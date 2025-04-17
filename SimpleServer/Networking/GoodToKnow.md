@@ -1,6 +1,6 @@
-# helper file
+# -----helper file----
 
-## usage of these functions 📌
+## 📌 usage of these functions 📌
 
 `#include <arpa/inet.h>`
 
@@ -13,13 +13,13 @@
 `uint16_t ntohs(uint16_t netshort);`
 **function converts the unsigned short integer netshort from network byte order to host byte order.**
 
-### Return Value
+### 💡 Return Value 💡
 **Upon successful completion, socket() shall return a non-negative integer, the socket file descriptor. Otherwise, a value of -1 shall be returned and errno set to indicate the error.**
 
 
-## Socket 📌
+## 📌 Socket 📌
 
-### Socket Creation 🟢
+### 🟢 Socket Creation 🟢
 
 `int sockfd = socket(domain, type, protocol);`
 
@@ -34,9 +34,22 @@
 **protocol** : Protocol value for Internet Protocol(IP), which is 0. This is the same number that appears on the protocol field in the IP header of a packet.(man protocols for more details)
 
 
-## Sockaddr_in struct 📌
+### 🟢 Bind 🟢
+
+`int bind(int socket, const struct sockaddr *address,socklen_t address_len);`
+
+*The bind() function shall assign a local socket address address to a socket identified by descriptor socket that has no local socket address assigned. Sockets created with the socket() function are initially unnamed; they are identified only by their address family.*
+
+
+#### 💡 Return Value 💡
+**Upon successful completion, bind() shall return 0; otherwise, -1 shall be returned and errno set to indicate the error.**
+
+
+
+## 📌 Sockaddr_in struct 📌
 
 `_address.sin_addr`
 `_address.sin_family`
 `_address.sin_port`
 `_address.sin_zero`
+
