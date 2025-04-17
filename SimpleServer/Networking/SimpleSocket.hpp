@@ -23,6 +23,9 @@ public:
 	int getSocket();
 	int getConnection();
 	struct sockaddr_in getAddress();
+
+	// Setter functions
+	void setConnection(int connection);
 };
 
 

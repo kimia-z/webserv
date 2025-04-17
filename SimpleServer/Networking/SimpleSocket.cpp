@@ -12,10 +12,6 @@ SimpleSocket::SimpleSocket(int domain, int service, int protocol, int port, u_lo
 	// Establish Socket
 	_socket = socket(domain, service, protocol);
 	testConnection(_socket);
-
-	// Establish Network Connection
-	_connection = connectToNetwork(_socket, _address);
-	testConnection(_connection);
 }
 
 // Test Socket/Connection
@@ -42,4 +38,11 @@ int SimpleSocket::getConnection()
 struct sockaddr_in SimpleSocket::getAddress()
 {
 	return _address;
+}
+
+// Setter
+
+void SimpleSocket::setConnection(int connection)
+{
+	_connection = connection;
 }
