@@ -10,4 +10,5 @@ BindingSocket::BindingSocket(int domain, int service, int portocol, int port, u_
 int BindingSocket::connectToNetwork(int socket, struct sockaddr_in address)
 {
 	return bind(socket, (struct sockaddr *)&address, sizeof(address));
+	//close (socket);
 }
