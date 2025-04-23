@@ -53,7 +53,23 @@
 #### 💡 Return Value 💡
 **Upon successful completion, connect() shall return 0; otherwise, -1 shall be returned and errno set to indicate the error.**
 
+### 🟢 Listen (Server Side)🟢
 
+`int listen(int socket, int backlog);`
+
+*The listen() function shall mark a connection-mode socket, specified by the socket argument, as accepting connections.*
+
+#### 💡 Return Value 💡
+**Upon successful completions, listen() shall return 0; otherwise, -1 shall be returned and errno set to indicate the error.**
+
+### 🟢 Accept (Server Side)🟢
+
+`int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len);`
+
+*The accept() function shall extract the first connection on the queue of pending connections, create a new socket with the same socket type protocol and address family as the specified socket, and allocate a new file descriptor for that socket.*
+
+#### 💡 Return Value 💡
+**Upon successful completion, accept() shall return the non-negative file descriptor of the accepted socket. Otherwise, -1 shall be returned and errno set to indicate the error.**
 
 ## 📌 Sockaddr_in struct (Defining Server Address)📌
 
