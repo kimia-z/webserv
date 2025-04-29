@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define domain AF_INET
+#define domain AF_UNSPEC
 #define service SOCK_STREAM
 #define protocol 0
 #define port 8081
