@@ -18,7 +18,7 @@ int main() {
 	memset(&server_addr, 0, sizeof(server_addr));
 
     // creating the socket
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    server_fd = socket(AF_INET6, SOCK_STREAM, 0);
     if (server_fd == 0) {
         perror("Socket failed");
         return 1;
