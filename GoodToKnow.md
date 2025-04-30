@@ -22,7 +22,7 @@
 
 **sockfd** : socket descriptor, an integer (like a file handle)
 
-**domain** : integer, specifies communication domain. We use AF_ LOCAL as defined in the POSIX standard for communication between processes on the same host. For communicating between processes on different hosts connected by IPV4, we use AF_INET and AF_INET 6 for processes connected by IPV6.
+**domain** : integer, specifies communication domain. We use AF_ LOCAL as defined in the POSIX standard for communication between processes on the same host. For communicating between processes on different hosts connected by IPV4, we use AF_INET and AF_INET6 for processes connected by IPV6.
 
 **type** : communication type
 1. SOCK_STREAM: TCP(reliable, connection-oriented)
