@@ -49,10 +49,28 @@ int main() {
         return 1;
     }
 
-    read(client_fd, buffer, 30000);
-    std::cout << "Odebrano żądanie:\n" << buffer << std::endl;
+    // read(client_fd, buffer, 30000);
+    // std::cout << "Odebrano żądanie:\n" << buffer << std::endl;
 
-    // Prosta odpowiedź HTTP
+    // // Prosta odpowiedź HTTP
+    // std::string response =
+    //     "HTTP/1.1 200 OK\r\n"
+    //     "Content-Type: text/html\r\n"
+    //     "Content-Length: 46\r\n"
+    //     "\r\n"
+    //     "<html><body><h1>Hello, world!</h1></body></html>";
+
+    // write(client_fd, response.c_str(), response.length());
+
+	ssize_t	bytesReceived = recv(client_fd, buffer, sizeof(buffer), 0);
+	if (bytesReceived < 0) {
+		perror("recv nie dziala");
+	}
+	else {
+		std::cout << "Odebrano żądanie:\n" << buffer << std::endl;
+	}
+
+	// Prosta odpowiedź HTTP
     std::string response =
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html\r\n"
@@ -60,10 +78,15 @@ int main() {
         "\r\n"
         "<html><body><h1>Hello, world!</h1></body></html>";
 
-    write(client_fd, response.c_str(), response.length());
+	ssize_t	bytesSent = send(client_fd, response.c_str(), response.length(), 0);
+	if (bytesSent < 0) {
+		perror ("send nie dziala");
+	}
 
     close(client_fd);
     close(server_fd);
+
+	std::cout << "Koniec programu" << std::endl;
 
     return 0;
 }
