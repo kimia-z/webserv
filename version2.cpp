@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#define PORT 8080
+#define PORT 8081
 
 int main() {
     int server_fd, client_fd;
