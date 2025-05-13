@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/05/05 13:02:41 by kziari           ###   ########.fr        #
+#                                                         ::::::::             #
+#    Makefile                                           :+:    :+:             #
+#                                                      +:+                     #
+#    By: kziari <kziari@student.42.fr>                +#+                      #
+#                                                    +#+                       #
+#    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
+#    Updated: 2025/05/13 10:44:58 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,7 +25,7 @@ OBJ_DIR = obj
 
 OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-HEADER = include/Webserv42.hpp
+HEADER = incl/Webserv42.hpp
 
 CPP = c++
 CPP_FLAGS = -Werror -Wextra -Wall
