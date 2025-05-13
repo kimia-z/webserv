@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ServerMain.hpp                                     :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/13 13:30:12 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/13 15:05:21 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ServerMain.hpp                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/13 13:30:12 by mstencel          #+#    #+#             */
+/*   Updated: 2025/05/13 17:15:33 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,8 @@ class ServerMain {
 		int				serverFd_;
 		int				serverPort_;
 		struct addrinfo	*res_;
-		
+		int				clientFd_;
+		std::string		rawRequest_;
 
 };
 
