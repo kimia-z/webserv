@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/05/13 17:55:26 by kziari           ###   ########.fr        #
+#    Updated: 2025/05/14 14:06:55 by kziari           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,13 +17,9 @@ ITALIC = \033[3m
 
 NAME = webserv
 
-SRC_DIR = src
-
-SRC_FILES = src/main.cpp ServerMain.cpp
-
+SRC_FILES = main.cpp ServerMain.cpp
 OBJ_DIR = obj
-
-OBJ_FILES = $(SRC_FILES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 
 HEADER = incl/Webserv42.hpp
 
@@ -36,10 +32,10 @@ all: $(NAME)
 
 $(NAME): $(OBJ_FILES) $(HEADER)
 	@$(CPP) $(CPP_FLAGS) $(OBJ_FILES) -o $(NAME)
-	@echo "$(GREEN)compilation success: '$(ITALIC)webserv$(GREEN)' created$(RESET)"
+	@echo "$(GREEN)compilation success: '$(ITALIC)$(NAME)$(GREEN)' created$(RESET)"
 
-$(OBJ_DIR)/%.o:$(SRC_DIR)/%.cpp
-	@if [ ! -d "$(@D)" ]; then mkdir $(@D); fi
+$(OBJ_DIR)/%.o: %.cpp
+	@if [ ! -d "$(@D)" ]; then mkdir -p $(@D); fi
 	@$(CPP) $(CPP_FLAGS) -c $< -o $@
 
 clean:
@@ -49,8 +45,8 @@ clean:
 
 fclean: clean
 	@$(RM) $(NAME)
-	@echo "webserv $(RED)removed$(RESET)"
+	@echo "$(NAME) $(RED)removed$(RESET)"
 
 re: fclean all
 
-.PHONY = all, clean, fclean, re
+.PHONY: all clean fclean re
