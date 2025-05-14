@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/05/14 14:06:55 by kziari           ###   ########.fr        #
+#    Updated: 2025/05/14 15:27:18 by kziari           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ ITALIC = \033[3m
 
 NAME = webserv
 
-SRC_FILES = main.cpp ServerMain.cpp
+SRC_FILES = main.cpp ServerMain.cpp Request.cpp
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 

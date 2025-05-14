@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/05/14 14:30:19 by kziari           ###   ########.fr       */
+/*   Updated: 2025/05/14 17:49:14 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,17 +160,21 @@ void ServerMain::startConnection() {
 		}
 		memset(buffer, 0, sizeof(buffer));
 		ssize_t bytesReceived = recv(clientFd_, buffer, sizeof(buffer), 0);
-		std::string rawRequest_(buffer, bytesReceived);
+		
 		if (bytesReceived == -1){
 			std::cerr << RED << "Recv failed: " << strerror(errno) << RESET << std::endl;
 			close(clientFd_);
 			close(serverFd_);
 		}
 		else{
+			std::string rawRequest_(buffer, bytesReceived);
 			std::cout << GREEN << "Received:" << bytesReceived << RESET << std::endl;
 			std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+			// ----Parsing the HTTP request----
+			Request httpRequest(rawRequest_);
+			httpRequest.print();
 		}
-		// ----Parsing the HTTP request----
+
 		
 		// ----Generate HTTP response-----
 		// simple HTTP response

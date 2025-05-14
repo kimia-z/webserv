@@ -2,6 +2,8 @@
 # define REQUEST
 
 #include "Webserv42.hpp"
+#include <sstream>
+#include <iostream>
 
 class Request
 {
@@ -13,8 +15,8 @@ private:
 	// std::string _body;
 
 	void parseRequest(const std::string &rawRequest);
-	void parseStartLine();
-	void parseHeader();
+	bool parseStartLine(std::string line);
+	bool parseHeader(std::string line);
 	// void parseBody();
 
 public:
@@ -29,6 +31,9 @@ public:
 	const std::string &getVersion() const;
 	const std::unordered_map<std::string, std::string> &getHeaders() const;
 	// const std::string &getBody() const;
+
+	//Print for debugging
+	void print() const;
 };
 
 #endif

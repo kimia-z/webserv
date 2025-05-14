@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:12 by mstencel          #+#    #+#             */
-/*   Updated: 2025/05/13 17:15:33 by kziari           ###   ########.fr       */
+/*   Updated: 2025/05/14 15:34:32 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <unistd.h> //for close()
 #include <cstring> //for memset()
 #include <string> //for to_string()
+#include "Webserv42.hpp"
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
