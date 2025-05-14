@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ServerMain.cpp                                     :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/13 13:30:17 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/13 15:10:02 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ServerMain.cpp                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
+/*   Updated: 2025/05/14 14:28:54 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 
 ServerMain::ServerMain():
 	serverFd_(-1),
-	serverPort_(0),
+	serverPort_(8081), // I changed the port for now!
 	res_(nullptr)
 	{
 	std::cout << "ServerMain was constructed" << std::endl;
@@ -84,7 +84,7 @@ void	ServerMain::setResults(addrinfo *newResult) {
 	res_ = newResult;
 }
 
-
+// Suggestion name for this member function: initializeSocket()/setupSocket()
 void	ServerMain::startSocket() {
 	struct addrinfo	hints;
 	struct addrinfo	*iterationPointer;
@@ -121,7 +121,7 @@ void	ServerMain::startSocket() {
 			continue;
 		}
 		int	yes = 1;
-		if (setsockopt(serverFd_, IPPROTO_TCP, SO_REUSEADDR, &yes, sizeof(yes)) == -1) { // TODO should we use SOL_SOCKET for APIs?
+		if (setsockopt(serverFd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) { // TODO should we use SOL_SOCKET for APIs?
 			std::cerr << RED << "setsockopt() failed: " << strerror(errno) << RESET << std::endl;
 			close (serverFd_);
 			continue;
@@ -142,4 +142,47 @@ void	ServerMain::startSocket() {
 		//TODO return? how to stop the program - no exit() allowed
 	}
 	std::cout << "listening on port " << serverPort_ << std::endl;
+}
+
+// Suggestion name for this member function: startConnection()
+void ServerMain::startConnection() {
+	struct sockaddr_storage other_addr;
+	char buffer[30000];
+	
+	socklen_t addr_size = sizeof(other_addr);
+	
+	while(true)
+	{
+		clientFd_ = accept(serverFd_, (struct sockaddr *)&other_addr, &addr_size); // Should we call getServFd() as argument?
+		if (clientFd_ == -1){
+			std::cerr << RED << "Accept failed: " << strerror(errno) << RESET << std::endl;
+			//TODO return? how to stop the program - no exit() allowed
+		}
+		memset(buffer, 0, sizeof(buffer));
+		ssize_t bytesReceived = recv(clientFd_, buffer, sizeof(buffer), 0);
+		std::string rawRequest_(buffer, bytesReceived);
+		if (bytesReceived == -1){
+			std::cerr << RED << "Recv failed: " << strerror(errno) << RESET << std::endl;
+			close(clientFd_);
+			close(serverFd_);
+		}
+		else{
+			std::cout << GREEN << "Received:" << bytesReceived << RESET << std::endl;
+			std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+		}
+		// ----Parsing the HTTP request----
+		
+		// ----Generate HTTP response-----
+		// simple HTTP response
+		std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from Server";
+		ssize_t	bytesSent = send(clientFd_, response.c_str(), response.length(), 0);
+		if (bytesSent == -1){
+			std::cerr << RED << "Send failed: " << strerror(errno) << RESET << std::endl;
+			close(serverFd_);
+			close(clientFd_);
+		}
+		// Done with client socket
+		close(clientFd_);
+	}
+	// close server socket and free program in destructor!
 }
