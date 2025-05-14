@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/05/14 14:28:54 by kziari           ###   ########.fr       */
+/*   Updated: 2025/05/14 14:30:19 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -144,7 +144,7 @@ void	ServerMain::startSocket() {
 	std::cout << "listening on port " << serverPort_ << std::endl;
 }
 
-// Suggestion name for this member function: startConnection()
+// Suggestion name for this member function: acceptConnections()
 void ServerMain::startConnection() {
 	struct sockaddr_storage other_addr;
 	char buffer[30000];
