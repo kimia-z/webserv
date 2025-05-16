@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/05/14 14:06:55 by kziari           ###   ########.fr        #
+#                                                         ::::::::             #
+#    Makefile                                           :+:    :+:             #
+#                                                      +:+                     #
+#    By: kziari <kziari@student.42.fr>                +#+                      #
+#                                                    +#+                       #
+#    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
+#    Updated: 2025/05/16 13:10:31 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,10 @@ ITALIC = \033[3m
 
 NAME = webserv
 
-SRC_FILES = main.cpp ServerMain.cpp
+SRC_FILES = src/main.cpp \
+			src/ServerMain.cpp \
+			src/Server42.cpp
+
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 

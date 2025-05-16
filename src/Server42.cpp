@@ -6,11 +6,11 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/13 10:30:48 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/13 13:49:20 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/16 13:10:50 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "incl/Server42.hpp"
+#include "../incl/Server42.hpp"
 
 //basic canonical form
 

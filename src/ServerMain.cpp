@@ -1,16 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ServerMain.cpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/05/14 14:30:19 by kziari           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   ServerMain.cpp                                     :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: kziari <kziari@student.42.fr>                +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2025/05/13 13:30:17 by mstencel      #+#    #+#                 */
+/*   Updated: 2025/05/16 13:10:55 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "incl/ServerMain.hpp"
+#include "../incl/ServerMain.hpp"
 
 //basic canonical form
 
@@ -121,7 +121,7 @@ void	ServerMain::startSocket() {
 			continue;
 		}
 		int	yes = 1;
-		if (setsockopt(serverFd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) { // TODO should we use SOL_SOCKET for APIs?
+		if (setsockopt(serverFd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) { // SOL_SOCK for APIs & SO_REUSEADDR for
 			std::cerr << RED << "setsockopt() failed: " << strerror(errno) << RESET << std::endl;
 			close (serverFd_);
 			continue;
@@ -167,7 +167,7 @@ void ServerMain::startConnection() {
 			close(serverFd_);
 		}
 		else{
-			std::cout << GREEN << "Received:" << bytesReceived << RESET << std::endl;
+			std::cout << GREEN << "Received from the client:" << bytesReceived << RESET << std::endl;
 			std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
 		}
 		// ----Parsing the HTTP request----
