@@ -5,7 +5,12 @@ Request::Request(const std::string &rawRequest)
 	parseRequest(rawRequest);
 }
 
+// Request(const Request& copy);
+// Request& operator=(const Request& copy);
+// ~Request();
 
+
+// Parsings:
 void Request::parseRequest(const std::string &rawRequest)
 {
 	// find start line and call its function
@@ -44,21 +49,61 @@ bool Request::parseStartLine(std::string line)
 {
 	std::istringstream start_line(line);
 
-	if (!(start_line >> _method >> _path >> _version)){
-		return false;
-	}
+	if (!(start_line >> _method >> _path >> _version)) return false;
+	if (!isValidMethod(_method) || !isValidPath(_path) || !isValidVersion(_version)) return false;
 	return true;
 }
 
 bool Request::parseHeader(std::string line)
 {
+	// Reject header line starting with whitespace
+	if (std::isspace(line[0])) return false;
 
+	std::string copyLine = line;
+	if (!copyLine.empty() && copyLine.back() == '\r') {
+		copyLine.pop_back();
+	}
+	size_t colonPos = copyLine.find(':');
+	if (colonPos == std::string::npos) return false; 
+
+	std::string key = copyLine.substr(0, colonPos);
+	std::string value = copyLine.substr(colonPos + 1);
+
+	// Trim leading and trailing whitespace from value
+	// *Searches the string for the first character that
+	// 		does not match any of the characters specified in its arguments.*
+	size_t startPos = value.find_first_not_of(" \t");
+	size_t endPos = value.find_last_not_of(" \t");
+	if (startPos != std::string::npos && endPos != std::string::npos){
+		value = value.substr(startPos, endPos - startPos + 1);
+	}
+	else
+		value = ""; // value is only spaces
+	_headers[key] = value;
+	return true;
 }
 
-// Request(const Request& copy);
-// Request& operator=(const Request& copy);
-// ~Request();
 
+// Validations:
+bool Request::isValidMethod(std::string &method){
+	static const std::set<std::string> allowedMethods = {
+		"GET", "POST", "DELETE"
+	};
+	return allowedMethods.count(method);
+}
+bool Request::isValidPath(std::string &path){
+	if (path.empty()) return false; // It must not be empty
+	if (path[0] != '/') return false; // It must start with /
+	if (path.find("..") != std::string::npos) return false; // It must not contain path traversal for Security risk
+	if (path.find('\0') != std::string::npos) return false; // It should not contain null bytes
+	return true;
+}
+bool Request::isValidVersion(std::string &version){
+	return version == "HTTP/1.1";
+}
+
+
+// Getters:
 const std::string &Request::getMethod() const
 {
 	return _method;

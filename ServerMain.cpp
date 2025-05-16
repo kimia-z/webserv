@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/05/14 17:49:14 by kziari           ###   ########.fr       */
+/*   Updated: 2025/05/16 16:05:38 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,8 +168,8 @@ void ServerMain::startConnection() {
 		}
 		else{
 			std::string rawRequest_(buffer, bytesReceived);
-			std::cout << GREEN << "Received:" << bytesReceived << RESET << std::endl;
-			std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+			// std::cout << GREEN << "Received:" << bytesReceived << RESET << std::endl;
+			// std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
 			// ----Parsing the HTTP request----
 			Request httpRequest(rawRequest_);
 			httpRequest.print();
