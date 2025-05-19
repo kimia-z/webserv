@@ -41,7 +41,17 @@ void Request::parseRequest(const std::string &rawRequest)
 			continue; // or TODO: return false/exit???
 		}
 	}
-	// Step 4: (Optional) Read message body??
+	// Step 4: (Optional) Read message body
+	std::unordered_map<std::string, std::string>::const_iterator contentLenPos = _headers.find("Content-Length");
+	if (contentLenPos != _headers.end()){
+		int contentLength = std::stoi(contentLenPos->second);
+		if (contentLength > 0){
+			size_t headerEnd = rawRequest.find("\r\n\r\n");
+			if (headerEnd != std::string::npos){
+				_body = rawRequest.substr(headerEnd + 4, contentLength);
+			}
+		}
+	}
 }
 
 //TODO: what should it beheaves when failed in parsing?
@@ -49,9 +59,43 @@ bool Request::parseStartLine(std::string line)
 {
 	std::istringstream start_line(line);
 
-	if (!(start_line >> _method >> _path >> _version)) return false;
-	if (!isValidMethod(_method) || !isValidPath(_path) || !isValidVersion(_version)) return false;
+	start_line >> _method;
+
+	std::string fullPath;
+	start_line >> fullPath;
+
+	start_line >> _version;
+
+	if (!isValidMethod(_method) || !isValidVersion(_version)) return false;
+	size_t qMarkPos = fullPath.find('?');
+	if(qMarkPos != std::string::npos){
+		_path = fullPath.substr(0, qMarkPos);
+		std::string queryString = fullPath.substr(qMarkPos + 1);
+		parseQueryParams(queryString);
+	} else{
+		_path = fullPath;
+	}
+	if(!isValidPath(_path)) return false;
+	// if (!(start_line >> _method >> _path >> _version)) return false;
+	// if (!isValidMethod(_method) || !isValidPath(_path) || !isValidVersion(_version)) return false;
 	return true;
+}
+
+void Request::parseQueryParams(std::string &queryString)
+{
+	std::istringstream query(queryString);
+	std::string token;
+
+	while (std::getline(query, token, '&')){
+		size_t eqPos = token.find('=');
+		if (eqPos != std::string::npos){
+			std::string key = token.substr(0, eqPos);
+			std::string value = token.substr(eqPos + 1);
+			_queryParams[key] = value;
+		} else{
+			_queryParams[token] = ""; // handle case with key but no value
+		}
+	}
 }
 
 bool Request::parseHeader(std::string line)

@@ -11,14 +11,16 @@ class Request
 private:
 	std::string _method;
 	std::string _path;
+	std::unordered_map<std::string, std::string> _queryParams;
 	std::string _version;
 	std::unordered_map<std::string, std::string> _headers;
-	// std::string _body;
+	std::string _body;
 
 
 	// Parser
 	void parseRequest(const std::string &rawRequest);
 	bool parseStartLine(std::string line);
+	void parseQueryParams(std::string &queryString);
 	bool parseHeader(std::string line);
 	// void parseBody();
 
