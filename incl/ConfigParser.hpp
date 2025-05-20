@@ -1,24 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   Webserv42.hpp                                      :+:    :+:            */
+/*   ConfigParser.hpp                                   :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/05/05 10:30:28 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/20 12:09:53 by mstencel      ########   odam.nl         */
+/*   Created: 2025/05/20 12:42:16 by mstencel      #+#    #+#                 */
+/*   Updated: 2025/05/20 12:43:11 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef WEBSERV42
-# define WEBSERV42
+#ifndef	CONFIGPARSER_HPP
+# define CONFIGPARSER_HPP
+
+#include <iostream>
 
 
-
-#include "Server42.hpp"
-#include "ServerMain.hpp"
-#include "ConfigTokeniser.hpp"
 
 #endif
-
-// TODO - check if all the setters and getters are actually needed
