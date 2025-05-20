@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/20 11:28:39 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/20 13:28:06 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/20 15:33:56 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,15 +17,14 @@
 #include <string> //for std::string::iterator
 
 enum	TokenType {
-	OPEN_BRACE,
-	CLOSE_BRACE,
-	STRING,
-	NUMBER,
-	COLON,
-	SEMICOLON,
-	HASH,
-	END_OF_FILE,
-	UNKNOWN
+	OPEN_BRACE, // {
+	CLOSE_BRACE, // }
+	STRING, // words
+	NUMBER, // numbers
+	COLON, // :
+	SEMICOLON, // ;
+	END_OF_FILE, // end of the file
+	UNKNOWN // anything else
 }	ttype;
 
 
@@ -44,7 +43,14 @@ class	ConfTokeniser {
 	ConfTokeniser(const ConfTokeniser& copy);
 	ConfTokeniser& operator=(const ConfTokeniser& copy);
 
-	configToken	defineToken();
+	std::string				getAllConfig() const;
+	std::string::iterator	getCurrentPos()	const;
+	
+	void	setAllConfig(const std::string& config);
+	void	setCurrentPos(std::string::iterator pos);
+
+	void		skipWhiteSpaceComments(); //skips white spaces & comments
+	configToken	defineToken(); //returns defined token
 	
 	private:
 	std::string				allConfig_; //config file saved as a string
