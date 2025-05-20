@@ -41,6 +41,17 @@ void Request::parseRequest(const std::string &rawRequest)
 			continue; // or TODO: return false/exit???
 		}
 	}
+	// Header validation: Mandatory Host name in header
+	if (_headers.find("Host") == _headers.end()){
+		std::cerr << "The request required Host header" << std::endl;
+		// return false;
+	}
+
+	// Handle Chunked bodies
+	auto isTe = _headers.find("Transfer-Encoding");
+	if (isTe != _headers.end() && isTe->second == "chunked") {
+		parseChunkedBody(rawRequest);
+	}
 	// Step 4: (Optional) Read message body
 	std::unordered_map<std::string, std::string>::const_iterator contentLenPos = _headers.find("Content-Length");
 	if (contentLenPos != _headers.end()){
@@ -76,8 +87,6 @@ bool Request::parseStartLine(std::string line)
 		_path = fullPath;
 	}
 	if(!isValidPath(_path)) return false;
-	// if (!(start_line >> _method >> _path >> _version)) return false;
-	// if (!isValidMethod(_method) || !isValidPath(_path) || !isValidVersion(_version)) return false;
 	return true;
 }
 
@@ -123,29 +132,52 @@ bool Request::parseHeader(std::string line)
 	}
 	else
 		value = ""; // value is only spaces
+	// Case-insensitive Header keys -> to lowercase??
+	
 	_headers[key] = value;
+	if (!isValidKey(key)) return false;
+	if (!isValidValue(value)) return false;
 	return true;
 }
 
+void Request::parseChunkedBody(const std::string &rawRequest)
+{
+	
+}
 
 // Validations:
-bool Request::isValidMethod(std::string &method){
+bool Request::isValidMethod(const std::string &method){
 	static const std::set<std::string> allowedMethods = {
 		"GET", "POST", "DELETE"
 	};
 	return allowedMethods.count(method);
 }
-bool Request::isValidPath(std::string &path){
+bool Request::isValidPath(const std::string &path){
 	if (path.empty()) return false; // It must not be empty
 	if (path[0] != '/') return false; // It must start with /
 	if (path.find("..") != std::string::npos) return false; // It must not contain path traversal for Security risk
 	if (path.find('\0') != std::string::npos) return false; // It should not contain null bytes
 	return true;
 }
-bool Request::isValidVersion(std::string &version){
+bool Request::isValidVersion(const std::string &version){
 	return version == "HTTP/1.1";
 }
 
+bool Request::isValidKey(const std::string &key)
+{
+	for (char c : key){
+		if (!std::isalnum(c) && std::string("!#$%&'*+-.^_`|~").find(c) == std::string::npos) return false;
+	}
+	return true;
+}
+
+bool Request::isValidValue(const std::string &value)
+{
+	for (char c : value){
+		if ((c < 32 && c != 9) || c == 127) return false;
+	}
+	return true;
+}
 
 // Getters:
 const std::string &Request::getMethod() const

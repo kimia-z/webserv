@@ -22,13 +22,16 @@ private:
 	bool parseStartLine(std::string line);
 	void parseQueryParams(std::string &queryString);
 	bool parseHeader(std::string line);
+	void parseChunkedBody(const std::string &rawRequest);
 	// void parseBody();
 
 
 	// Validation
-	bool isValidMethod(std::string &method);
-	bool isValidPath(std::string &path);
-	bool isValidVersion(std::string &version);
+	bool isValidMethod(const std::string &method);
+	bool isValidPath(const std::string &path);
+	bool isValidVersion(const std::string &version);
+	bool isValidKey(const std::string &key);
+	bool isValidValue(const std::string &value);
 
 public:
 	Request(const std::string &rawRequest);
