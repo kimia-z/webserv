@@ -47,22 +47,10 @@ void Request::parseRequest(const std::string &rawRequest)
 		// return false;
 	}
 
-	// Handle Chunked bodies
-	auto isTe = _headers.find("Transfer-Encoding");
-	if (isTe != _headers.end() && isTe->second == "chunked") {
-		parseChunkedBody(rawRequest);
-	}
-	// Step 4: (Optional) Read message body
-	std::unordered_map<std::string, std::string>::const_iterator contentLenPos = _headers.find("Content-Length");
-	if (contentLenPos != _headers.end()){
-		int contentLength = std::stoi(contentLenPos->second);
-		if (contentLength > 0){
-			size_t headerEnd = rawRequest.find("\r\n\r\n");
-			if (headerEnd != std::string::npos){
-				_body = rawRequest.substr(headerEnd + 4, contentLength);
-			}
-		}
-	}
+	// Step 4: Parse body
+	parseBody(rawRequest);
+	
+
 }
 
 //TODO: what should it beheaves when failed in parsing?
@@ -132,17 +120,56 @@ bool Request::parseHeader(std::string line)
 	}
 	else
 		value = ""; // value is only spaces
-	// Case-insensitive Header keys -> to lowercase??
-	
+	// Handle multiple value for a header
+	if (_headers.count(key)) {
+		_headers[key] += ", " + value;
+	} else {
 	_headers[key] = value;
+	}
 	if (!isValidKey(key)) return false;
 	if (!isValidValue(value)) return false;
 	return true;
 }
 
+void Request::parseBody(const std::string &rawRequest)
+{
+	size_t headerEnd = rawRequest.find("\r\n\r\n");
+	// Handle Chunked bodies
+	auto isTe = _headers.find("Transfer-Encoding");
+	if (isTe != _headers.end() && isTe->second == "chunked") {
+		if (headerEnd != std::string::npos){
+			parseChunkedBody(rawRequest.substr(headerEnd + 4));
+		}
+	}
+	// Read message body
+	std::unordered_map<std::string, std::string>::const_iterator contentLenPos = _headers.find("Content-Length");
+	if (contentLenPos != _headers.end()){
+		int contentLength = std::stoi(contentLenPos->second);
+		if (contentLength > 0){
+			if (headerEnd != std::string::npos){
+				_body = rawRequest.substr(headerEnd + 4, contentLength);
+			}
+		}
+	}
+}
+
 void Request::parseChunkedBody(const std::string &rawRequest)
 {
-	
+	std::istringstream stream(rawRequest);
+	std::string line;
+	_body.clear();
+	while(std::getline(stream, line)){
+		if (!line.empty() && line.back() == '\r') line.pop_back();
+		size_t chunkedSize = std::stoul(line, nullptr, 16);
+		if (chunkedSize == 0) break;
+		char *buffer = new char[chunkedSize];
+		stream.read(buffer, chunkedSize);
+		_body.append(buffer, chunkedSize);
+		delete [] buffer;
+		stream.ignore(2);
+	}
+
+	// Parse tailer headers????
 }
 
 // Validations:

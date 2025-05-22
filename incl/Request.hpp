@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <set>
+#include <algorithm>
 
 class Request
 {
@@ -23,7 +24,7 @@ private:
 	void parseQueryParams(std::string &queryString);
 	bool parseHeader(std::string line);
 	void parseChunkedBody(const std::string &rawRequest);
-	// void parseBody();
+	void parseBody(const std::string &rawRequest);
 
 
 	// Validation
