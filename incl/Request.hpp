@@ -6,16 +6,19 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
+#include "Exception.hpp"
+
 
 class Request
 {
 private:
-	std::string _method;
-	std::string _path;
-	std::unordered_map<std::string, std::string> _queryParams;
-	std::string _version;
-	std::unordered_map<std::string, std::string> _headers;
-	std::string _body;
+	std::string										_method;
+	std::string										_path;
+	std::unordered_map<std::string, std::string>	_queryParams;
+	std::string										_version;
+	std::unordered_map<std::string, std::string>	_headers;
+	std::string										_body;
+	// int												_codeStatus;
 
 
 	// Parser
@@ -45,7 +48,8 @@ public:
 	const std::string &getPath() const;
 	const std::string &getVersion() const;
 	const std::unordered_map<std::string, std::string> &getHeaders() const;
-	// const std::string &getBody() const;
+	const std::string &getBody() const;
+	// const int &getCodeStatus() const;
 
 	//Print for debugging
 	void print() const;

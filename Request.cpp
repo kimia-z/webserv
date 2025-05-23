@@ -2,7 +2,12 @@
 
 Request::Request(const std::string &rawRequest)
 {
-	parseRequest(rawRequest);
+	try {
+		parseRequest(rawRequest);
+	} catch (const HttpException &e) {
+		std::cerr << "Request parsing failed: " << e.what() << std::endl;
+		throw; // Re-throw to be handled by caller
+	}
 }
 
 // Request(const Request& copy);
@@ -13,11 +18,6 @@ Request::Request(const std::string &rawRequest)
 // Parsings:
 void Request::parseRequest(const std::string &rawRequest)
 {
-	// find start line and call its function
-	// loop through headers and call its function for each line
-	// check if body exist
-	// validation
-
 	std::istringstream stream(rawRequest);
 	std::string line;
 
@@ -29,41 +29,35 @@ void Request::parseRequest(const std::string &rawRequest)
 	}
 	// Step 2: Parse start-line: METHOD PATH VERSION
 	if (!parseStartLine(line)){
-		std::cerr << RED << "Parsing the startline failed: " << strerror(errno) << RESET << std::endl;
-		// TODO: return false/exit???
+		throw HttpException(400, "Bad Request: Invalid start line");
+		// std::cerr << RED << "Parsing the startline failed: " << strerror(errno) << RESET << std::endl;
 	}
 	// Step 3: Parse headers
 	while(std::getline(stream, line))
 	{
 		if (line == "\r" || line.empty()) break;
 		if (!parseHeader(line)){
-			std::cerr << RED << "Invalid header line: " << strerror(errno) << RESET << std::endl;
-			continue; // or TODO: return false/exit???
+			throw HttpException(400, "Bad Request: Invalid Header");
+			// std::cerr << RED << "Invalid header line: " << strerror(errno) << RESET << std::endl;
 		}
 	}
 	// Header validation: Mandatory Host name in header
 	if (_headers.find("Host") == _headers.end()){
-		std::cerr << "The request required Host header" << std::endl;
-		// return false;
+		throw HttpException(400, "Bad Request: Missing mandatory 'Host' header");
+		//std::cerr << "The request required Host header" << std::endl;
 	}
 
 	// Step 4: Parse body
 	parseBody(rawRequest);
-	
-
 }
 
 //TODO: what should it beheaves when failed in parsing?
 bool Request::parseStartLine(std::string line)
 {
 	std::istringstream start_line(line);
-
-	start_line >> _method;
-
 	std::string fullPath;
-	start_line >> fullPath;
 
-	start_line >> _version;
+	start_line >> _method >> fullPath >> _version;
 
 	if (!isValidMethod(_method) || !isValidVersion(_version)) return false;
 	size_t qMarkPos = fullPath.find('?');
@@ -83,75 +77,69 @@ void Request::parseQueryParams(std::string &queryString)
 	std::istringstream query(queryString);
 	std::string token;
 
-	while (std::getline(query, token, '&')){
+	while (std::getline(query, token, '&')) {
 		size_t eqPos = token.find('=');
-		if (eqPos != std::string::npos){
-			std::string key = token.substr(0, eqPos);
-			std::string value = token.substr(eqPos + 1);
-			_queryParams[key] = value;
-		} else{
-			_queryParams[token] = ""; // handle case with key but no value
-		}
+		std::string key = token.substr(0, eqPos);
+		std::string value = (eqPos != std::string::npos) ? token.substr(eqPos + 1) : ""; // handle case with key but no value
+		_queryParams[key] = value;
 	}
 }
 
 bool Request::parseHeader(std::string line)
 {
 	// Reject header line starting with whitespace
-	if (std::isspace(line[0])) return false;
+	if (line.empty() || std::isspace(line[0])) return false;
 
-	std::string copyLine = line;
-	if (!copyLine.empty() && copyLine.back() == '\r') {
-		copyLine.pop_back();
-	}
-	size_t colonPos = copyLine.find(':');
-	if (colonPos == std::string::npos) return false; 
+	if (line.back() == '\r') line.pop_back();
+	size_t colonPos = line.find(':');
+	if (colonPos == std::string::npos) return false;
 
-	std::string key = copyLine.substr(0, colonPos);
-	std::string value = copyLine.substr(colonPos + 1);
-
+	std::string key = line.substr(0, colonPos);
+	std::string value = line.substr(colonPos + 1);
 	// Trim leading and trailing whitespace from value
 	// *Searches the string for the first character that
-	// 		does not match any of the characters specified in its arguments.*
-	size_t startPos = value.find_first_not_of(" \t");
-	size_t endPos = value.find_last_not_of(" \t");
-	if (startPos != std::string::npos && endPos != std::string::npos){
-		value = value.substr(startPos, endPos - startPos + 1);
-	}
-	else
-		value = ""; // value is only spaces
+	// 	does not match any of the characters specified in its arguments.*
+	size_t start = value.find_first_not_of(" \t");
+	size_t end = value.find_last_not_of(" \t");
+	value = (start != std::string::npos && end != std::string::npos) ? value.substr(start, end - start + 1) : "";// value is only spaces
+
+	if (!isValidKey(key) || !isValidValue(value)) return false;
 	// Handle multiple value for a header
 	if (_headers.count(key)) {
 		_headers[key] += ", " + value;
 	} else {
-	_headers[key] = value;
+		_headers[key] = value;
 	}
-	if (!isValidKey(key)) return false;
-	if (!isValidValue(value)) return false;
 	return true;
 }
 
 void Request::parseBody(const std::string &rawRequest)
 {
 	size_t headerEnd = rawRequest.find("\r\n\r\n");
-	// Handle Chunked bodies
+	if (headerEnd == std::string::npos) return;
+
+	std::string body = rawRequest.substr(headerEnd + 4);
 	auto isTe = _headers.find("Transfer-Encoding");
+	auto clIt = _headers.find("Content-Length");
+
 	if (isTe != _headers.end() && isTe->second == "chunked") {
-		if (headerEnd != std::string::npos){
-			parseChunkedBody(rawRequest.substr(headerEnd + 4));
+		parseChunkedBody(body);
+	} else if (clIt != _headers.end()) {
+		try {
+			int contentLength = std::stoi(clIt->second);
+			if (contentLength < 0)
+				throw HttpException(400, "Negative Content-Length");
+			if ((int)body.size() < contentLength)
+				throw HttpException(400, "Body shorter than Content-Length");
+			_body = body.substr(0, contentLength);
+		} catch (const std::exception &) {
+			throw HttpException(400, "Invalid Content-Length value");
 		}
-	}
-	// Read message body
-	std::unordered_map<std::string, std::string>::const_iterator contentLenPos = _headers.find("Content-Length");
-	if (contentLenPos != _headers.end()){
-		int contentLength = std::stoi(contentLenPos->second);
-		if (contentLength > 0){
-			if (headerEnd != std::string::npos){
-				_body = rawRequest.substr(headerEnd + 4, contentLength);
-			}
-		}
+	} else if (_method == "POST" || _method == "PUT") {
+		throw HttpException(400, "Missing Content-Length or Transfer-Encoding for POST/PUT");
 	}
 }
+
 
 void Request::parseChunkedBody(const std::string &rawRequest)
 {
@@ -207,22 +195,11 @@ bool Request::isValidValue(const std::string &value)
 }
 
 // Getters:
-const std::string &Request::getMethod() const
-{
-	return _method;
-}
-const std::string &Request::getPath() const
-{
-	return _path;
-}
-const std::string &Request::getVersion() const
-{
-	return _version;
-}
-const std::unordered_map<std::string, std::string> &Request::getHeaders() const
-{
-	return _headers;
-}
+const std::string &Request::getMethod() const { return _method; }
+const std::string &Request::getPath() const { return _path; }
+const std::string &Request::getVersion() const { return _version; }
+const std::unordered_map<std::string, std::string> &Request::getHeaders() const { return _headers; }
+const std::string &Request::getBody() const { return _body; }
 
 
 void Request::print() const
@@ -234,4 +211,5 @@ void Request::print() const
 	for (auto i : requestMap){
 		std::cout << i.first << ": " << i.second << std::endl;
 	}
+	std::cout << "Body: " << getBody() << std::endl;
 }
