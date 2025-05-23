@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/20 11:28:02 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/20 15:39:37 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/23 14:27:02 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ ConfTokeniser::ConfTokeniser() {
 	std::cout << "ConfToekniser default constructor called" << std::endl;
 }
 
-ConfTokeniser::ConfTokeniser(const std::string & config) {
+ConfTokeniser::ConfTokeniser(const std::string& config) {
 	allConfig_ = config;
 	currentPos_ = allConfig_.begin();
 	std::cout << "ConfTokeniser constructor with param called" << std::endl;
@@ -74,11 +74,13 @@ void	ConfTokeniser::skipWhiteSpaceComments() {
 	}
 }
 
+/// @brief checks what type is the token (see the tokenType enum)
+/// @return created token
 configToken	ConfTokeniser::defineToken() {
 	
 	skipWhiteSpaceComments();
 	if (currentPos_ == allConfig_.end())
-	return (configToken(END_OF_FILE, ""));
+		return (configToken(END_OF_FILE, ""));
 	if (*currentPos_ == '{') {
 		currentPos_++;
 		return (configToken(OPEN_BRACE, "{"));
@@ -95,19 +97,28 @@ configToken	ConfTokeniser::defineToken() {
 		currentPos_++;
 		return (configToken(SEMICOLON, ";"));
 	}
+	if (*currentPos_ == '/') {
+		currentPos_++;
+		return (configToken(SLASH, "/"));
+	}
 	std::string	tValue;
 	if (isdigit(*currentPos_)) {
-		while (currentPos_ != allConfig_.end() && isdigit(*currentPos_)) {
+		while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isdigit(*currentPos_) || *currentPos_ == '.')) {
 			tValue += *currentPos_;
 			currentPos_++;
 		}
 		return (configToken(NUMBER, tValue));
 	}
 	if (isalpha(*currentPos_)) {
-		while (currentPos_ != allConfig_.end() && (isalpha(*currentPos_) || isdigit(*currentPos_) || *currentPos_ == '-' || *currentPos_ == '_')) {
+		while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isalpha(*currentPos_) || isdigit(*currentPos_) || *currentPos_ == '-' || *currentPos_ == '_' || *currentPos_ == '.')) {
 			tValue += *currentPos_;
 			currentPos_++;
 		}
 		return (configToken(STRING, tValue));
 	}
+	while (currentPos_ != allConfig_.end() && *currentPos_ != '\n') {
+		tValue += *currentPos_;
+		currentPos_++;
+	}
+	return (configToken(UNKNOWN, tValue));
 }

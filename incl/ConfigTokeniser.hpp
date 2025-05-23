@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/20 11:28:39 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/20 15:33:56 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/23 15:13:12 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,23 +16,24 @@
 #include <iostream>
 #include <string> //for std::string::iterator
 
-enum	TokenType {
+enum	tokenType {
 	OPEN_BRACE, // {
 	CLOSE_BRACE, // }
-	STRING, // words
-	NUMBER, // numbers
+	NUMBER, // numbers (includes the dot)
+	STRING, // words (includes the dot)
 	COLON, // :
 	SEMICOLON, // ;
+	SLASH, // /
 	END_OF_FILE, // end of the file
 	UNKNOWN // anything else
-}	ttype;
+};
 
 
 struct configToken {
-	TokenType	type; //token's type
+	tokenType	type; //token's type
 	std::string	value; //token's value
 	
-	configToken(TokenType t, std::string v) : type(t), value(v) {}	//constructor -> already sets type & value while creating the token
+	configToken(tokenType t, std::string v) : type(t), value(v) {}	//constructor -> already sets type & value while creating the token
 };
 
 class	ConfTokeniser {

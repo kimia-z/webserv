@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/05 10:30:28 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/20 12:09:53 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/23 14:25:36 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,10 @@
 #include "Server42.hpp"
 #include "ServerMain.hpp"
 #include "ConfigTokeniser.hpp"
+
+//headers for the main.cpp
+#include <fstream> //for ifstream
+#include <sstream> //for stringstream
 
 #endif
 
