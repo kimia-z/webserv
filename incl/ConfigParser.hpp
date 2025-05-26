@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/20 12:42:16 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/20 12:43:11 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/26 11:15:08 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,30 @@
 # define CONFIGPARSER_HPP
 
 #include <iostream>
+#include "ConfigTokeniser.hpp"
 
+class ConfigParser {
+	public:
+		ConfigParser();
+		ConfigParser(std::stringstream& buffer);
+		ConfigParser(const ConfigParser& copy);
+		ConfigParser& operator=(const ConfigParser& copy);
+		~ConfigParser();
+	
+		ConfTokeniser	getTokeniser() const;
+		cToken			getCurrentToken() const;
+		
+		void			setTokeniser(const ConfTokeniser& tokeniser);
+		void			setCurrentToken(const cToken& token);
+		
+		int				parseConfig();
+		int				parseServerBlock();
+		int				configError(const std::string& errorMessage) const;
 
+	
+	private:
+		ConfTokeniser	tokeniser_;
+		cToken			currentToken_;
+};
 
 #endif

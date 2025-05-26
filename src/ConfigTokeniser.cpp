@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   ConfigTokeniser.cpp                                :+:    :+:            */
+/*   cTokeniser.cpp                                :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/20 11:28:02 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/23 14:27:02 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/05/26 10:38:31 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,19 +14,21 @@
 
 //canonical form
 
-ConfTokeniser::ConfTokeniser() {
+ConfTokeniser::ConfTokeniser(): allConfig_(""), currentPos_(allConfig_.begin()), currentLine_(1) {
 	std::cout << "ConfToekniser default constructor called" << std::endl;
 }
 
 ConfTokeniser::ConfTokeniser(const std::string& config) {
 	allConfig_ = config;
 	currentPos_ = allConfig_.begin();
+	currentLine_ = 1;
 	std::cout << "ConfTokeniser constructor with param called" << std::endl;
 }
 
 ConfTokeniser::ConfTokeniser(const ConfTokeniser& copy): 
 	allConfig_(copy.allConfig_),
-	currentPos_(copy.currentPos_) {
+	currentPos_(copy.currentPos_),
+	currentLine_(copy.currentLine_) {
 	std::cout << "ConfTokeniser copy constructor called" << std::endl;
 }
 
@@ -34,6 +36,7 @@ ConfTokeniser&	ConfTokeniser::operator=(const ConfTokeniser& copy) {
 	if (this != &copy) {
 		allConfig_ = copy.allConfig_;
 		currentPos_ = copy.currentPos_;
+		currentLine_ = copy.currentLine_;
 	}
 	std::cout << "ConfTokeniser copy assignment operator called" << std::endl;
 	return (*this);
@@ -76,49 +79,67 @@ void	ConfTokeniser::skipWhiteSpaceComments() {
 
 /// @brief checks what type is the token (see the tokenType enum)
 /// @return created token
-configToken	ConfTokeniser::defineToken() {
+cToken	ConfTokeniser::defineToken() {
 	
-	skipWhiteSpaceComments();
-	if (currentPos_ == allConfig_.end())
-		return (configToken(END_OF_FILE, ""));
-	if (*currentPos_ == '{') {
-		currentPos_++;
-		return (configToken(OPEN_BRACE, "{"));
-	}
-	if (*currentPos_ == '}') {
-		currentPos_++;
-		return (configToken(CLOSE_BRACE, "}"));
-	}
-	if (*currentPos_ == ':') {
-		currentPos_++;
-		return (configToken(COLON, ":"));
-	}
-	if (*currentPos_ == ';') {
-		currentPos_++;
-		return (configToken(SEMICOLON, ";"));
-	}
-	if (*currentPos_ == '/') {
-		currentPos_++;
-		return (configToken(SLASH, "/"));
-	}
-	std::string	tValue;
-	if (isdigit(*currentPos_)) {
-		while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isdigit(*currentPos_) || *currentPos_ == '.')) {
-			tValue += *currentPos_;
-			currentPos_++;
+	while (currentPos_ != allConfig_.end()) {
+		skipWhiteSpaceComments();
+		if (currentPos_ == allConfig_.end()) {
+			std::cout << "EOF found" << std::endl;
+			return (cToken(END_OF_FILE, ""));
 		}
-		return (configToken(NUMBER, tValue));
-	}
-	if (isalpha(*currentPos_)) {
-		while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isalpha(*currentPos_) || isdigit(*currentPos_) || *currentPos_ == '-' || *currentPos_ == '_' || *currentPos_ == '.')) {
-			tValue += *currentPos_;
+		if (*currentPos_ == '{') {
 			currentPos_++;
+			std::cout << "{ foung" << std::endl;
+			return (cToken(OPEN_BRACE, "{"));
 		}
-		return (configToken(STRING, tValue));
+		if (*currentPos_ == '}') {
+			currentPos_++;
+			std::cout << "} found" << std::endl;
+			return (cToken(CLOSE_BRACE, "}"));
+		}
+		if (*currentPos_ == ':') {
+			currentPos_++;
+			std::cout << ": found" << std::endl;
+			return (cToken(COLON, ":"));
+		}
+		if (*currentPos_ == ';') {
+			currentPos_++;
+			std::cout << "; found" << std::endl;
+			return (cToken(SEMICOLON, ";"));
+		}
+		if (*currentPos_ == '/') {
+			currentPos_++;
+			std::cout << "/ found" << std::endl;
+			return (cToken(SLASH, "/"));
+		}
+		std::string	tValue;
+		if (isdigit(*currentPos_)) {
+			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isdigit(*currentPos_) || *currentPos_ == '.')) {
+				tValue += *currentPos_;
+				currentPos_++;
+			}
+			std::cout << tValue << " found" << std::endl;
+			return (cToken(NUMBER, tValue));
+		}
+		if (isalpha(*currentPos_)) {
+			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isalpha(*currentPos_) || isdigit(*currentPos_) || *currentPos_ == '-' || *currentPos_ == '_' || *currentPos_ == '.')) {
+				tValue += *currentPos_;
+				currentPos_++;
+			}
+			std::cout << tValue << " found" << std::endl;
+			return (cToken(STRING, tValue));
+		}
+		if (*currentPos_ == '\n') {
+			currentLine_++;
+			currentPos_++;
+			std::cout << "\\n found" << std::endl;
+		}
 	}
+	std::string tValue;
 	while (currentPos_ != allConfig_.end() && *currentPos_ != '\n') {
 		tValue += *currentPos_;
 		currentPos_++;
 	}
-	return (configToken(UNKNOWN, tValue));
+	std::cout << "Unknown input: " << tValue << " found" << std::endl;
+	return (cToken(UNKNOWN, tValue));
 }

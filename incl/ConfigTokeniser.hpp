@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   ConfigTokeniser.hpp                                :+:    :+:            */
+/*   cTokeniser.hpp                                :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef	CONFIGTOKENISER_HPP
-# define CONFIGTOKENISER_HPP
+#ifndef	cTokenISER_HPP
+# define cTokenISER_HPP
 
 #include <iostream>
 #include <string> //for std::string::iterator
@@ -29,11 +29,11 @@ enum	tokenType {
 };
 
 
-struct configToken {
+struct cToken {
 	tokenType	type; //token's type
 	std::string	value; //token's value
 	
-	configToken(tokenType t, std::string v) : type(t), value(v) {}	//constructor -> already sets type & value while creating the token
+	cToken(tokenType t, std::string v) : type(t), value(v) {}	//constructor -> already sets type & value while creating the token
 };
 
 class	ConfTokeniser {
@@ -51,11 +51,12 @@ class	ConfTokeniser {
 	void	setCurrentPos(std::string::iterator pos);
 
 	void		skipWhiteSpaceComments(); //skips white spaces & comments
-	configToken	defineToken(); //returns defined token
+	cToken		defineToken(); //returns defined token
 	
 	private:
 	std::string				allConfig_; //config file saved as a string
 	std::string::iterator	currentPos_; //current position in the saved string
+	int						currentLine_; //current line number for error handling
 };
 
 #endif
