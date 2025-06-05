@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include "ConfigTokeniser.hpp"
+#include "SingleServer.hpp"
 
 class ConfigParser {
 	public:
@@ -30,8 +31,8 @@ class ConfigParser {
 		void			setTokeniser(const ConfTokeniser& tokeniser);
 		void			setCurrentToken(const cToken& token);
 		
-		int				parseConfig();
-		int				parseServerBlock();
+		int				parseConfig(std::vector<SingleServer>& servers);
+		int				parseServerBlock(std::vector<SingleServer>& servers);
 		int				configError(const std::string& errorMessage) const;
 
 	

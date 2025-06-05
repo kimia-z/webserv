@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 
 #include "../incl/ConfigParser.hpp"
-#include "../incl/ServerMain.hpp"
 
 ConfigParser::ConfigParser(): tokeniser_(nullptr), currentToken_(currentToken_.type = UNKNOWN, currentToken_.value = "") {
 	std::cout << "ConfigParser default constructor called" << std::endl;
@@ -64,8 +63,10 @@ int	ConfigParser::configError(const std::string& errorMessage) const {
 	return (EXIT_FAILURE);
 }
 
-int	ConfigParser::parseServerBlock() {
+int	ConfigParser::parseServerBlock(std::vector<SingleServer>& servers) {
 	std::cout << "Parsing server block" << std::endl;
+	SingleServer	newServer;
+	
 	currentToken_ = tokeniser_.defineToken();
 	if (currentToken_.type != OPEN_BRACE) {
 		return (configError("expected '{' after 'server' keyword"));
@@ -74,12 +75,30 @@ int	ConfigParser::parseServerBlock() {
 		currentToken_ = tokeniser_.defineToken();
 		if (currentToken_.type == STRING) {
 			if (currentToken_.value == "listen") {
-				//fill up the server's listen port
+				currentToken_ = tokeniser_.defineToken();
+				if (currentToken_.type != NUMBER) {
+					return (configError("expected an IP address"));
+				}
+				//TODO check if the IP address is correct
+				newServer.setServIP(currentToken_.value);
+				currentToken_ = tokeniser_.defineToken();
+				if (currentToken_.type != SEMICOLON) {
+					return (configError("expected ':' after the IP address"));
+				}
+				currentToken_ = tokeniser_.defineToken();
+				if (currentToken_.type != NUMBER) {
+					return (configError("expected a port number"));
+				}
+				//TODO check if the port number is correct
+				newServer.setServPort(std::stoi(currentToken_.value));
 			}
+			currentToken_ = tokeniser_.defineToken();
 			if (currentToken_.value == "server_name") {
-				//fill in the server's name
+				std::cout << "going to fill in the server's name" << std::endl;
+				newServer.set//fill in the server's name
 			}
 			if (currentToken_.value == "location") {
+				std::cout << "going to parse the location part" << std::endl;
 				//fill in the location block
 			}
 			if (currentToken_.type == CLOSE_BRACE) {
@@ -89,18 +108,23 @@ int	ConfigParser::parseServerBlock() {
 				return (configError("expected '}' to close the server block"));
 			}
 		}
+		servers.push_back(newServer);
 	}
 	return (EXIT_SUCCESS);
 }
 
-int	ConfigParser::parseConfig() {
+int	ConfigParser::parseConfig(std::vector<SingleServer>& servers) {
 	currentToken_ = tokeniser_.defineToken();
 	while (currentToken_.type != END_OF_FILE) {
 		if (currentToken_.type == STRING && currentToken_.value == "server") {
-			parseServerBlock();
+			if (parseServerBlock(servers) != EXIT_SUCCESS) {
+				return (EXIT_FAILURE);
+			}
 		}
 		else {
 			return (configError("expected 'server' keyword"));
 		}
+		currentToken_ = tokeniser_.defineToken();
 	}
+	return (EXIT_SUCCESS);
 }

@@ -15,7 +15,7 @@
 //canonical form
 
 ConfTokeniser::ConfTokeniser(): allConfig_(""), currentPos_(allConfig_.begin()), currentLine_(1) {
-	std::cout << "ConfToekniser default constructor called" << std::endl;
+	std::cout << "ConfTokeniser default constructor called" << std::endl;
 }
 
 ConfTokeniser::ConfTokeniser(const std::string& config) {

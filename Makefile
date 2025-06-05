@@ -20,7 +20,7 @@ NAME = webserv
 SRC_FILES = src/main.cpp \
 			src/cTokeniser.cpp \
 			src/Server42.cpp \
-			src/ServerMain.cpp
+			src/SingleServer.cpp
 
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)

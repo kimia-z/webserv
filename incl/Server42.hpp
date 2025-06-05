@@ -28,33 +28,16 @@ class Server42 {
 		~Server42();
 
 		// getters:
-		// int											getServPort() const;
-		// int											getServFd() const;
-		std::string									getServHost() const;
-		std::string									getServRoot() const;
-		std::vector<std::string>					getServName() const;
-		const std::unordered_map<int, std::string>	&getErrorPages() const; //using "const &"" as a return value is faster, cause the map doesn't need to be copied
+		
+		
 		
 		//setters:
-		// void	setServPort(int newServPort);
-		// void	setServFd(int newServFd);
-		void	setServHost(const std::string &newServHost);
-		void	setServRoot(const std::string &newServRoot);
-		void	setServName(const std::vector<std::string> &newServName);
-		void	setErrorPages(const int errorNb, const std::string &newErrorPage);
+		
 
 		
 	
 	private:
-		// int										serverPort_;
-		// int										serverFd_;
-		std::string								serverHost_;
-		std::string								serverRoot_;
-		std::vector<std::string>				serverName_;
-		std::unordered_map<int, std::string>	errorPage_;
-		
-		
-		
+		std::vector<SingleServer>				servers_;	
 };
 
 #endif

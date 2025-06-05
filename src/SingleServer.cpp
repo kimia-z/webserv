@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   ServerMain.cpp                                     :+:    :+:            */
+/*   SingleServer.cpp                                     :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: kziari <kziari@student.42.fr>                +#+                     */
 /*                                                   +#+                      */
@@ -10,82 +10,169 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../incl/ServerMain.hpp"
+#include "../incl/SingleServer.hpp"
 
 //basic canonical form
 
-ServerMain::ServerMain():
+SingleServer::SingleServer():
+	serverName_(0),
+	serverHost_(""),
+	serverRoot_(""),
+	serverIP_(""),
+	serverPortString_("8081"), //temp
+	serverPortInt_(8081), // temp
 	serverFd_(-1),
-	serverPort_(8081), // I changed the port for now!
-	res_(nullptr)
+	clientFd_(-1),
+	res_(nullptr),
+	errorPage_(0)
 	{
-	std::cout << "ServerMain was constructed" << std::endl;
+	std::cout << "SingleServer was constructed" << std::endl;
 }
 
-ServerMain::ServerMain(int port):
+SingleServer::SingleServer(int port):
+	serverName_(0),
+	serverHost_(""),
+	serverRoot_(""),
+	serverIP_(""),
+	serverPortString_(std::to_string(port)),
 	serverFd_(-1),
-	res_(nullptr)
+	clientFd_(-1),
+	res_(nullptr),
+	errorPage_(0)
 	{
-	serverPort_ = port;
-	std::cout << "ServerMain with port: " << port << " was constructed" <<std::endl;
+	serverPortInt_ = port;
+	std::cout << "SingleServer with port: " << port << " was constructed" <<std::endl;
 }
 
-ServerMain::ServerMain(const ServerMain& copy):
+SingleServer::SingleServer(const SingleServer& copy):
+	serverName_(copy.serverName_),
+	serverHost_(copy.serverHost_),
+	serverRoot_(copy.serverRoot_),
+	serverIP_(copy.serverIP_),
+	serverPortString_(copy.serverPortString_),
+	serverPortInt_(copy.serverPortInt_),
 	serverFd_(copy.serverFd_),
-	serverPort_(copy.serverPort_),
-	res_(copy.res_)
+	clientFd_(copy.clientFd_),
+	res_(copy.res_),
+	errorPage_(copy.errorPage_)
 	{
-	std::cout << "ServerMain's copy was constructed" << std::endl;
+	std::cout << "SingleServer's copy was constructed" << std::endl;
 }
 
-ServerMain&	ServerMain::operator=(const ServerMain& copy) {
+SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 	if (this != &copy) {
+		serverName_ = copy.serverName_;
+		serverHost_ = copy.serverHost_;
+		serverRoot_ = copy.serverRoot_;
+		serverIP_ = copy.serverIP_;
+		serverPortString_ = copy.serverPortString_;
+		serverPortInt_ = copy.serverPortInt_;
 		serverFd_ =copy.serverFd_;
-		serverPort_ = copy.serverPort_;
+		clientFd_ = copy.clientFd_;
 		res_ = copy.res_;
+		errorPage_ = copy.errorPage_;
 	}
-	std::cout << "ServerMain's copy was created with the copy assignment operator" << std::endl;
+	std::cout << "SingleServer's copy was created with the copy assignment operator" << std::endl;
 	return (*this);
 }
 
-ServerMain::~ServerMain() {
+SingleServer::~SingleServer() {
 	if (res_)
 		freeaddrinfo(res_);
 	if (serverFd_ >= 0)
 		close(serverFd_);
-	std::cout << "ServerMain was destructed" << std::endl;
+	std::cout << "SingleServer was destructed" << std::endl;
 }
 
 // getters
-int	ServerMain::getServFd() const {
+std::vector<std::string>	SingleServer::getServName() const {
+	return (serverName_);
+}
+
+std::string	SingleServer::getServHost() const {
+	return (serverHost_);
+}
+
+std::string	SingleServer::getServRoot() const {
+	return (serverRoot_);
+}
+
+std::string SingleServer::getServIP() const {
+	return (serverIP_);
+}
+
+std::string	SingleServer::getServPortString() const {
+	return (serverPortString_);
+}
+
+int	SingleServer::getServPortInt() const {
+	return (serverPortInt_);
+}
+
+int	SingleServer::getServFd() const {
 	return (serverFd_);
 }
 
-int	ServerMain::getServPort() const {
-	return (serverPort_);
+int	SingleServer::getClientFd() const {
+	return (clientFd_);
 }
 
-addrinfo	*ServerMain::getResults() const {
+addrinfo	*SingleServer::getResults() const {
 	return (res_);
 }
 
+const std::unordered_map<int, std::string>&	SingleServer::getErrorPages() const {
+	return (errorPage_);
+}
+
 // setters
-void	ServerMain::setServPort(int newServPort) {
-	serverPort_ = newServPort;
+
+void	SingleServer::setServName(const std::vector<std::string> &newServName) {
+	serverName_ = newServName;
 }
 
-void	ServerMain::setServFd(int newServFd) {
-	serverFd_ = newServFd;
+void	SingleServer::setServHost(const std::string &newServHost) {
+	serverHost_ = newServHost;
 }
 
-void	ServerMain::setResults(addrinfo *newResult) {
+void	SingleServer::setServRoot(const std::string &newServRoot) {
+	serverRoot_ = newServRoot;
+}
+
+void	SingleServer::setServIP(const std::string& newServIP) {
+	serverIP_ = newServIP;
+}
+
+void	SingleServer::setServPortString(const std::string& newServPortStr) {
+	serverPortString_ = newServPortStr;
+}
+
+void	SingleServer::setServPortInt(int newServPortInt) {
+	serverPortInt_ = newServPortInt;
+}
+
+void	SingleServer::setResults(addrinfo *newResult) {
 	if (res_)
 		freeaddrinfo(res_);
 	res_ = newResult;
 }
 
-// Suggestion name for this member function: initializeSocket()/setupSocket()
-void	ServerMain::startSocket() {
+void	SingleServer::setServFd(int newServFd) {
+	serverFd_ = newServFd;
+}
+
+void	SingleServer::setClientFd(int newClientFd) {
+	clientFd_ = newClientFd;
+}
+
+void	SingleServer::setErrorPages(const int errorNb, const std::string &newErrorPage) {
+	errorPage_[errorNb] = newErrorPage;
+}
+
+
+
+
+void	SingleServer::initSocket() {
 	struct addrinfo	hints;
 	struct addrinfo	*iterationPointer;
 	int				status;
@@ -95,7 +182,7 @@ void	ServerMain::startSocket() {
 	hints.ai_family = AF_UNSPEC; //works for both IPv4 & IPv6
 	hints.ai_socktype = SOCK_STREAM; //for the TCP
 	hints.ai_flags = AI_PASSIVE; // fills it in with the localhost address
-	portString = std::to_string(serverPort_);
+	portString = std::to_string(serverPortInt_);
 	
 	if ((status = getaddrinfo(NULL, portString.c_str(), &hints, &res_)) != 0) {
 		std::cerr << "getaddrinfo error: " << gai_strerror(status) << std::endl;
@@ -141,11 +228,11 @@ void	ServerMain::startSocket() {
 		std::cerr << RED << "listen() failed: " << strerror(errno) << RESET << std::endl;
 		//TODO return? how to stop the program - no exit() allowed
 	}
-	std::cout << "listening on port " << serverPort_ << std::endl;
+	std::cout << "listening on port " << serverPortInt_ << std::endl;
 }
 
 // Suggestion name for this member function: acceptConnections()
-void ServerMain::startConnection() {
+void SingleServer::acceptConnections() {
 	struct sockaddr_storage other_addr;
 	char buffer[30000];
 	

@@ -16,12 +16,14 @@
 
 
 #include "Server42.hpp"
-#include "ServerMain.hpp"
+#include "SingleServer.hpp"
 #include "ConfigTokeniser.hpp"
+#include "ConfigParser.hpp"
 
 //headers for the main.cpp
 #include <fstream> //for ifstream
 #include <sstream> //for stringstream
+#include <vector> //for vector
 
 #endif
 

@@ -47,11 +47,17 @@ int	main(int argc, char **argv)
 	confFile.close();
 	std::cout << "test\n" << buffer.str() << std::endl;
 
+	ConfigParser	confParser(buffer);
+	std::vector<SingleServer> servers;
+	if (confParser.parseConfig(servers) != EXIT_SUCCESS) {
+		std::cerr << "Error: configuration file parsing failed" << std::endl;
+		return (-1);
+	}
 	//parse the config file and populate the server
 	
-	ServerMain	server;
+	SingleServer	server;
 
-	server.startSocket();
-	server.startConnection();
+	server.initSocket();
+	server.acceptConnections();
 	return (0);
 }
