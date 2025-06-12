@@ -18,6 +18,8 @@
 #include <unistd.h> //for close()
 #include <cstring> //for memset()
 #include <string> //for to_string()
+#include <vector> //for std::vector
+#include <unordered_map> // for std::unordered_map
 
 #include "Server42.hpp"
 

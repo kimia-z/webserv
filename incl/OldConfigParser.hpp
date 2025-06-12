@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   ConfigParser.hpp                                   :+:    :+:            */
+/*   OldConfigParser.hpp                                :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/20 12:42:16 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/26 11:15:08 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/12 11:38:20 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,10 @@
 # define CONFIGPARSER_HPP
 
 #include <iostream>
-#include "ConfigTokeniser.hpp"
+#include "OldConfigTokeniser.hpp"
 #include "SingleServer.hpp"
+
+class SingleServer;
 
 class ConfigParser {
 	public:
@@ -25,11 +27,13 @@ class ConfigParser {
 		ConfigParser& operator=(const ConfigParser& copy);
 		~ConfigParser();
 	
-		ConfTokeniser	getTokeniser() const;
-		cToken			getCurrentToken() const;
+		ConfTokeniser		getTokeniser() const;
+		// cToken				getCurrentToken() const;
+		// std::vector<cToken> getAllTokens() const;
 		
 		void			setTokeniser(const ConfTokeniser& tokeniser);
-		void			setCurrentToken(const cToken& token);
+		// void			setCurrentToken(const cToken& token);
+		// void			setAllTokens(const std::vector<cToken>& tokens);
 		
 		int				parseConfig(std::vector<SingleServer>& servers);
 		int				parseServerBlock(std::vector<SingleServer>& servers);
@@ -37,8 +41,9 @@ class ConfigParser {
 
 	
 	private:
-		ConfTokeniser	tokeniser_;
-		cToken			currentToken_;
+		ConfTokeniser		tokeniser_;
+		// std::vector<cToken>	allTokens_;
+		// cToken				currentToken_;
 };
 
 #endif

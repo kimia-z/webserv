@@ -127,15 +127,15 @@ const std::unordered_map<int, std::string>&	SingleServer::getErrorPages() const 
 
 // setters
 
-void	SingleServer::setServName(const std::vector<std::string> &newServName) {
+void	SingleServer::setServName(const std::vector<std::string>& newServName) {
 	serverName_ = newServName;
 }
 
-void	SingleServer::setServHost(const std::string &newServHost) {
+void	SingleServer::setServHost(const std::string& newServHost) {
 	serverHost_ = newServHost;
 }
 
-void	SingleServer::setServRoot(const std::string &newServRoot) {
+void	SingleServer::setServRoot(const std::string& newServRoot) {
 	serverRoot_ = newServRoot;
 }
 

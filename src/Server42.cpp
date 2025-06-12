@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/13 10:30:48 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/16 13:10:50 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/11 11:46:10 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,29 +14,18 @@
 
 //basic canonical form
 
-Server42::Server42():
-	serverHost_(""),
-	serverRoot_(""),
-	serverName_(0),
-	errorPage_(0)
-{
+Server42::Server42() {
 	std::cout << "Server42 was created" << std::endl;
 }
 
-Server42::Server42(const Server42& copy):
-	serverHost_(copy.serverHost_),
-	serverRoot_(copy.serverRoot_),
-	serverName_(copy.serverName_),
-	errorPage_(copy.errorPage_) {
+Server42::Server42(const Server42& copy) {
+	servers_ = copy.servers_;
 	std::cout << "Server42's copy was created" << std::endl;
 }
 
 Server42& Server42::operator=(const Server42& copy) {
 	if (this != &copy) {
-		serverHost_ = copy.serverHost_;
-		serverRoot_ = copy.serverRoot_;
-		serverName_ = copy.serverName_;
-		errorPage_ = copy.errorPage_;
+		servers_ = copy.servers_;
 	}
 	std::cout << "Server42's copy was created with the copy assignment operator" << std::endl;
 	return (*this);
@@ -48,5 +37,12 @@ Server42::~Server42() {
 
 //getters:
 
+std::vector<SingleServer> Server42::getServers() const {
+	return (servers_);
+}
 
 //setters:
+
+void	Server42::addServer(const SingleServer& newServer) {
+	servers_.push_back(newServer);
+}

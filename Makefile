@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>                +#+                      #
 #                                                    +#+                       #
 #    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
-#    Updated: 2025/05/26 10:46:20 by mstencel      ########   odam.nl          #
+#    Updated: 2025/06/12 13:53:02 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,7 +18,7 @@ ITALIC = \033[3m
 NAME = webserv
 
 SRC_FILES = src/main.cpp \
-			src/cTokeniser.cpp \
+			src/ConfParser.cpp \
 			src/Server42.cpp \
 			src/SingleServer.cpp
 
