@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/12 13:53:16 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/18 08:03:35 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,9 +40,10 @@ enum	tokenType {
 struct cToken {
 	tokenType	type; //token's type
 	std::string	value; //token's value
+	size_t		line; //line in the file where the token was found
 	
-	cToken() : type(EMPTY), value("") {} //default constructor
-	cToken(tokenType t, std::string v) : type(t), value(v) {}	//constructor -> already sets type & value while creating the token
+	cToken() : type(EMPTY), value(""), line(1) {} //default constructor
+	cToken(tokenType t, std::string v, size_t l) : type(t), value(v), line(l) {}	//constructor -> already sets type & value while creating the token
 };
 
 class	ConfParser {
@@ -66,9 +67,10 @@ class	ConfParser {
 		
 		cToken				defineToken(); //returns defined token
 		void				skipWhiteSpaceComment(); //skips white spaces & comments
-
+		int					tokensCheck(); // runs basic checks on the tokens
+		
 		int					parseConfig(Server42& servers);
-		int					populateServers(Server42& servers);
+		int					populateServers(Server42& servers, size_t& i);
 		int					parseServerBlock(std::vector<SingleServer>& server);
 
 	private:

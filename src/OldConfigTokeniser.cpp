@@ -79,7 +79,7 @@ void	ConfTokeniser::skipWhiteSpaceComments() {
 			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n') {
 				*currentPos_++;
 				// i++;
-				std::cout << "in skipping currently: " << i << std::endl;
+				// std::cout << "in skipping currently: " << i << std::endl;
 			}
 		}
 		else
