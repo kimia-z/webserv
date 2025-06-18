@@ -19,10 +19,8 @@
 #include "Server42.hpp"
 class Server42;
 
-// #include "SingleServer.hpp"
-// class SingleServer;
-
-
+#include "SingleServer.hpp"
+class SingleServer;
 
 enum	tokenType {
 	OPEN_BRACE, // {

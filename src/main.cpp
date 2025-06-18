@@ -12,12 +12,13 @@
 
 #include "../incl/Webserv42.hpp"
 
-/// @brief checks if the conf file can be opened, if it's empty
+/// @brief opens the conFile and saves it in conFile, 
+	// checks if the conf file can be opened, if it's empty
 /// @param path 
 /// @return 
-std::ifstream	openConfFile(const char *path) {
+void	openConfFile(const char *path, std::ifstream& conFile) {
 
-	std::ifstream	conFile(path, std::ifstream::in);
+	conFile.open(path, std::ifstream::in);
 	if (!conFile.is_open()) {
 		throw std::runtime_error("conf file cannot be opened");
 	}
@@ -25,7 +26,6 @@ std::ifstream	openConfFile(const char *path) {
 		conFile.close();
 		throw std::runtime_error("configuration file is empty");
 	}
-	return (conFile);
 }
 
 int	main(int argc, char **argv)
@@ -36,7 +36,7 @@ int	main(int argc, char **argv)
 	}
 	std::ifstream	confFile;
 	try {
-		confFile = argc == 2 ? openConfFile(argv[1]) : openConfFile("webserv.conf");
+		 openConfFile(argc == 2 ? argv[1] : "webserv.conf", confFile);
 	}
 	catch (const std::exception& e) {
 		std::cerr << "Error: " << e.what() << std::endl;
