@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/18 09:22:12 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/18 10:50:09 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -197,19 +197,55 @@ int	ConfParser::setAllTokens() {
 	return (EXIT_SUCCESS);
 }
 
+// int	ConfParser::populateLocation(SingleServer& server, size_t& i) {
+	
+	
+// 	// add the location's values to the server
+// 	return (EXIT_SUCCESS);
+// }
+
 /// @brief 
 /// @param servers 
 /// @param i starts with the next token after "server"
 /// @return 
 int	ConfParser::populateServers(Server42& servers, size_t& i) {
 	
+	i++;
 	if (allTokens_[i].type != OPEN_BRACE) {
 		std::cerr << "Error: Incorrect config file: expected '{' after 'server' keyword on the line: " << allTokens_[i].line << std::endl;
 		return (EXIT_FAILURE);
 	}
 	i++; // go to the next token after the opening brace
-	
-	//populate the server block
+	SingleServer	newServer;
+
+	while (i < allTokens_.size()) {
+		if (allTokens_[i].type == STRING) {
+			if (allTokens_[i].value == "listen") {
+				//populate the server's port and IP
+			}
+			else if (allTokens_[i].value == "server_name") {
+				//populate the server's name
+			}
+			else if (allTokens_[i].value == "location") {
+				// if (populateLocation(newServer, i) == EXIT_FAILURE) {
+				// 	return (EXIT_FAILURE);
+				// }
+				//populate the server's location
+			}
+			else if (allTokens_[i].value == "client_max_body_size") {
+				//populate the server's max body size
+			}
+			else if (allTokens_[i].value == "error_page") {
+				//populate the server's error pages
+			}
+			else {
+				std::cerr << "Error: Incorrect config file: unknown keyword ;" << allTokens_[i].value << "' at line " << allTokens_[i].line << std::endl;
+				return (EXIT_FAILURE);
+			}
+		}
+		i++;
+	}
+	servers.addServer(newServer);
 	
 	return (EXIT_SUCCESS);
 }
@@ -222,7 +258,6 @@ int ConfParser::parseConfig(Server42& servers) {
 	}
 	for (size_t i(0); i < allTokens_.size(); i++) {
 		if (allTokens_[i].type == STRING && allTokens_[i].value == "server") {
-			i++;
 			if (populateServers(servers, i) == EXIT_FAILURE) {
 				std::cerr << "Error following up - from populateServers() in parseConfig()" << std::endl;
 				return (EXIT_FAILURE);

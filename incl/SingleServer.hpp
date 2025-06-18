@@ -28,6 +28,13 @@
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 
+struct	location {
+	std::string					path;
+	std::string					index;
+	std::vector<std::string>	method;
+	bool						autoindex;
+};
+
 class SingleServer {
 	
 	public:
@@ -66,16 +73,17 @@ class SingleServer {
 		void	acceptConnections();
 	
 	private:
-		std::vector<std::string>				serverName_;
-		std::string								serverHost_;
-		std::string								serverRoot_;
-		std::string								serverIP_;
-		std::string								serverPortString_;
-		int										serverPortInt_;
-		int										serverFd_;
-		int										clientFd_;
-		struct addrinfo							*res_;
-		std::unordered_map<int, std::string>	errorPage_;
+		std::vector<std::string>				serverName_; // server's names of the domains
+		std::vector<location>					locations_; // server's urls and their locations
+		// std::string								serverHost_; // server's host, e.g. "localhost" - within the serverName_, so not needed?
+		std::string								serverRoot_; // server's root, e.g. "www/html"
+		std::string								serverIP_; //server's IP as a string
+		std::string								serverPortString_; //server's port as a string
+		int										serverPortInt_; //server's port as an integer
+		int										serverFd_; //socket() fd
+		int										clientFd_; //accept() fd
+		struct addrinfo							*res_; //getaddrinfo() results, needed for bind() & accept()
+		std::unordered_map<int, std::string>	errorPage_; //all error pages, key = error number & value = page path
 		// std::string								rawRequest_;
 };
 

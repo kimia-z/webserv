@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>                +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/13 10:37:48 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/12 13:44:25 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/18 10:48:05 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,7 @@ int	main(int argc, char **argv)
 		std::cerr << "Error: failure of config parsing" << std::endl;
 		return (-1);
 	}
-	
+	// std::cout << "here?" << std::endl;
 	//parse the config file and populate the server
 	
 	SingleServer	server;

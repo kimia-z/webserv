@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/18 08:03:35 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/18 10:47:02 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,6 +69,7 @@ class	ConfParser {
 		
 		int					parseConfig(Server42& servers);
 		int					populateServers(Server42& servers, size_t& i);
+		// int					populateLocation(SingleServer& server, size_t& i);
 		int					parseServerBlock(std::vector<SingleServer>& server);
 
 	private:
