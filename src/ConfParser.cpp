@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/18 10:50:09 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/18 12:08:38 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -210,18 +210,44 @@ int	ConfParser::setAllTokens() {
 /// @return 
 int	ConfParser::populateServers(Server42& servers, size_t& i) {
 	
-	i++;
+	i++; //moving to the open brace token
 	if (allTokens_[i].type != OPEN_BRACE) {
-		std::cerr << "Error: Incorrect config file: expected '{' after 'server' keyword on the line: " << allTokens_[i].line << std::endl;
+		std::cerr << "Error: Incorrect config file: expected '{' after 'server' directive at line: " << allTokens_[i].line << std::endl;
 		return (EXIT_FAILURE);
 	}
 	i++; // go to the next token after the opening brace
 	SingleServer	newServer;
 
-	while (i < allTokens_.size()) {
+	while (i < allTokens_.size() && allTokens_[i].value != "server") {
 		if (allTokens_[i].type == STRING) {
 			if (allTokens_[i].value == "listen") {
-				//populate the server's port and IP
+				i++; //move to the token after listen
+				if (allTokens_[i].type != NUMBER || allTokens_[i].value != "localhost") {
+					std::cerr << "Error: Incorrect config file: expected IP/localhost and port number after 'listen' directive at line " << allTokens_[i].line << std::endl;
+					return (EXIT_FAILURE);
+				}
+				else if (allTokens_[i].value == "localhost") {
+					newServer.setServIP("127.0.0.1");
+				}
+				else {
+					newServer.setServIP(allTokens_[i].value);
+				}
+				i++; // gets to the colon or the next token
+				if (allTokens_[i].type == COLON) {
+					i++; // move to the port number token
+					if (allTokens_[i].type != NUMBER) {
+						std::cerr << "Error: Incorrect config file: expected port number after ':' at line " << allTokens_[i].line << std::endl;
+						return (EXIT_FAILURE);
+					}
+					else {
+						newServer.setServPortString(allTokens_[i].value);
+						newServer.setServPortInt(std::stoi(allTokens_[i].value));
+						i++;
+					}
+				}
+				//somewhere here may be still semicolon - need to check later, now need to go
+				else
+					continue; //should get back to the while loop
 			}
 			else if (allTokens_[i].value == "server_name") {
 				//populate the server's name
@@ -239,9 +265,12 @@ int	ConfParser::populateServers(Server42& servers, size_t& i) {
 				//populate the server's error pages
 			}
 			else {
-				std::cerr << "Error: Incorrect config file: unknown keyword ;" << allTokens_[i].value << "' at line " << allTokens_[i].line << std::endl;
+				std::cerr << "Error: Incorrect config file: unknown directive ;" << allTokens_[i].value << "' at line " << allTokens_[i].line << std::endl;
 				return (EXIT_FAILURE);
 			}
+		}
+		else if (allTokens_[i].type == END_OF_FILE) {
+			return (EXIT_SUCCESS);
 		}
 		i++;
 	}
@@ -256,7 +285,7 @@ int ConfParser::parseConfig(Server42& servers) {
 		std::cerr << "Error following up - from setAllTokens() in parseConfig()" << std::endl;
 		return (EXIT_FAILURE);
 	}
-	for (size_t i(0); i < allTokens_.size(); i++) {
+	for (size_t i(0); allTokens_[i].type != END_OF_FILE; i++) {
 		if (allTokens_[i].type == STRING && allTokens_[i].value == "server") {
 			if (populateServers(servers, i) == EXIT_FAILURE) {
 				std::cerr << "Error following up - from populateServers() in parseConfig()" << std::endl;
