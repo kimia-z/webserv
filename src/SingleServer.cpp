@@ -16,7 +16,7 @@
 
 SingleServer::SingleServer():
 	serverName_(0),
-	serverHost_(""),
+	// serverHost_(""),
 	serverRoot_(""),
 	serverIP_(""),
 	serverPortString_("8081"), //temp
@@ -26,12 +26,12 @@ SingleServer::SingleServer():
 	res_(nullptr),
 	errorPage_(0)
 	{
-	std::cout << "SingleServer was constructed" << std::endl;
+	// std::cout << "SingleServer was constructed" << std::endl;
 }
 
 SingleServer::SingleServer(int port):
 	serverName_(0),
-	serverHost_(""),
+	// serverHost_(""),
 	serverRoot_(""),
 	serverIP_(""),
 	serverPortString_(std::to_string(port)),
@@ -41,12 +41,12 @@ SingleServer::SingleServer(int port):
 	errorPage_(0)
 	{
 	serverPortInt_ = port;
-	std::cout << "SingleServer with port: " << port << " was constructed" <<std::endl;
+	// std::cout << "SingleServer with port: " << port << " was constructed" <<std::endl;
 }
 
 SingleServer::SingleServer(const SingleServer& copy):
 	serverName_(copy.serverName_),
-	serverHost_(copy.serverHost_),
+	// serverHost_(copy.serverHost_),
 	serverRoot_(copy.serverRoot_),
 	serverIP_(copy.serverIP_),
 	serverPortString_(copy.serverPortString_),
@@ -56,13 +56,13 @@ SingleServer::SingleServer(const SingleServer& copy):
 	res_(copy.res_),
 	errorPage_(copy.errorPage_)
 	{
-	std::cout << "SingleServer's copy was constructed" << std::endl;
+	// std::cout << "SingleServer's copy was constructed" << std::endl;
 }
 
 SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 	if (this != &copy) {
 		serverName_ = copy.serverName_;
-		serverHost_ = copy.serverHost_;
+		// serverHost_ = copy.serverHost_;
 		serverRoot_ = copy.serverRoot_;
 		serverIP_ = copy.serverIP_;
 		serverPortString_ = copy.serverPortString_;
@@ -72,7 +72,7 @@ SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 		res_ = copy.res_;
 		errorPage_ = copy.errorPage_;
 	}
-	std::cout << "SingleServer's copy was created with the copy assignment operator" << std::endl;
+	// std::cout << "SingleServer's copy was created with the copy assignment operator" << std::endl;
 	return (*this);
 }
 
@@ -81,7 +81,7 @@ SingleServer::~SingleServer() {
 		freeaddrinfo(res_);
 	if (serverFd_ >= 0)
 		close(serverFd_);
-	std::cout << "SingleServer was destructed" << std::endl;
+	// std::cout << "SingleServer was destructed" << std::endl;
 }
 
 // getters
@@ -89,9 +89,9 @@ std::vector<std::string>	SingleServer::getServName() const {
 	return (serverName_);
 }
 
-std::string	SingleServer::getServHost() const {
-	return (serverHost_);
-}
+// std::string	SingleServer::getServHost() const {
+// 	return (serverHost_);
+// }
 
 std::string	SingleServer::getServRoot() const {
 	return (serverRoot_);
@@ -131,9 +131,9 @@ void	SingleServer::setServName(const std::vector<std::string>& newServName) {
 	serverName_ = newServName;
 }
 
-void	SingleServer::setServHost(const std::string& newServHost) {
-	serverHost_ = newServHost;
-}
+// void	SingleServer::setServHost(const std::string& newServHost) {
+// 	serverHost_ = newServHost;
+// }
 
 void	SingleServer::setServRoot(const std::string& newServRoot) {
 	serverRoot_ = newServRoot;

@@ -15,24 +15,24 @@
 //basic canonical form
 
 Server42::Server42() {
-	std::cout << "Server42 was created" << std::endl;
+	// std::cout << "Server42 was created" << std::endl;
 }
 
 Server42::Server42(const Server42& copy) {
 	servers_ = copy.servers_;
-	std::cout << "Server42's copy was created" << std::endl;
+	// std::cout << "Server42's copy was created" << std::endl;
 }
 
 Server42& Server42::operator=(const Server42& copy) {
 	if (this != &copy) {
 		servers_ = copy.servers_;
 	}
-	std::cout << "Server42's copy was created with the copy assignment operator" << std::endl;
+	// std::cout << "Server42's copy was created with the copy assignment operator" << std::endl;
 	return (*this);
 }
 
 Server42::~Server42() {
-	std::cout << "Server42 was destroyed" << std::endl;
+	// std::cout << "Server42 was destroyed" << std::endl;
 }
 
 //getters:

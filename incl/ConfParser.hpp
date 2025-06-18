@@ -69,6 +69,7 @@ class	ConfParser {
 		
 		int					parseConfig(Server42& servers);
 		int					populateServers(Server42& servers, size_t& i);
+		int					addListen(SingleServer& newServer, size_t& i);
 		// int					populateLocation(SingleServer& server, size_t& i);
 		int					parseServerBlock(std::vector<SingleServer>& server);
 

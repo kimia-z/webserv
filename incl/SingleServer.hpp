@@ -46,7 +46,7 @@ class SingleServer {
 
 		//getters:
 		std::vector<std::string>					getServName() const;
-		std::string									getServHost() const;
+		// std::string									getServHost() const;
 		std::string									getServRoot() const;
 		std::string									getServIP() const;
 		std::string									getServPortString() const;
@@ -58,7 +58,7 @@ class SingleServer {
 
 		//setters:
 		void	setServName(const std::vector<std::string> &newServName);
-		void	setServHost(const std::string &newServHost);
+		// void	setServHost(const std::string &newServHost);
 		void	setServRoot(const std::string &newServRoot);
 		void	setServIP(const std::string& newIP);
 		void	setServPortString(const std::string& newPortStr);

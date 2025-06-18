@@ -13,16 +13,16 @@
 #include "../incl/ConfParser.hpp"
 
 ConfParser::ConfParser(): currentLine_(1) {
-	std::cout << "ConfParser default constructor called" << std::endl;
+	// std::cout << "ConfParser default constructor called" << std::endl;
 }
 
 ConfParser::ConfParser(const std::string& config):
 	allConfig_(config),
 	currentPos_(allConfig_.begin()),
 	currentLine_(1) {
-		std::cout << "ConfParser constructor with param called" << std::endl;
-		std::cout << allConfig_ << std::endl;
-		std::cout << "Current position: " << *currentPos_ << std::endl;
+		// std::cout << "ConfParser constructor with param called" << std::endl;
+		// std::cout << allConfig_ << std::endl;
+		// std::cout << "Current position: " << *currentPos_ << std::endl;
 }
 
 ConfParser::ConfParser(const ConfParser& copy):
@@ -30,7 +30,7 @@ ConfParser::ConfParser(const ConfParser& copy):
 	currentPos_(copy.currentPos_),
 	currentLine_(copy.currentLine_),
 	allTokens_(copy.allTokens_) {
-		std::cout << "ConfParser copy constructor called" << std::endl;
+		// std::cout << "ConfParser copy constructor called" << std::endl;
 }
 
 ConfParser& ConfParser::operator=(const ConfParser& copy) {
@@ -40,12 +40,12 @@ ConfParser& ConfParser::operator=(const ConfParser& copy) {
 		currentLine_ = copy.currentLine_;
 		allTokens_ = copy.allTokens_;
 	}
-	std::cout << "ConfParser copy assignment operator called" << std::endl;
+	// std::cout << "ConfParser copy assignment operator called" << std::endl;
 	return (*this);
 }
 
 ConfParser::~ConfParser() {
-	std::cout << "ConfParser default destructor called" << std::endl;
+	// std::cout << "ConfParser default destructor called" << std::endl;
 }
 
 int	ConfParser::getCurrentLine() const {
@@ -64,7 +64,7 @@ void	ConfParser::setAllConfig(const std::string& config) {
 
 void	ConfParser::skipWhiteSpaceComment() {
 	for (; currentPos_ != allConfig_.end(); currentPos_++) {
-		if (isspace(*currentPos_))
+		if (*currentPos_ == ' ' || *currentPos_ == '\t')
 			continue;
 		else if (*currentPos_ == '#') {
 			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n')
@@ -77,43 +77,48 @@ void	ConfParser::skipWhiteSpaceComment() {
 
 cToken	ConfParser::defineToken() {
 	std::string	tValue;
-	//TODO - if enough time, change it to cases instead of ifs?
 	while (currentPos_ != allConfig_.end()) {
 		skipWhiteSpaceComment();
 		if (currentPos_ == allConfig_.end()) {
-			std::cout << "EOF found" << std::endl;
+			// std::cout << "EOF found" << std::endl;
 			return (cToken(END_OF_FILE, "", currentLine_));
 		}
-		else if (*currentPos_ == '{') {
-			currentPos_++;
-			std::cout << "{ found" << std::endl;
-			return (cToken(OPEN_BRACE, "{", currentLine_));
+
+		char	currentChar(*currentPos_);
+		switch (currentChar) {
+			case '{':
+				currentPos_++;
+				// std::cout << "{ found" << std::endl;
+				return (cToken(OPEN_BRACE, "{", currentLine_));
+			case '}':
+				currentPos_++;
+				// std::cout << "} found" << std::endl;
+				return (cToken(CLOSE_BRACE, "}", currentLine_));
+			case ':':
+				currentPos_++;
+				// std::cout << ": found" << std::endl;
+				return (cToken(COLON, ":", currentLine_));
+			case ';':
+				currentPos_++;
+				// std::cout << "; found" << std::endl;
+				return (cToken(SEMICOLON, ";", currentLine_));
+			case '/':
+				currentPos_++;
+				// std::cout << "/ found" << std::endl;
+				return (cToken(SLASH, "/", currentLine_));
+			case '\n':
+				currentLine_++;
+				currentPos_++;
+				// std::cout << "\\n found" << std::endl;
+				continue; // skip to the next character
+			default:
+				break;
 		}
-		else if (*currentPos_ == '}') {
-			currentPos_++;
-			std::cout << "} found" << std::endl;
-			return (cToken(CLOSE_BRACE, "}", currentLine_));
-		}
-		else if (*currentPos_ == ':') {
-			currentPos_++;
-			std::cout << ": found" << std::endl;
-			return (cToken(COLON, ":", currentLine_));
-		}
-		else if (*currentPos_ == ';') {
-			currentPos_++;
-			std::cout << "; found" << std::endl;
-			return (cToken(SEMICOLON, ";", currentLine_));
-		}
-		else if (*currentPos_ == '/') {
-			currentPos_++;
-			std::cout << "/ found" << std::endl;
-			return (cToken(SLASH, "/", currentLine_));
-		}
-		else if (isdigit(*currentPos_)) {
+		if (isdigit(*currentPos_)) {
 			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isdigit(*currentPos_) || *currentPos_ == '.')) {
 				tValue += *currentPos_;
 				currentPos_++;			}
-			std::cout << tValue << " found" << std::endl;
+			// std::cout << tValue << " found" << std::endl;
 			return (cToken(NUMBER, tValue, currentLine_));
 		}
 		else if (isalpha(*currentPos_)) {
@@ -121,25 +126,20 @@ cToken	ConfParser::defineToken() {
 				tValue.push_back(*currentPos_);
 				currentPos_++;
 			}
-			std::cout << tValue << " found" << std::endl;
+			// std::cout << tValue << " found" << std::endl;
 			return (cToken(STRING, tValue, currentLine_));
-		}
-		else if (*currentPos_ == '\n') {
-			currentLine_++;
-			currentPos_++;
-			std::cout << "\\n found" << std::endl;
 		}
 		else {
 			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n') {
 				tValue += *currentPos_;
 				currentPos_++;
 			}
-			// std::cout << "Unknown input: " << tValue << " found on line " << currentLine_ << std::endl;
+			std::cout << "Unknown input: " << tValue << " found on line " << currentLine_ << std::endl;
 			return (cToken(UNKNOWN, tValue, currentLine_));
 		}
 	}
-	if (currentPos_ == allConfig_.end()) {
-		std::cout << "EOF found" << std::endl;
+		if (currentPos_ == allConfig_.end()) {
+		// std::cout << "EOF found" << std::endl;
 		return (cToken(END_OF_FILE, "", currentLine_));
 	}
 	return (cToken(UNKNOWN, "", currentLine_)); //it shouldn't reach here, but it's not a void funciton, so it needs to return sth
@@ -191,9 +191,9 @@ int	ConfParser::setAllTokens() {
 	if (tokensCheck() == EXIT_FAILURE) {
 		return (EXIT_FAILURE);
 	}
-	for (size_t i = 0; i < allTokens_.size(); i++) {
-		std::cout << "Token: " << allTokens_[i].type << "\tValue: " << allTokens_[i].value << std::endl;
-	}
+	// for (size_t i = 0; i < allTokens_.size(); i++) {
+	// 	std::cout << "Token: " << allTokens_[i].type << "\tValue: " << allTokens_[i].value << std::endl;
+	// }
 	return (EXIT_SUCCESS);
 }
 
@@ -204,6 +204,49 @@ int	ConfParser::setAllTokens() {
 // 	return (EXIT_SUCCESS);
 // }
 
+
+int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
+	i++; //move to the token after listen
+	std::cout << "after listen? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+	if (allTokens_[i].type != NUMBER && allTokens_[i].value != "localhost") {
+		std::cerr << "Error: Incorrect config file: expected IP/localhost and port number after 'listen' directive at line " << allTokens_[i].line << std::endl;
+		return (EXIT_FAILURE);
+	}
+	else if (allTokens_[i].value == "localhost") {
+		newServer.setServIP("127.0.0.1");
+	}
+	else {
+		newServer.setServIP(allTokens_[i].value);
+		// std::cout << "IP is set to: " << newServer.getServIP() << std::endl;
+	}
+	i++; // gets to the colon or the next token
+	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+	if (allTokens_[i].type == COLON) {
+		i++; // move to the port number token
+		std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+		if (allTokens_[i].type != NUMBER) {
+			std::cerr << "Error: Incorrect config file: expected port number after ':' at line " << allTokens_[i].line << std::endl;
+			return (EXIT_FAILURE);
+		}
+		else {
+			newServer.setServPortString(allTokens_[i].value);
+			newServer.setServPortInt(std::stoi(allTokens_[i].value));
+			i++;
+			std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+		}
+	}
+	if (allTokens_[i].type == SEMICOLON) {
+		i++; //move to the next token after ;
+		std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+		return (EXIT_SUCCESS); //should get back to the while loop
+	}
+	else { //no semicolon at the end of the ip & port
+		std::cerr << "Error: Incorrect config file: expected ';' at the end of the 'listen' at line " << allTokens_[i].line << std::endl;
+		return (EXIT_FAILURE);
+	}
+	return (EXIT_SUCCESS);
+}
+
 /// @brief 
 /// @param servers 
 /// @param i starts with the next token after "server"
@@ -211,45 +254,29 @@ int	ConfParser::setAllTokens() {
 int	ConfParser::populateServers(Server42& servers, size_t& i) {
 	
 	i++; //moving to the open brace token
+	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	if (allTokens_[i].type != OPEN_BRACE) {
 		std::cerr << "Error: Incorrect config file: expected '{' after 'server' directive at line: " << allTokens_[i].line << std::endl;
 		return (EXIT_FAILURE);
 	}
 	i++; // go to the next token after the opening brace
+	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	SingleServer	newServer;
 
 	while (i < allTokens_.size() && allTokens_[i].value != "server") {
 		if (allTokens_[i].type == STRING) {
+			//parsing listen directive
 			if (allTokens_[i].value == "listen") {
-				i++; //move to the token after listen
-				if (allTokens_[i].type != NUMBER || allTokens_[i].value != "localhost") {
-					std::cerr << "Error: Incorrect config file: expected IP/localhost and port number after 'listen' directive at line " << allTokens_[i].line << std::endl;
+				if (addListen(newServer, i) == EXIT_FAILURE) {
 					return (EXIT_FAILURE);
 				}
-				else if (allTokens_[i].value == "localhost") {
-					newServer.setServIP("127.0.0.1");
-				}
 				else {
-					newServer.setServIP(allTokens_[i].value);
+					continue;
 				}
-				i++; // gets to the colon or the next token
-				if (allTokens_[i].type == COLON) {
-					i++; // move to the port number token
-					if (allTokens_[i].type != NUMBER) {
-						std::cerr << "Error: Incorrect config file: expected port number after ':' at line " << allTokens_[i].line << std::endl;
-						return (EXIT_FAILURE);
-					}
-					else {
-						newServer.setServPortString(allTokens_[i].value);
-						newServer.setServPortInt(std::stoi(allTokens_[i].value));
-						i++;
-					}
-				}
-				//somewhere here may be still semicolon - need to check later, now need to go
-				else
-					continue; //should get back to the while loop
 			}
 			else if (allTokens_[i].value == "server_name") {
+				i++; //move to the next token after server_name
+				std::cout << "in server_name current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 				//populate the server's name
 			}
 			else if (allTokens_[i].value == "location") {
