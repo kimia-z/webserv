@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/18 10:47:02 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/19 13:57:34 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,6 +66,8 @@ class	ConfParser {
 		cToken				defineToken(); //returns defined token
 		void				skipWhiteSpaceComment(); //skips white spaces & comments
 		int					tokensCheck(); // runs basic checks on the tokens
+
+		int					validateIP(const std::string& ip, size_t line); //validates the IP address
 		
 		int					parseConfig(Server42& servers);
 		int					populateServers(Server42& servers, size_t& i);

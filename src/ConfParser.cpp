@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/18 12:08:38 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/19 13:59:59 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -205,6 +205,32 @@ int	ConfParser::setAllTokens() {
 // }
 
 
+int	ConfParser::validateIP(const std::string& ip, size_t line) {
+	
+	//count the dots
+	//check if the numbers are within 0-255
+
+	int	dotCount(0);
+	for (int i(0); i < ip.size(); i++) {
+		if (ip[i] == '.') {
+			dotCount++;
+			if (i == 0 || i == ip.size() - 1 || ip[i - 1] == '.' || ip[i + 1] == '.') {
+				std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
+				return (EXIT_FAILURE);
+			}
+		}
+	}
+	if (dotCount != 3) {
+		std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
+		return (EXIT_FAILURE);
+	}
+	
+	return (EXIT_SUCCESS);
+}
+
+
+
+
 int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 	i++; //move to the token after listen
 	std::cout << "after listen? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
@@ -216,6 +242,9 @@ int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 		newServer.setServIP("127.0.0.1");
 	}
 	else {
+		if (validateIP(allTokens_[i].value, allTokens_[i].line) == EXIT_FAILURE) {
+			return (EXIT_FAILURE);
+		}
 		newServer.setServIP(allTokens_[i].value);
 		// std::cout << "IP is set to: " << newServer.getServIP() << std::endl;
 	}
