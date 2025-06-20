@@ -16,6 +16,7 @@
 
 SingleServer::SingleServer():
 	serverName_(0),
+	locations_(),
 	// serverHost_(""),
 	serverRoot_(""),
 	serverIP_(""),
@@ -23,22 +24,21 @@ SingleServer::SingleServer():
 	serverPortInt_(8081), // temp
 	serverFd_(-1),
 	clientFd_(-1),
-	res_(nullptr),
-	errorPage_(0)
+	res_(nullptr)
 	{
 	// std::cout << "SingleServer was constructed" << std::endl;
 }
 
 SingleServer::SingleServer(int port):
 	serverName_(0),
+	locations_(),
 	// serverHost_(""),
 	serverRoot_(""),
 	serverIP_(""),
 	serverPortString_(std::to_string(port)),
 	serverFd_(-1),
 	clientFd_(-1),
-	res_(nullptr),
-	errorPage_(0)
+	res_(nullptr)
 	{
 	serverPortInt_ = port;
 	// std::cout << "SingleServer with port: " << port << " was constructed" <<std::endl;
@@ -46,6 +46,7 @@ SingleServer::SingleServer(int port):
 
 SingleServer::SingleServer(const SingleServer& copy):
 	serverName_(copy.serverName_),
+	locations_(copy.locations_),
 	// serverHost_(copy.serverHost_),
 	serverRoot_(copy.serverRoot_),
 	serverIP_(copy.serverIP_),
@@ -53,8 +54,7 @@ SingleServer::SingleServer(const SingleServer& copy):
 	serverPortInt_(copy.serverPortInt_),
 	serverFd_(copy.serverFd_),
 	clientFd_(copy.clientFd_),
-	res_(copy.res_),
-	errorPage_(copy.errorPage_)
+	res_(copy.res_)
 	{
 	// std::cout << "SingleServer's copy was constructed" << std::endl;
 }
@@ -62,6 +62,7 @@ SingleServer::SingleServer(const SingleServer& copy):
 SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 	if (this != &copy) {
 		serverName_ = copy.serverName_;
+		locations_ = copy.locations_;
 		// serverHost_ = copy.serverHost_;
 		serverRoot_ = copy.serverRoot_;
 		serverIP_ = copy.serverIP_;
@@ -70,7 +71,6 @@ SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 		serverFd_ =copy.serverFd_;
 		clientFd_ = copy.clientFd_;
 		res_ = copy.res_;
-		errorPage_ = copy.errorPage_;
 	}
 	// std::cout << "SingleServer's copy was created with the copy assignment operator" << std::endl;
 	return (*this);
@@ -87,6 +87,10 @@ SingleServer::~SingleServer() {
 // getters
 std::vector<std::string>	SingleServer::getServName() const {
 	return (serverName_);
+}
+
+std::vector<location> SingleServer::getLocations() const {
+	return (locations_);
 }
 
 // std::string	SingleServer::getServHost() const {
@@ -121,14 +125,18 @@ addrinfo	*SingleServer::getResults() const {
 	return (res_);
 }
 
-const std::unordered_map<int, std::string>&	SingleServer::getErrorPages() const {
-	return (errorPage_);
-}
+// const std::unordered_map<int, std::string>&	SingleServer::getErrorPages() const {
+// 	return (errorPage_);
+// }
 
 // setters
 
 void	SingleServer::setServName(const std::vector<std::string>& newServName) {
 	serverName_ = newServName;
+}
+
+void	SingleServer::setLocations(const std::vector<location>& newLocation) {
+	locations_ = newLocation;
 }
 
 // void	SingleServer::setServHost(const std::string& newServHost) {
@@ -165,9 +173,9 @@ void	SingleServer::setClientFd(int newClientFd) {
 	clientFd_ = newClientFd;
 }
 
-void	SingleServer::setErrorPages(const int errorNb, const std::string &newErrorPage) {
-	errorPage_[errorNb] = newErrorPage;
-}
+// void	SingleServer::setErrorPages(const int errorNb, const std::string &newErrorPage) {
+// 	errorPage_[errorNb] = newErrorPage;
+// }
 
 
 

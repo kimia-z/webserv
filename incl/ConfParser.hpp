@@ -68,6 +68,7 @@ class	ConfParser {
 		int					tokensCheck(); // runs basic checks on the tokens
 
 		int					validateIP(const std::string& ip, size_t line); //validates the IP address
+		int					validatePort(const std::string port, size_t line); //validates the port number
 		
 		int					parseConfig(Server42& servers);
 		int					populateServers(Server42& servers, size_t& i);

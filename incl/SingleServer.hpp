@@ -29,10 +29,14 @@
 #define YELLOW  "\033[33m"
 
 struct	location {
-	std::string					path;
-	std::string					index;
-	std::vector<std::string>	method;
-	bool						autoindex;
+	std::string								path; //location of the directory
+	std::string								root; // path to the folder with sites
+	std::string								index; // index file (index.html)
+	std::vector<std::string>				allowedMethods; //methods that can be used
+	bool									autoindex; //true/false of autoindex
+	std::string								uploadPath; //path with the uploads' folder
+	std::unordered_map<int, std::string>	errorPages; //all error pages, key = error number & value = page path
+	std::string								redirections; //if applicable, redirection path
 };
 
 class SingleServer {
@@ -46,6 +50,7 @@ class SingleServer {
 
 		//getters:
 		std::vector<std::string>					getServName() const;
+		std::vector<location>						getLocations() const;
 		// std::string									getServHost() const;
 		std::string									getServRoot() const;
 		std::string									getServIP() const;
@@ -58,6 +63,7 @@ class SingleServer {
 
 		//setters:
 		void	setServName(const std::vector<std::string> &newServName);
+		void	setLocations(const std::vector<location> &newLocations);
 		// void	setServHost(const std::string &newServHost);
 		void	setServRoot(const std::string &newServRoot);
 		void	setServIP(const std::string& newIP);
@@ -76,14 +82,13 @@ class SingleServer {
 		std::vector<std::string>				serverName_; // server's names of the domains
 		std::vector<location>					locations_; // server's urls and their locations
 		// std::string								serverHost_; // server's host, e.g. "localhost" - within the serverName_, so not needed?
-		std::string								serverRoot_; // server's root, e.g. "www/html"
+		std::string								serverRoot_; // server's root, path to the folder with sites, for us "www"
 		std::string								serverIP_; //server's IP as a string
 		std::string								serverPortString_; //server's port as a string
 		int										serverPortInt_; //server's port as an integer
 		int										serverFd_; //socket() fd
 		int										clientFd_; //accept() fd
 		struct addrinfo							*res_; //getaddrinfo() results, needed for bind() & accept()
-		std::unordered_map<int, std::string>	errorPage_; //all error pages, key = error number & value = page path
 		// std::string								rawRequest_;
 };
 

@@ -25,22 +25,22 @@ SRC_FILES = src/main.cpp \
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 
-HEADER = incl/Webserv42.hpp
+HEADER_DIR = incl
 
 CPP = c++
-CPP_FLAGS = -Werror -Wextra -Wall
+CPP_FLAGS = -Werror -Wextra -Wall -I $(HEADER_DIR)
 
 RM = rm -rf
 
 all: $(NAME)
 
-$(NAME): $(OBJ_FILES) $(HEADER)
+$(NAME): $(OBJ_FILES)
 	@$(CPP) $(CPP_FLAGS) $(OBJ_FILES) -o $(NAME)
 	@echo "$(GREEN)compilation success: '$(ITALIC)$(NAME)$(GREEN)' created$(RESET)"
 
 $(OBJ_DIR)/%.o: %.cpp
 	@if [ ! -d "$(@D)" ]; then mkdir -p $(@D); fi
-	@$(CPP) $(CPP_FLAGS) -c $< -o $@
+	@$(CPP) $(CPP_FLAGS) -c -I $(HEADER_DIR) $< -o $@
 
 clean:
 	@$(RM) $(OBJ_FILES)

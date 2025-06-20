@@ -145,8 +145,8 @@ cToken	ConfParser::defineToken() {
 	return (cToken(UNKNOWN, "", currentLine_)); //it shouldn't reach here, but it's not a void funciton, so it needs to return sth
 }
 
-/// @brief checks if the token list is empty, checks if th number of pairs of brackets if correct
-/// @return 
+/// @brief checks if the token list is empty, checks if the number of brackets' pairs is correct
+/// @return EXIT_FAILURE upon the error, EXIT_SUCCESS if all is good
 int	ConfParser::tokensCheck() {
 	
 	if (allTokens_.empty()) {
@@ -191,6 +191,7 @@ int	ConfParser::setAllTokens() {
 	if (tokensCheck() == EXIT_FAILURE) {
 		return (EXIT_FAILURE);
 	}
+	// to remove - printing the tokens
 	// for (size_t i = 0; i < allTokens_.size(); i++) {
 	// 	std::cout << "Token: " << allTokens_[i].type << "\tValue: " << allTokens_[i].value << std::endl;
 	// }
@@ -210,26 +211,37 @@ int	ConfParser::validateIP(const std::string& ip, size_t line) {
 	//count the dots
 	//check if the numbers are within 0-255
 
-	int	dotCount(0);
-	for (int i(0); i < ip.size(); i++) {
-		if (ip[i] == '.') {
-			dotCount++;
-			if (i == 0 || i == ip.size() - 1 || ip[i - 1] == '.' || ip[i + 1] == '.') {
-				std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
-				return (EXIT_FAILURE);
-			}
-		}
-	}
-	if (dotCount != 3) {
+	if (std::count(ip.begin(), ip.end(), '.') != 3) {
 		std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
 		return (EXIT_FAILURE);
 	}
-	
+
+	std::string	ipPart;
+	int	start(0);
+	int	end(0);
+	int	ipPartInt(0);
+	for (int i(0); i < 4; i++) {
+		if (i < 3) {
+			end = ip.find('.', start);
+			ipPart = ip.substr(start, end - start);
+		}
+		else {
+			ipPart = ip.substr(start);
+		}
+		if (ipPart.empty() || ipPart.find_first_not_of("0123456789") != std::string::npos) {
+			std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
+			return (EXIT_FAILURE);
+		}
+		ipPartInt = std::stoi(ipPart);
+		// std::cout << ipPartInt << std::endl;
+		if (ipPartInt < 0 || ipPartInt > 255) {
+			std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
+			return (EXIT_FAILURE);
+		}
+		start = end + 1;
+	}
 	return (EXIT_SUCCESS);
 }
-
-
-
 
 int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 	i++; //move to the token after listen
@@ -248,16 +260,24 @@ int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 		newServer.setServIP(allTokens_[i].value);
 		// std::cout << "IP is set to: " << newServer.getServIP() << std::endl;
 	}
-	i++; // gets to the colon or the next token
+	i++; // gets to the semicolon
+	std::cout << "am I a semicolon? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+	if (allTokens_[i].type != SEMICOLON) {
+		std::cerr << "Error: Incorrect config file: expected ';' after the ip address at line " << allTokens_[i].line << std::endl;
+	}
+	i++; //moved to the port number or the server_name
 	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
-	if (allTokens_[i].type == COLON) {
+	if (allTokens_[i].type == STRING && allTokens_[i].value == "port") {
 		i++; // move to the port number token
 		std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 		if (allTokens_[i].type != NUMBER) {
-			std::cerr << "Error: Incorrect config file: expected port number after ':' at line " << allTokens_[i].line << std::endl;
+			std::cerr << "Error: Incorrect config file: expected port number after 'port' at line " << allTokens_[i].line << std::endl;
 			return (EXIT_FAILURE);
 		}
 		else {
+			if (validatePort(allTokens_[i].value, allTokens_[i].line) == EXIT_FAILURE) {
+				return (EXIT_FAILURE);
+			}
 			newServer.setServPortString(allTokens_[i].value);
 			newServer.setServPortInt(std::stoi(allTokens_[i].value));
 			i++;
@@ -282,6 +302,7 @@ int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 /// @return 
 int	ConfParser::populateServers(Server42& servers, size_t& i) {
 	
+	// std::cout << "hello" << std::endl;
 	i++; //moving to the open brace token
 	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	if (allTokens_[i].type != OPEN_BRACE) {
@@ -289,13 +310,14 @@ int	ConfParser::populateServers(Server42& servers, size_t& i) {
 		return (EXIT_FAILURE);
 	}
 	i++; // go to the next token after the opening brace
-	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+	std::cout << "are you listen? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	SingleServer	newServer;
 
 	while (i < allTokens_.size() && allTokens_[i].value != "server") {
 		if (allTokens_[i].type == STRING) {
 			//parsing listen directive
 			if (allTokens_[i].value == "listen") {
+				std::cout << "here?" << std::endl;
 				if (addListen(newServer, i) == EXIT_FAILURE) {
 					return (EXIT_FAILURE);
 				}
