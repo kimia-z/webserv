@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/19 13:59:59 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/24 09:37:27 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -198,24 +198,29 @@ int	ConfParser::setAllTokens() {
 	return (EXIT_SUCCESS);
 }
 
-// int	ConfParser::populateLocation(SingleServer& server, size_t& i) {
-	
-	
-// 	// add the location's values to the server
-// 	return (EXIT_SUCCESS);
-// }
-
+int	ConfParser::semicolonCheck(const tokenType& type, size_t line) {
+	if (type != SEMICOLON) {
+		std::cerr << "Error: Incorrect config file: expected ';' after the value at the end of line " << line << std::endl;
+		return (EXIT_FAILURE);
+	}
+	return (EXIT_SUCCESS);
+}
 
 int	ConfParser::validateIP(const std::string& ip, size_t line) {
 	
 	//count the dots
 	//check if the numbers are within 0-255
-
-	if (std::count(ip.begin(), ip.end(), '.') != 3) {
+	
+	int	dotCount(0);
+	for(size_t i(0); i < ip.size(); i++) {
+		if (ip[i] == '.')
+		dotCount++;
+	}
+	if (dotCount != 3) {
 		std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
 		return (EXIT_FAILURE);
 	}
-
+	
 	std::string	ipPart;
 	int	start(0);
 	int	end(0);
@@ -243,9 +248,8 @@ int	ConfParser::validateIP(const std::string& ip, size_t line) {
 	return (EXIT_SUCCESS);
 }
 
-int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
+int	ConfParser::addIP(SingleServer& newServer, size_t& i) {
 	i++; //move to the token after listen
-	std::cout << "after listen? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	if (allTokens_[i].type != NUMBER && allTokens_[i].value != "localhost") {
 		std::cerr << "Error: Incorrect config file: expected IP/localhost and port number after 'listen' directive at line " << allTokens_[i].line << std::endl;
 		return (EXIT_FAILURE);
@@ -258,14 +262,24 @@ int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 			return (EXIT_FAILURE);
 		}
 		newServer.setServIP(allTokens_[i].value);
-		// std::cout << "IP is set to: " << newServer.getServIP() << std::endl;
 	}
-	i++; // gets to the semicolon
-	std::cout << "am I a semicolon? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
-	if (allTokens_[i].type != SEMICOLON) {
-		std::cerr << "Error: Incorrect config file: expected ';' after the ip address at line " << allTokens_[i].line << std::endl;
+	i++; // moved to the semicolon?
+	return (semicolonCheck(allTokens_[i].type, allTokens_[i].line));
+}
+
+int	ConfParser::validatePort(const std::string& port, size_t line) {
+	
+	int	portInt(std::stoi(port));
+	if (portInt < 1024 || portInt > 65535) {
+		std::cerr << "Error: Incorrect config file: invalid port number: " << port << " at line " << line << std::endl;
+		return (EXIT_FAILURE);
 	}
-	i++; //moved to the port number or the server_name
+	return (EXIT_SUCCESS);
+}
+
+int	ConfParser::addPort(SingleServer& newServer, size_t& i) {
+	
+	i++; //moved to the token after "port"
 	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	if (allTokens_[i].type == STRING && allTokens_[i].value == "port") {
 		i++; // move to the port number token
@@ -278,63 +292,80 @@ int	ConfParser::addListen(SingleServer& newServer, size_t& i) {
 			if (validatePort(allTokens_[i].value, allTokens_[i].line) == EXIT_FAILURE) {
 				return (EXIT_FAILURE);
 			}
-			newServer.setServPortString(allTokens_[i].value);
-			newServer.setServPortInt(std::stoi(allTokens_[i].value));
-			i++;
-			std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+			if (newServer.getServPortInt() == -1) {
+				newServer.setServPortString(allTokens_[i].value);
+				newServer.setServPortInt(std::stoi(allTokens_[i].value));
+			}
 		}
-	}
-	if (allTokens_[i].type == SEMICOLON) {
-		i++; //move to the next token after ;
-		std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
-		return (EXIT_SUCCESS); //should get back to the while loop
-	}
-	else { //no semicolon at the end of the ip & port
-		std::cerr << "Error: Incorrect config file: expected ';' at the end of the 'listen' at line " << allTokens_[i].line << std::endl;
-		return (EXIT_FAILURE);
-	}
+		}
+	i++; //moved to the semicolon?
+	return (semicolonCheck(allTokens_[i].type, allTokens_[i].line));
+}
+
+int	ConfParser::addServerName(SingleServer& newServer, size_t& i) {
+	i++; //moving to the token after 'server_name'
+	newServer.setServName(allTokens_[i].value);
+	i++; //moving to the semicolon?
+	return (semicolonCheck(allTokens_[i].type, allTokens_[i].line));
+}
+
+int	ConfParser::populateLocation(SingleServer& server, size_t& i) {
+	i++; // move to the location's path
+	
+	// add the location's values to the server
 	return (EXIT_SUCCESS);
 }
 
-/// @brief 
-/// @param servers 
-/// @param i starts with the next token after "server"
-/// @return 
 int	ConfParser::populateServers(Server42& servers, size_t& i) {
 	
-	// std::cout << "hello" << std::endl;
 	i++; //moving to the open brace token
-	std::cout << "current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	if (allTokens_[i].type != OPEN_BRACE) {
 		std::cerr << "Error: Incorrect config file: expected '{' after 'server' directive at line: " << allTokens_[i].line << std::endl;
 		return (EXIT_FAILURE);
 	}
 	i++; // go to the next token after the opening brace
-	std::cout << "are you listen? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
+	std::cout << "starting with? current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
 	SingleServer	newServer;
-
+	
 	while (i < allTokens_.size() && allTokens_[i].value != "server") {
 		if (allTokens_[i].type == STRING) {
-			//parsing listen directive
+			//all the adding functions will end with the semicolon token
 			if (allTokens_[i].value == "listen") {
-				std::cout << "here?" << std::endl;
-				if (addListen(newServer, i) == EXIT_FAILURE) {
+				if (addIP(newServer, i) == EXIT_FAILURE) {
 					return (EXIT_FAILURE);
 				}
 				else {
+					i++; //move to the token after the semicolon
+					continue;
+				}
+			}
+			else if (allTokens_[i].value == "port") {
+				if (addPort(newServer, i) == EXIT_FAILURE) {
+					return (EXIT_FAILURE);
+				}
+				else {
+					i++; //move to the token after the semicolon
 					continue;
 				}
 			}
 			else if (allTokens_[i].value == "server_name") {
-				i++; //move to the next token after server_name
-				std::cout << "in server_name current token n " << i + 1 << ": " << allTokens_[i].value << std::endl;
-				//populate the server's name
+				if (addServerName(newServer, i) == EXIT_FAILURE) {
+					return (EXIT_FAILURE);
+				}
+				else {
+					i++; //move to the token after the semicolon
+					continue;
+				}
 			}
 			else if (allTokens_[i].value == "location") {
-				// if (populateLocation(newServer, i) == EXIT_FAILURE) {
-				// 	return (EXIT_FAILURE);
-				// }
-				//populate the server's location
+				// std::cout << "in the location" << std::endl;
+				if (populateLocation(newServer, i) == EXIT_FAILURE) {
+					return (EXIT_FAILURE);
+				}
+				else {
+					i++; //move to the token after the seimicolon
+					continue;
+				}
 			}
 			else if (allTokens_[i].value == "client_max_body_size") {
 				//populate the server's max body size

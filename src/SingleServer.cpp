@@ -21,7 +21,7 @@ SingleServer::SingleServer():
 	serverRoot_(""),
 	serverIP_(""),
 	serverPortString_("8081"), //temp
-	serverPortInt_(8081), // temp
+	serverPortInt_(-1), // temp
 	serverFd_(-1),
 	clientFd_(-1),
 	res_(nullptr)
@@ -36,11 +36,11 @@ SingleServer::SingleServer(int port):
 	serverRoot_(""),
 	serverIP_(""),
 	serverPortString_(std::to_string(port)),
+	serverPortInt_(port),
 	serverFd_(-1),
 	clientFd_(-1),
 	res_(nullptr)
 	{
-	serverPortInt_ = port;
 	// std::cout << "SingleServer with port: " << port << " was constructed" <<std::endl;
 }
 
@@ -131,8 +131,8 @@ addrinfo	*SingleServer::getResults() const {
 
 // setters
 
-void	SingleServer::setServName(const std::vector<std::string>& newServName) {
-	serverName_ = newServName;
+void	SingleServer::setServName(const std::string& newServName) {
+	serverName_.push_back(newServName);
 }
 
 void	SingleServer::setLocations(const std::vector<location>& newLocation) {

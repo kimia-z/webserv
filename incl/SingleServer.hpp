@@ -28,16 +28,8 @@
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 
-struct	location {
-	std::string								path; //location of the directory
-	std::string								root; // path to the folder with sites
-	std::string								index; // index file (index.html)
-	std::vector<std::string>				allowedMethods; //methods that can be used
-	bool									autoindex; //true/false of autoindex
-	std::string								uploadPath; //path with the uploads' folder
-	std::unordered_map<int, std::string>	errorPages; //all error pages, key = error number & value = page path
-	std::string								redirections; //if applicable, redirection path
-};
+#include "Location.hpp"
+
 
 class SingleServer {
 	
@@ -62,7 +54,7 @@ class SingleServer {
 		const std::unordered_map<int, std::string>&	getErrorPages() const; //using "const &"" as a return value is faster, cause the map doesn't need to be copied
 
 		//setters:
-		void	setServName(const std::vector<std::string> &newServName);
+		void	setServName(const std::string& newServName);
 		void	setLocations(const std::vector<location> &newLocations);
 		// void	setServHost(const std::string &newServHost);
 		void	setServRoot(const std::string &newServRoot);
