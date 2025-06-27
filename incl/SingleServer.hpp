@@ -21,14 +21,13 @@
 #include <vector> //for std::vector
 #include <unordered_map> // for std::unordered_map
 
-#include "Server42.hpp"
+#include "Webserv42.hpp"
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 
-#include "Location.hpp"
 
 
 class SingleServer {
@@ -42,7 +41,7 @@ class SingleServer {
 
 		//getters:
 		std::vector<std::string>					getServName() const;
-		std::vector<location>						getLocations() const;
+		std::vector<Location>						getLocations() const;
 		// std::string									getServHost() const;
 		std::string									getServRoot() const;
 		std::string									getServIP() const;
@@ -55,7 +54,7 @@ class SingleServer {
 
 		//setters:
 		void	setServName(const std::string& newServName);
-		void	setLocations(const std::vector<location> &newLocations);
+		void	setLocations(const std::vector<Location> &newLocations);
 		// void	setServHost(const std::string &newServHost);
 		void	setServRoot(const std::string &newServRoot);
 		void	setServIP(const std::string& newIP);
@@ -72,7 +71,7 @@ class SingleServer {
 	
 	private:
 		std::vector<std::string>				serverName_; // server's names of the domains
-		std::vector<location>					locations_; // server's urls and their locations
+		std::vector<Location>					locations_; // server's urls and their locations
 		// std::string								serverHost_; // server's host, e.g. "localhost" - within the serverName_, so not needed?
 		std::string								serverRoot_; // server's root, path to the folder with sites, for us "www"
 		std::string								serverIP_; //server's IP as a string

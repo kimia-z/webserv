@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/24 09:50:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/24 10:00:08 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/27 14:12:31 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,14 +23,14 @@ class Location {
 		Location& operator=(const Location& copy);
 		~Location();
 
-		void	setPath(const std::string& path);
-		void	setRoot(const std::string& root);
-		void	setIndex(const std::string& index);
-		void	setAllowedMethods(const std::string& method);
-		void	setAutoindex(bool autoindex);
-		void	setUploadPath(const std::string& uploadPath);
-		void	setErrorPages(const int& errorCode, const std::string& errorPage);
-		void	setRedirections(const std::string& redirections);
+		void	setPath(const std::string& newPath);
+		void	setRoot(const std::string& newRoot);
+		void	setIndex(const std::string& newIndex);
+		void	setAllowedMethods(const std::string& newMethod);
+		void	setAutoindex(bool newAutoindex);
+		void	setUploadPath(const std::string& newUploadPath);
+		void	setErrorPages(const int& newErrorCode, const std::string& newErrorPage);
+		void	setRedirections(const std::string& newRedirections);
 
 		std::string								getPath() const;
 		std::string								getRoot() const;

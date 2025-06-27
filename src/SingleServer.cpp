@@ -255,17 +255,23 @@ void SingleServer::acceptConnections() {
 		}
 		memset(buffer, 0, sizeof(buffer));
 		ssize_t bytesReceived = recv(clientFd_, buffer, sizeof(buffer), 0);
-		std::string rawRequest_(buffer, bytesReceived);
+
 		if (bytesReceived == -1){
 			std::cerr << RED << "Recv failed: " << strerror(errno) << RESET << std::endl;
 			close(clientFd_);
 			close(serverFd_);
 		}
 		else{
-			std::cout << GREEN << "Received from the client:" << bytesReceived << RESET << std::endl;
-			std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+			std::string rawRequest_(buffer, bytesReceived);
+			// std::cout << GREEN << "Received from the client:" << bytesReceived << RESET << std::endl;
+			// std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+			
+			
+			// ----Parsing the HTTP request----
+			// Request httpRequest(rawRequest_);
+			// httpRequest.print();
 		}
-		// ----Parsing the HTTP request----
+		
 		
 		// ----Generate HTTP response-----
 		// simple HTTP response
