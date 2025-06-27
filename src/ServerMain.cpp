@@ -6,11 +6,11 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/06/27 11:58:50 by kziari           ###   ########.fr       */
+/*   Updated: 2025/06/27 12:22:20 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "incl/ServerMain.hpp"
+#include "../incl/ServerMain.hpp"
 
 //basic canonical form
 

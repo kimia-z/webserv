@@ -6,7 +6,7 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
-#include "Exception.hpp"
+#include "HttpException.hpp"
 
 
 class Request

@@ -1,16 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Server42.cpp                                       :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/13 10:30:48 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/13 13:49:20 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Server42.cpp                                       :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/13 10:30:48 by mstencel          #+#    #+#             */
+/*   Updated: 2025/06/27 12:22:24 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "incl/Server42.hpp"
+#include "../incl/Server42.hpp"
 
 //basic canonical form
 
