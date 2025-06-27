@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/05/16 16:05:38 by kziari           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:58:50 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,7 +136,21 @@ void	ServerMain::startSocket() {
 		std::cerr << RED << "Socket() failed: " << strerror(errno) << RESET << std::endl;
 		//TODO return? how to stop the program - no exit() allowed
 	}
-
+	
+	// int flags = fcntl(serverFd_, F_GETFL);
+	// if (flags == -1)
+	// {
+	// 	std::cerr << RED << "fcntl(F_GETFL) failed: " << strerror(errno) << RESET << std::endl;
+	// 	// close(serverFd_);
+	// 	// return;
+	// }
+	// flags |= O_NONBLOCK;
+	// if (fcntl(serverFd_, F_SETFL, flags) == -1)
+	// {
+	// 	std::cerr << RED << "fcntl(F_SETFL, O_NONBLOCK) failed: " << strerror(errno) << RESET << std::endl;
+	// 	// close(serverFd_);
+	// 	// return;
+	// }
 	if (listen(serverFd_, 10) == -1) {
 		std::cerr << RED << "listen() failed: " << strerror(errno) << RESET << std::endl;
 		//TODO return? how to stop the program - no exit() allowed
