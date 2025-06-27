@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/24 09:45:42 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/27 14:28:20 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,7 +77,7 @@ class	ConfParser {
 		
 		cToken				defineToken(); //returns defined token
 		void				skipWhiteSpaceComment(); //skips white spaces & comments
-		int					tokensCheck(); // runs basic checks on the tokens
+		int					validateTokens(); // runs basic checks on the tokens
 		int					semicolonCheck(const tokenType& type, size_t line); //checks if each line is closed with semicolon
 
 		int					validateIP(const std::string& ip, size_t line); //validates the IP address

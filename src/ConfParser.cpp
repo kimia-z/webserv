@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/24 09:37:27 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/06/27 14:45:42 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,7 +81,8 @@ cToken	ConfParser::defineToken() {
 		skipWhiteSpaceComment();
 		if (currentPos_ == allConfig_.end()) {
 			// std::cout << "EOF found" << std::endl;
-			return (cToken(END_OF_FILE, "", currentLine_));
+			tValue = "";
+			return (cToken(END_OF_FILE, tValue, currentLine_));
 		}
 
 		char	currentChar(*currentPos_);
@@ -89,23 +90,28 @@ cToken	ConfParser::defineToken() {
 			case '{':
 				currentPos_++;
 				// std::cout << "{ found" << std::endl;
-				return (cToken(OPEN_BRACE, "{", currentLine_));
+				tValue = "{";
+				return (cToken(OPEN_BRACE, tValue, currentLine_));
 			case '}':
 				currentPos_++;
 				// std::cout << "} found" << std::endl;
-				return (cToken(CLOSE_BRACE, "}", currentLine_));
+				tValue = "}";
+				return (cToken(CLOSE_BRACE, tValue, currentLine_));
 			case ':':
 				currentPos_++;
 				// std::cout << ": found" << std::endl;
-				return (cToken(COLON, ":", currentLine_));
+				tValue = ":";
+				return (cToken(COLON, tValue, currentLine_));
 			case ';':
 				currentPos_++;
 				// std::cout << "; found" << std::endl;
-				return (cToken(SEMICOLON, ";", currentLine_));
+				tValue = ";";
+				return (cToken(SEMICOLON, tValue, currentLine_));
 			case '/':
 				currentPos_++;
 				// std::cout << "/ found" << std::endl;
-				return (cToken(SLASH, "/", currentLine_));
+				tValue = "/";
+				return (cToken(SLASH, tValue, currentLine_));
 			case '\n':
 				currentLine_++;
 				currentPos_++;
@@ -140,14 +146,16 @@ cToken	ConfParser::defineToken() {
 	}
 		if (currentPos_ == allConfig_.end()) {
 		// std::cout << "EOF found" << std::endl;
-		return (cToken(END_OF_FILE, "", currentLine_));
+		tValue = "";
+		return (cToken(END_OF_FILE, tValue, currentLine_));
 	}
-	return (cToken(UNKNOWN, "", currentLine_)); //it shouldn't reach here, but it's not a void funciton, so it needs to return sth
+	tValue = "";
+	return (cToken(UNKNOWN, tValue, currentLine_)); //it shouldn't reach here, but it's not a void funciton, so it needs to return sth
 }
 
 /// @brief checks if the token list is empty, checks if the number of brackets' pairs is correct
 /// @return EXIT_FAILURE upon the error, EXIT_SUCCESS if all is good
-int	ConfParser::tokensCheck() {
+int	ConfParser::validateTokens() {
 	
 	if (allTokens_.empty()) {
 		std::cerr << "Error: Incorrect config file: no tokens retrived" << std::endl;
@@ -312,6 +320,8 @@ int	ConfParser::addServerName(SingleServer& newServer, size_t& i) {
 int	ConfParser::populateLocation(SingleServer& server, size_t& i) {
 	i++; // move to the location's path
 	
+	
+	
 	// add the location's values to the server
 	return (EXIT_SUCCESS);
 }
@@ -377,6 +387,10 @@ int	ConfParser::populateServers(Server42& servers, size_t& i) {
 				std::cerr << "Error: Incorrect config file: unknown directive ;" << allTokens_[i].value << "' at line " << allTokens_[i].line << std::endl;
 				return (EXIT_FAILURE);
 			}
+		}
+		else if (semicolonCheck(allTokens_[i].type, allTokens_[i].line)) {
+			std::cerr << "Error: Incorrect config file: extra ';' at line " << allTokens_[i].line << std::endl;
+			return (EXIT_FAILURE);
 		}
 		else if (allTokens_[i].type == END_OF_FILE) {
 			return (EXIT_SUCCESS);
