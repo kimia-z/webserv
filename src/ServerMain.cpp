@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ServerMain.cpp                                     :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kziari <kziari@student.42.fr>                +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/13 13:30:17 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/16 13:10:55 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ServerMain.cpp                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
+/*   Updated: 2025/06/27 12:28:51 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,7 +136,21 @@ void	ServerMain::startSocket() {
 		std::cerr << RED << "Socket() failed: " << strerror(errno) << RESET << std::endl;
 		//TODO return? how to stop the program - no exit() allowed
 	}
-
+	
+	// int flags = fcntl(serverFd_, F_GETFL);
+	// if (flags == -1)
+	// {
+	// 	std::cerr << RED << "fcntl(F_GETFL) failed: " << strerror(errno) << RESET << std::endl;
+	// 	// close(serverFd_);
+	// 	// return;
+	// }
+	// flags |= O_NONBLOCK;
+	// if (fcntl(serverFd_, F_SETFL, flags) == -1)
+	// {
+	// 	std::cerr << RED << "fcntl(F_SETFL, O_NONBLOCK) failed: " << strerror(errno) << RESET << std::endl;
+	// 	// close(serverFd_);
+	// 	// return;
+	// }
 	if (listen(serverFd_, 10) == -1) {
 		std::cerr << RED << "listen() failed: " << strerror(errno) << RESET << std::endl;
 		//TODO return? how to stop the program - no exit() allowed
@@ -160,17 +174,21 @@ void ServerMain::startConnection() {
 		}
 		memset(buffer, 0, sizeof(buffer));
 		ssize_t bytesReceived = recv(clientFd_, buffer, sizeof(buffer), 0);
-		std::string rawRequest_(buffer, bytesReceived);
+		
 		if (bytesReceived == -1){
 			std::cerr << RED << "Recv failed: " << strerror(errno) << RESET << std::endl;
 			close(clientFd_);
 			close(serverFd_);
 		}
 		else{
-			std::cout << GREEN << "Received from the client:" << bytesReceived << RESET << std::endl;
-			std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+			std::string rawRequest_(buffer, bytesReceived);
+			// std::cout << GREEN << "Received:" << bytesReceived << RESET << std::endl;
+			// std::cout << YELLOW << "Client Request:\n" << rawRequest_ << RESET << std::endl;
+			// ----Parsing the HTTP request----
+			Request httpRequest(rawRequest_);
+			httpRequest.print();
 		}
-		// ----Parsing the HTTP request----
+
 		
 		// ----Generate HTTP response-----
 		// simple HTTP response
