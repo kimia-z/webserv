@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/06/27 12:25:48 by kziari           ###   ########.fr        #
+#                                                         ::::::::             #
+#    Makefile                                           :+:    :+:             #
+#                                                      +:+                     #
+#    By: kziari <kziari@student.42.fr>                +#+                      #
+#                                                    +#+                       #
+#    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
+#    Updated: 2025/06/27 13:59:19 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,26 +17,32 @@ ITALIC = \033[3m
 
 NAME = webserv
 
-SRC_FILES = src/main.cpp src/ServerMain.cpp src/Request.cpp
+SRC_FILES = src/main.cpp \
+			src/ConfParser.cpp \
+			src/Location.cpp \
+			src/Request.cpp \
+			src/Server42.cpp \
+			src/SingleServer.cpp
+
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 
-HEADER = incl/Webserv42.hpp
+HEADER_DIR = incl
 
 CPP = c++
-CPP_FLAGS = -Werror -Wextra -Wall
+CPP_FLAGS = -Werror -Wextra -Wall -I $(HEADER_DIR) -std=c++11 #delete c++11 on Linux - redundant
 
 RM = rm -rf
 
 all: $(NAME)
 
-$(NAME): $(OBJ_FILES) $(HEADER)
+$(NAME): $(OBJ_FILES)
 	@$(CPP) $(CPP_FLAGS) $(OBJ_FILES) -o $(NAME)
 	@echo "$(GREEN)compilation success: '$(ITALIC)$(NAME)$(GREEN)' created$(RESET)"
 
 $(OBJ_DIR)/%.o: %.cpp
 	@if [ ! -d "$(@D)" ]; then mkdir -p $(@D); fi
-	@$(CPP) $(CPP_FLAGS) -c $< -o $@
+	@$(CPP) $(CPP_FLAGS) -c -I $(HEADER_DIR) $< -o $@
 
 clean:
 	@$(RM) $(OBJ_FILES)
