@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:17 by mstencel          #+#    #+#             */
-/*   Updated: 2025/06/27 12:28:51 by kziari           ###   ########.fr       */
+/*   Updated: 2025/06/30 15:12:16 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -99,8 +99,11 @@ void	ServerMain::startSocket() {
 	
 	if ((status = getaddrinfo(NULL, portString.c_str(), &hints, &res_)) != 0) {
 		std::cerr << "getaddrinfo error: " << gai_strerror(status) << std::endl;
+		// Consider throwing an exception or returning an error code
+		// rather than just printing and continuing potentially uninitialized.
+		//throw std::runtime_error("Failed to get address info"); // Example
 	}
-	
+	// iteration for debugging!
 	for (iterationPointer = res_; iterationPointer != NULL; iterationPointer = iterationPointer->ai_next) {
 		void	*addr;
 		
@@ -129,31 +132,32 @@ void	ServerMain::startSocket() {
 		if (bind(serverFd_, iterationPointer->ai_addr, iterationPointer->ai_addrlen) == 0) {
 			break ; //bind worked!
 		}
-		close(serverFd_);
+		close(serverFd_); // Close socket if bind failed, try next address
 	}
 
 	if (iterationPointer == NULL) {
-		std::cerr << RED << "Socket() failed: " << strerror(errno) << RESET << std::endl;
-		//TODO return? how to stop the program - no exit() allowed
+		std::cerr << RED << "Could not bind to any address: " << strerror(errno) << RESET << std::endl;
+		//throw std::runtime_error("Failed to bind socket"); // Stop program if no address worked
 	}
 	
-	// int flags = fcntl(serverFd_, F_GETFL);
-	// if (flags == -1)
-	// {
-	// 	std::cerr << RED << "fcntl(F_GETFL) failed: " << strerror(errno) << RESET << std::endl;
-	// 	// close(serverFd_);
-	// 	// return;
-	// }
-	// flags |= O_NONBLOCK;
-	// if (fcntl(serverFd_, F_SETFL, flags) == -1)
-	// {
-	// 	std::cerr << RED << "fcntl(F_SETFL, O_NONBLOCK) failed: " << strerror(errno) << RESET << std::endl;
-	// 	// close(serverFd_);
-	// 	// return;
-	// }
+	int flags = fcntl(serverFd_, F_GETFL, 0);
+	if (flags == -1)
+	{
+		std::cerr << RED << "fcntl(F_GETFL) failed for server socket: " << strerror(errno) << RESET << std::endl;
+		close(serverFd_);
+		// throw std::runtime_error("Failed to get socket flags");
+	}
+	flags |= O_NONBLOCK;
+	if (fcntl(serverFd_, F_SETFL, flags) == -1)
+	{
+		std::cerr << RED << "fcntl(F_SETFL, O_NONBLOCK) failed for server socket: " << strerror(errno) << RESET << std::endl;
+		close(serverFd_);
+		// throw std::runtime_error("Failed to set socket flags");
+	}
 	if (listen(serverFd_, 10) == -1) {
 		std::cerr << RED << "listen() failed: " << strerror(errno) << RESET << std::endl;
-		//TODO return? how to stop the program - no exit() allowed
+		close(serverFd_); // Close if listen fails
+		//throw std::runtime_error("Failed to listen on socket");
 	}
 	std::cout << "listening on port " << serverPort_ << std::endl;
 }
