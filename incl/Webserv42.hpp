@@ -17,8 +17,6 @@
 
 #include "Server42.hpp"
 #include "SingleServer.hpp"
-// #include "OldConfigTokeniser.hpp"
-// #include "OldConfigParser.hpp"
 #include "ConfParser.hpp"
 #include "Location.hpp"
 

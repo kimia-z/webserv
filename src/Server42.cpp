@@ -38,6 +38,7 @@ Server42::~Server42() {
 //getters:
 
 std::vector<SingleServer> Server42::getServers() const {
+
 	return (servers_);
 }
 

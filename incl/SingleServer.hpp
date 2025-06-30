@@ -28,6 +28,7 @@
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 
+class Location;
 
 
 class SingleServer {
@@ -40,7 +41,7 @@ class SingleServer {
 		~SingleServer();
 
 		//getters:
-		std::vector<std::string>					getServName() const;
+		std::string									getServName() const;
 		std::vector<Location>						getLocations() const;
 		// std::string									getServHost() const;
 		std::string									getServRoot() const;
@@ -49,28 +50,30 @@ class SingleServer {
 		int											getServPortInt() const;
 		int											getServFd() const;
 		int											getClientFd() const;
-		addrinfo									*getResults() const;
-		const std::unordered_map<int, std::string>&	getErrorPages() const; //using "const &"" as a return value is faster, cause the map doesn't need to be copied
+		int											getMaxBodySize() const;
+		const std::unordered_map<int, std::string>	getErrorPages() const;
+		addrinfo*									getResults() const;
 
 		//setters:
 		void	setServName(const std::string& newServName);
-		void	setLocations(const std::vector<Location> &newLocations);
+		void	setLocations(const Location& newLocations);
 		// void	setServHost(const std::string &newServHost);
-		void	setServRoot(const std::string &newServRoot);
+		void	setServRoot(const std::string& newServRoot);
 		void	setServIP(const std::string& newIP);
 		void	setServPortString(const std::string& newPortStr);
-		void	setServPortInt(const int newPortInt);
-		void	setResults(addrinfo *newResult);
-		void	setServFd(const int newServFd);
-		void	setClientFd(const int newClientFd);
-		void	setErrorPages(const int errorNb, const std::string &newErrorPage);
+		void	setServPortInt(const int& newPortInt);
+		void	setServFd(const int& newServFd);
+		void	setClientFd(const int& newClientFd);
+		void	setMaxBodySize(const int& newMaxBodySize);
+		void	setErrorPages(const int& errorNb, const std::string& newErrorPage);
+		void	setResults(addrinfo* newResult);
 
 		
 		void	initSocket();
 		void	acceptConnections();
 	
 	private:
-		std::vector<std::string>				serverName_; // server's names of the domains
+		std::string								serverName_; // server's name of the domain
 		std::vector<Location>					locations_; // server's urls and their locations
 		// std::string								serverHost_; // server's host, e.g. "localhost" - within the serverName_, so not needed?
 		std::string								serverRoot_; // server's root, path to the folder with sites, for us "www"
@@ -79,6 +82,8 @@ class SingleServer {
 		int										serverPortInt_; //server's port as an integer
 		int										serverFd_; //socket() fd
 		int										clientFd_; //accept() fd
+		int										maxBodySize_; //max size of the uploadable file in bytes
+		std::unordered_map<int, std::string>	errorPages_; //all error pages, key = error number & value = page path
 		struct addrinfo							*res_; //getaddrinfo() results, needed for bind() & accept()
 		// std::string								rawRequest_;
 };

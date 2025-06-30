@@ -29,8 +29,8 @@ class Location {
 		void	setAllowedMethods(const std::string& newMethod);
 		void	setAutoindex(bool newAutoindex);
 		void	setUploadPath(const std::string& newUploadPath);
-		void	setErrorPages(const int& newErrorCode, const std::string& newErrorPage);
-		void	setRedirections(const std::string& newRedirections);
+		// void	setErrorPages(const int& newErrorCode, const std::string& newErrorPage);
+		// void	setRedirections(const std::string& newRedirections);
 
 		std::string								getPath() const;
 		std::string								getRoot() const;
@@ -38,8 +38,8 @@ class Location {
 		std::vector<std::string>				getAllowedMethods() const;
 		bool									getAutoindex() const;
 		std::string								getUploadPath() const;
-		std::unordered_map<int, std::string>	getErrorPages() const;
-		std::string								getRedirections() const;
+		// std::unordered_map<int, std::string>	getErrorPages() const;
+		// std::string								getRedirections() const;
 		
 	private:
 		std::string								path_; //location of the directory
@@ -48,6 +48,5 @@ class Location {
 		std::vector<std::string>				allowedMethods_; //methods that can be used
 		bool									autoindex_; //true/false of autoindex
 		std::string								uploadPath_; //path with the uploads' folder
-		std::unordered_map<int, std::string>	errorPages_; //all error pages, key = error number & value = page path
 		std::string								redirections_; //if applicable, redirection path
 };

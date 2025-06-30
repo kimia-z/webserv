@@ -29,7 +29,7 @@ OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 HEADER_DIR = incl
 
 CPP = c++
-CPP_FLAGS = -Werror -Wextra -Wall -I $(HEADER_DIR)
+CPP_FLAGS = -Werror -Wextra -Wall -I $(HEADER_DIR) -std=c++11
 
 RM = rm -rf
 

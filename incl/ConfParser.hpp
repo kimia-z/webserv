@@ -16,18 +16,6 @@
 #include <iostream>
 #include <string> //for std::string::iterator
 
-
-// #define LISTEN 0
-// #define PORT 1
-// #define SERVER_NAME 2
-// #define LOCATION 3
-// #define LOC_ROOT 4
-// #define LOC_INDEX 5
-// #define LOC_METHODS 6
-// #define LOC_AUTOINDEX 7
-// #define CLIENT_MAX_BODY_SIZE 8
-// #define ERROR_PAGE 9
-
 #include "Server42.hpp"
 class Server42;
 
@@ -39,9 +27,9 @@ enum	tokenType {
 	CLOSE_BRACE, // }
 	NUMBER, // numbers (includes the dot)
 	STRING, // words (includes the dot)
+	DIRECTIVE, // directives, e.g. listen, error_pages, port, etc
 	COLON, // :
 	SEMICOLON, // ;
-	SLASH, // /
 	END_OF_FILE, // end of the file
 	UNKNOWN, // anything else
 	EMPTY // for initialisation
@@ -66,32 +54,30 @@ class	ConfParser {
 		~ConfParser();
 	
 
-		// std::string				getAllConfig() const;
-		// std::string::iterator	getCurrentPos() const;
+		int					parseConfig(Server42& servers);
+
 		int					getCurrentLine() const;
 		std::vector<cToken>	getAllTokens() const;
 
 		void				setAllConfig(const std::string& config);
 		int					setAllTokens();
-		// void				setCurrentPos(const std::string::iterator pos);
 		
 		cToken				defineToken(); //returns defined token
 		void				skipWhiteSpaceComment(); //skips white spaces & comments
-		int					validateTokens(); // runs basic checks on the tokens
-		int					semicolonCheck(const tokenType& type, size_t line); //checks if each line is closed with semicolon
 
+		int					semicolonCheck(const tokenType& type, size_t line); //checks if each line is closed with semicolon
+		int					validateBraces(); // runs the check on number of braces
 		int					validateIP(const std::string& ip, size_t line); //validates the IP address
 		int					validatePort(const std::string& port, size_t line); //validates the port number
 
-		int					parseConfig(Server42& servers);
 		int					populateServers(Server42& servers, size_t& i);
 		int					addIP(SingleServer& newServer, size_t& i);
 		int					addPort(SingleServer& newServer, size_t& i);
 		int					addServerName(SingleServer& newServer, size_t& i);
-		
-		int					populateLocation(SingleServer& server, size_t& i);
-		
-		int					parseServerBlock(std::vector<SingleServer>& server);
+		int					addLocation(SingleServer& server, size_t& i);
+		int					addMaxBodySize(SingleServer& newServer, size_t& i);
+		int					addErrorPages(SingleServer& newServer, size_t& i);
+
 
 	private:
 		std::string				allConfig_; // config file in a string format

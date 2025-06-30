@@ -35,6 +35,7 @@ int	main(int argc, char **argv)
 		return (-1);
 	}
 	std::ifstream	confFile;
+	// std::cout << "hello main()" << std::endl;
 	try {
 		 openConfFile(argc == 2 ? argv[1] : "webserv.conf", confFile);
 	}
@@ -46,6 +47,7 @@ int	main(int argc, char **argv)
 	buffer << confFile.rdbuf();
 	confFile.close();
 
+	// std::cout << "after openConfFile()" << std::endl;
 	ConfParser	conf(buffer.str());
 	Server42	servers;
 	if (conf.parseConfig(servers) == EXIT_FAILURE) {
@@ -55,9 +57,9 @@ int	main(int argc, char **argv)
 	// std::cout << "here?" << std::endl;
 	//parse the config file and populate the server
 	
-	SingleServer	server;
-
-	server.initSocket();
-	server.acceptConnections();
+	for (SingleServer& server : servers.getServers()) {
+    server.initSocket();
+    server.acceptConnections();
+	}
 	return (0);
 }

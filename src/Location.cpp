@@ -19,7 +19,7 @@ Location::Location() :
 	allowedMethods_(),
 	autoindex_(false),
 	uploadPath_(""),
-	errorPages_(),
+	// errorPages_(),
 	redirections_("") {
 	// std::cout << "Location's constructor was called" << std::endl;
 }
@@ -31,7 +31,7 @@ Location::Location(const Location& copy) :
 	allowedMethods_(copy.allowedMethods_),
 	autoindex_(copy.autoindex_),
 	uploadPath_(copy.uploadPath_),
-	errorPages_(copy.errorPages_),
+	// errorPages_(copy.errorPages_),
 	redirections_(copy.redirections_) {
 	// std::cout << "Location's copy constructor was called" << std::endl;
 }
@@ -44,7 +44,7 @@ Location& Location::operator=(const Location& copy) {
 		allowedMethods_ = copy.allowedMethods_;
 		autoindex_ = copy.autoindex_;
 		uploadPath_ = copy.uploadPath_;
-		errorPages_ = copy.errorPages_;
+		// errorPages_ = copy.errorPages_;
 		redirections_ = copy.redirections_;
 	}
 	// std::cout << "Location's copy operator was called" << std::endl;
@@ -79,9 +79,9 @@ std::string		Location::getUploadPath() const {
 	return (uploadPath_);
 }
 
-std::unordered_map<int, std::string>	Location::getErrorPages() const {
-	return (errorPages_);
-}
+// std::unordered_map<int, std::string>	Location::getErrorPages() const {
+// 	return (errorPages_);
+// }
 
 std::string	Location::getRedirections() const {
 	return (redirections_);
@@ -110,10 +110,6 @@ void	Location::setAutoindex(bool newAutoindex) {
 
 void	Location::setUploadPath(const std::string& newUploadPath) {
 	uploadPath_ = newUploadPath;
-}
-
-void	Location::setErrorPages(const int& newErrorCode, const std::string& newErrorPage) {
-	errorPages_[newErrorCode] = newErrorPage;
 }
 
 void	Location::setRedirections(const std::string& newRedirections) {
