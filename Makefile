@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/06/27 12:25:48 by kziari           ###   ########.fr        #
+#    Updated: 2025/07/04 17:14:38 by kziari           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ ITALIC = \033[3m
 
 NAME = webserv
 
-SRC_FILES = src/main.cpp src/ServerMain.cpp src/Request.cpp
+SRC_FILES = src/main.cpp src/ServerMain.cpp src/Request.cpp src/epoll.cpp
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 

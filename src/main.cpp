@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 10:43:12 by mstencel          #+#    #+#             */
-/*   Updated: 2025/06/27 12:26:42 by kziari           ###   ########.fr       */
+/*   Updated: 2025/07/04 17:27:07 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,8 @@ int	main()
 	//parse the config file and populate the server
 
 	server.startSocket();
-	server.startConnection();
+	// server.startConnection();
+	server.setUpEpoll();
+	server.eventLoop();
 	return (0);
 }

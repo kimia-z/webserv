@@ -1,4 +1,4 @@
-#include <ServerMain.hpp>
+#include "../incl/ServerMain.hpp"
 
 void ServerMain::setUpEpoll()
 {
@@ -21,4 +21,14 @@ void ServerMain::addFdToEpoll(int fd, uint32_t events)
 		//throw std::runtime_error("Failed to add fd to epoll");
 	}
 	std::cout << "Added FD " << fd << " to epoll with events " << events << std::endl;
+}
+
+void ServerMain::removeFdFromEpoll(int fd)
+{
+	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1)
+	{
+		std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
+		//throw std::runtime_error("Failed to add fd to epoll");
+	}
+	std::cout << "Removed FD " << fd << " from epoll" << std::endl;
 }

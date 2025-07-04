@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 13:30:12 by mstencel          #+#    #+#             */
-/*   Updated: 2025/06/30 15:20:01 by kziari           ###   ########.fr       */
+/*   Updated: 2025/07/04 15:50:36 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
+#define MAX_EVENTS 64
 
 class ServerMain {
 	
@@ -49,18 +50,21 @@ class ServerMain {
 		
 		void	startSocket();
 		void	startConnection();
+		void	eventLoop();
 
 		//epoll
 		void setUpEpoll();
-		void addFdToEpoll(int epollFd, uint32_t event);
+		void addFdToEpoll(int fd, uint32_t events);
+		void removeFdFromEpoll(int fd);
 	
 	private:
-		int				serverFd_;
-		int				serverPort_;
-		struct addrinfo	*res_;
-		int				clientFd_;
-		std::string		rawRequest_;
-		int				epollFd_;
+		int							serverFd_;
+		int							serverPort_;
+		struct addrinfo				*res_;
+		int							clientFd_;
+		std::string					rawRequest_;
+		int							epollFd_;
+		std::vector<epoll_event>	events_;
 
 };
 
