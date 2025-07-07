@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/27 13:59:39 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/27 14:25:03 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/07/07 13:50:42 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,8 @@ Location::Location() :
 	autoindex_(false),
 	uploadPath_(""),
 	// errorPages_(),
-	redirections_("") {
+	redirectionCode_(-1),
+	redirectionsPath_("") {
 	// std::cout << "Location's constructor was called" << std::endl;
 }
 
@@ -32,7 +33,8 @@ Location::Location(const Location& copy) :
 	autoindex_(copy.autoindex_),
 	uploadPath_(copy.uploadPath_),
 	// errorPages_(copy.errorPages_),
-	redirections_(copy.redirections_) {
+	redirectionCode_(copy.redirectionCode_),
+	redirectionsPath_(copy.redirectionsPath_) {
 	// std::cout << "Location's copy constructor was called" << std::endl;
 }
 
@@ -45,7 +47,8 @@ Location& Location::operator=(const Location& copy) {
 		autoindex_ = copy.autoindex_;
 		uploadPath_ = copy.uploadPath_;
 		// errorPages_ = copy.errorPages_;
-		redirections_ = copy.redirections_;
+		redirectionCode_ = copy.redirectionCode_;
+		redirectionsPath_ = copy.redirectionsPath_;
 	}
 	// std::cout << "Location's copy operator was called" << std::endl;
 	return (*this);
@@ -83,8 +86,12 @@ std::string		Location::getUploadPath() const {
 // 	return (errorPages_);
 // }
 
-std::string	Location::getRedirections() const {
-	return (redirections_);
+int	Location::getRedirectionCode() const {
+	return (redirectionCode_);
+}
+
+std::string	Location::getRedirectionsPath() const {
+	return (redirectionsPath_);
 }
 
 
@@ -112,8 +119,37 @@ void	Location::setUploadPath(const std::string& newUploadPath) {
 	uploadPath_ = newUploadPath;
 }
 
-void	Location::setRedirections(const std::string& newRedirections) {
-	redirections_ = newRedirections;
+void	Location::setRedirectionCode(const int& newRedirectionCode) {
+	redirectionCode_ = newRedirectionCode;
 }
 
+void	Location::setRedirectionsPath(const std::string& newRedirectionsPath) {
+	redirectionsPath_ = newRedirectionsPath;
+}
+
+std::ostream& operator<<(std::ostream& os, const Location& location) {
+	os << "Location: \n";
+	if (!location.getPath().empty())
+		os << "\tPath: " << location.getPath() << "\n";
+	if (!location.getRoot().empty())
+		os << "\tRoot: " << location.getRoot() << "\n";
+	if (!location.getIndex().empty())
+		os << "\tIndex: " << location.getIndex() << "\n";
+	const std::vector<std::string>& allowedMethods = location.getAllowedMethods();
+	if (!allowedMethods.empty()){
+		os << "\tAllowed methods: ";
+		for (const std::string& method : allowedMethods) {
+			os << method << " ";
+		}
+		os << "\n";
+	}
+	os << "\tAutoindex: " << (location.getAutoindex() ? "on" : "off") << "\n";
+	if (!location.getUploadPath().empty())
+		os << "\tUpload path: " << location.getUploadPath() << "\n";
+	if (location.getRedirectionCode() != -1) {
+		os << "\tRedirection code: " << location.getRedirectionCode() << "\n";
+		os << "\tRedirection path: " << location.getRedirectionsPath() << "\n";
+	}
+	return os;
+}
 

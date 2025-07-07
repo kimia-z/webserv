@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/27 14:28:20 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/07/07 15:10:07 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,13 +60,13 @@ class	ConfParser {
 		std::vector<cToken>	getAllTokens() const;
 
 		void				setAllConfig(const std::string& config);
-		int					setAllTokens();
+		void				setAllTokens();
 		
 		cToken				defineToken(); //returns defined token
 		void				skipWhiteSpaceComment(); //skips white spaces & comments
 
 		int					semicolonCheck(const tokenType& type, size_t line); //checks if each line is closed with semicolon
-		int					validateBraces(); // runs the check on number of braces
+		void				validateBraces(); // runs the check on number of braces
 		int					validateIP(const std::string& ip, size_t line); //validates the IP address
 		int					validatePort(const std::string& port, size_t line); //validates the port number
 
@@ -84,6 +84,20 @@ class	ConfParser {
 		std::string::iterator	currentPos_; // current position in the allConfig string
 		int						currentLine_; // current line number for error handling
 		std::vector<cToken>		allTokens_; // vector with all tokens
+
+	
+	class	ConfParserException : public std::exception {
+		public:
+			ConfParserException(const std::string& message, const std::string& token, size_t line);
+			ConfParserException(const std::string& message, size_t line);
+			ConfParserException(const std::string& message);
+			const char* what() const throw();
+			~ConfParserException();
+			
+		private:
+			std::string allMessage_;
+	};
+		
 };
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/27 14:45:42 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/07/07 15:12:49 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,26 @@ ConfParser::~ConfParser() {
 	// std::cout << "ConfParser default destructor called" << std::endl;
 }
 
+//exception class
+ConfParser::ConfParserException::ConfParserException(const std::string& message, const std::string& token, size_t line) {
+	allMessage_ = "Error: Incorrect config file: " + message + token + " at line " + std::to_string(line);
+}
+
+ConfParser::ConfParserException::ConfParserException(const std::string& message, size_t line) {
+	allMessage_ = "Error: Incorrect config file: " + message + " at line " + std::to_string(line);
+}
+
+ConfParser::ConfParserException::ConfParserException(const std::string& message) {
+	allMessage_ = "Error: Incorrect config file: " + message;
+}
+
+const char* ConfParser::ConfParserException::what() const throw() {
+	return (allMessage_.c_str());
+}
+
+ConfParser::ConfParserException::~ConfParserException() {
+}
+
 int	ConfParser::getCurrentLine() const {
 	return (currentLine_);
 }
@@ -69,6 +89,8 @@ void	ConfParser::skipWhiteSpaceComment() {
 		else if (*currentPos_ == '#') {
 			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n')
 				*currentPos_++;
+			if (*currentPos_ == '\n')
+				currentLine_++;
 		}
 		else
 			break;
@@ -135,7 +157,7 @@ cToken	ConfParser::defineToken() {
 				tValue += *currentPos_;
 				currentPos_++;
 			}
-			std::cout << "Unknown input: " << tValue << " found on line " << currentLine_ << std::endl;
+			// std::cout << "Unknown input: " << tValue << " found on line " << currentLine_ << std::endl;
 			return (cToken(UNKNOWN, tValue, currentLine_));
 		}
 	}
@@ -150,87 +172,94 @@ cToken	ConfParser::defineToken() {
 
 /// @brief checks if the token list is empty, checks if the number of brackets' pairs is correct
 /// @return EXIT_FAILURE upon the error, EXIT_SUCCESS if all is good
-int	ConfParser::validateBraces() {
+void	ConfParser::validateBraces() {
 	
 	if (allTokens_.empty()) {
-		std::cerr << "Error: Incorrect config file: no tokens retrived" << std::endl;
-		return (EXIT_FAILURE);
+		throw ConfParser::ConfParserException("no tokens retrived ", 0);
+		// std::cerr << "Error: Incorrect config file: no tokens retrived" << std::endl;
+		// return (EXIT_FAILURE);
 	}
 	//checking the the braces are matched
 	int	braceCount(0);
 	int	openBraceLine(0);
-	for (size_t i(0); i < allTokens_.size(); i++) {
-		if (allTokens_[i].type == OPEN_BRACE) {
+	
+	for (const auto& token : allTokens_) {
+		if (token.type == OPEN_BRACE) {
 			braceCount++;
-			openBraceLine = allTokens_[i].line;
+			openBraceLine = token.line;
 		}
-		if (allTokens_[i].type == CLOSE_BRACE) {
+		else if (token.type == CLOSE_BRACE) {
 			braceCount--;
 			if (braceCount < 0) {
-				std::cerr << "Error: Incorrect config file: unmatched closing brace '}' at line " << allTokens_[i].line << std::endl;
-				return (EXIT_FAILURE);
+				throw ConfParser::ConfParserException("unmatched closing brace ", token.line);
+				// std::cerr << "Error: Incorrect config file: unmatched closing brace '}' at line " << token.line << std::endl;
+				// return (EXIT_FAILURE);
 			}
 		}
 	}
 	if (braceCount > 0) {
-		std::cerr << "Error: Incorrect config file: unmatched opening brace '{' at line " << openBraceLine << std::endl;
-		return (EXIT_FAILURE);
+		throw ConfParser::ConfParserException("unmatched opening brace ", openBraceLine);
+		// std::cerr << "Error: Incorrect config file: unmatched opening brace '{' at line " << openBraceLine << std::endl;
+		// return (EXIT_FAILURE);
 	}
 
-	return (EXIT_SUCCESS);
+	// return (EXIT_SUCCESS);
 }
 
-int	ConfParser::setAllTokens() {
+void	ConfParser::setAllTokens() {
 	
 	cToken	currentToken;
 	while (currentPos_ < allConfig_.end()) {
-		// std::cout << "in setAllTokens() before defining them" << std::endl;
 		currentToken = defineToken();
 		if (currentToken.type == UNKNOWN) {
-			std::cerr << "Error: Incorrect config file: Unknown token '" << currentToken.value << "' at line " << currentToken.line << std::endl;
-			return (EXIT_FAILURE);
+			throw ConfParser::ConfParserException("Unknown token: ", currentToken.value, currentToken.line);
 		}
-		// std::cout << "currentToken.type = " << currentToken.type << std::endl;
 		if (currentToken.type == STRING) {
 			int allTokenSize = (int)allTokens_.size(); 
-			// std::cout << "previousToken = " << allTokenSize << std::endl;
 			if (allTokenSize == 0 ||
 				allTokens_[allTokenSize - 1].type == SEMICOLON ||
 				allTokens_[allTokenSize - 1].type == CLOSE_BRACE ||
 				allTokens_[allTokenSize - 1].type == OPEN_BRACE) {
-				// std::cout << "directive: " << currentToken.value << std::endl;
 				currentToken.type = DIRECTIVE;
 			}
 		}
 		allTokens_.push_back(currentToken);
 	}
-	if (validateBraces() == EXIT_FAILURE) {
-		return (EXIT_FAILURE);
+	try {
+		validateBraces();
 	}
-	// to remove - printing the tokens
-	// for (size_t i = 0; i < allTokens_.size(); i++) {
-	// 	std::cout << "Token: " << allTokens_[i].type << "\tValue: " << allTokens_[i].value << std::endl;
+	catch (const ConfParser::ConfParserException& e) {
+			std::cerr << e.what() << std::endl;
+	}
+	// if (validateBraces() == EXIT_FAILURE) {
+	// 	return (EXIT_FAILURE);
 	// }
-	return (EXIT_SUCCESS);
+
+
+	// to remove - printing the tokens
+	// for (const auto& token : allTokens_) {
+	// 	std::cout << "Token: " << token.type << "\tValue: " << token.value << std::endl;
+	// }
+	
+	// return (EXIT_SUCCESS);
 }
 
 int	ConfParser::semicolonCheck(const tokenType& type, size_t line) {
 	if (type != SEMICOLON) {
-		std::cerr << "Error: Incorrect config file: expected ';' after the value at the end of line " << line << std::endl;
+		throw ConfParser::ConfParserException("expected ';' after the value ", line);
+		// std::cerr << "Error: Incorrect config file: expected ';' after the value at the end of line " << line << std::endl;
 		return (EXIT_FAILURE);
 	}
 	return (EXIT_SUCCESS);
 }
 
 int	ConfParser::validateIP(const std::string& ip, size_t line) {
-	
-	//count the dots
-	//check if the numbers are within 0-255
-	
+
 	int	dotCount(0);
-	for(size_t i(0); i < ip.size(); i++) {
-		if (ip[i] == '.')
-		dotCount++;
+	for (const auto& c : ip) {
+		if (c == '.') {
+			dotCount++;
+		}
 	}
 	if (dotCount != 3) {
 		std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
@@ -254,7 +283,6 @@ int	ConfParser::validateIP(const std::string& ip, size_t line) {
 			return (EXIT_FAILURE);
 		}
 		ipPartInt = std::stoi(ipPart);
-		// std::cout << ipPartInt << std::endl;
 		if (ipPartInt < 0 || ipPartInt > 255) {
 			std::cerr << "Error: Incorrect config file: invalid IP address: " << ip << " at line " << line << std::endl;
 			return (EXIT_FAILURE);
@@ -433,7 +461,39 @@ int	ConfParser::addLocation(SingleServer& server, size_t& i) {
 			if (semicolonCheck(allTokens_[i].type, allTokens_[i].line) == EXIT_FAILURE)
 				return (EXIT_FAILURE);
 		}
-		i++;
+		else if (allTokens_[i].value == "return") {
+			i++; //move to the redirect code
+			if (allTokens_[i].type != NUMBER || (allTokens_[i].value != "301" && allTokens_[i].value != "302")) {
+				std::cerr << "Error: Incorrect config file: expected the redirection code 301 or 302 after 'return' at line " << allTokens_[i].line << std::endl;
+				return (EXIT_FAILURE);
+			}
+			newLocation.setRedirectionCode(std::stoi(allTokens_[i].value));
+			i++; //move to the redirect path
+			if (allTokens_[i].type != STRING) {
+				std::cerr << "Error: Incorrect config file: exptected the redirection path after the redirection code at line " << allTokens_[i].line << std::endl;
+				return (EXIT_FAILURE);
+			}
+			newLocation.setRedirectionsPath(allTokens_[i].value);
+			i++; //move to the semicolon
+			if (semicolonCheck(allTokens_[i].type, allTokens_[i].line) == EXIT_FAILURE) {
+				return (EXIT_FAILURE);
+			}
+		}
+		else if (allTokens_[i].value == "upload_path") {
+			i++; //move to the upload path
+			// std::cout << "upload path = " << allTokens_[i].value << std::endl;
+			if (allTokens_[i].type != STRING) {
+				std::cerr << "Error: Incorrect config file: expected a string after 'upload_path directive at line " << allTokens_[i].line << std::endl;
+				return (EXIT_FAILURE);
+			}
+			newLocation.setUploadPath(allTokens_[i].value);
+			// std::cout << "upload_path set: " << newLocation.getUploadPath() << std::endl;
+			i++; //move to the semicolon
+			if (semicolonCheck(allTokens_[i].type, allTokens_[i].line) == EXIT_FAILURE) {
+				return (EXIT_FAILURE);
+			}
+		}
+		i++; //move after the semicolon
 		//TODO add cgi-related stuff
 	}
 	if (allTokens_[i].type != CLOSE_BRACE) {
@@ -441,6 +501,7 @@ int	ConfParser::addLocation(SingleServer& server, size_t& i) {
 		return (EXIT_FAILURE);
 	}
 	// std::cout << "did I get out from the location?" << std::endl;
+	std::cout << newLocation << std::endl;
 	server.setLocations(newLocation);
 	return (EXIT_SUCCESS);
 }
@@ -598,10 +659,18 @@ int	ConfParser::populateServers(Server42& servers, size_t& i) {
 int ConfParser::parseConfig(Server42& servers) {
 	
 	// std::cout << "hello in parseConfig()" << std::endl;
-	if (setAllTokens() == EXIT_FAILURE) {
-		std::cerr << "Error following up - from setAllTokens() in parseConfig()" << std::endl;
+	try {
+		setAllTokens();
+	}
+	catch (const ConfParserException& e) {
+		std::cerr << e.what() << std::endl;
 		return (EXIT_FAILURE);
 	}
+	// if (setAllTokens() == EXIT_FAILURE) {
+	// 	std::cerr << "Error following up - from setAllTokens() in parseConfig()" << std::endl;
+	// 	return (EXIT_FAILURE);
+	// }
+	
 	size_t i(0);
 	while (allTokens_[i].type != END_OF_FILE)
 
