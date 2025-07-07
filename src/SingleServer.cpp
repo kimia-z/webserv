@@ -284,8 +284,8 @@ void SingleServer::acceptConnections() {
 			
 			
 			// ----Parsing the HTTP request----
-			// Request httpRequest(rawRequest_);
-			// httpRequest.print();
+			Request httpRequest(rawRequest_);
+			httpRequest.print();
 		}
 		
 		
