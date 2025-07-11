@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/07/07 15:10:07 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/07/11 09:50:23 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ class	ConfParser {
 		~ConfParser();
 	
 
-		int					parseConfig(Server42& servers);
+		void					parseConfig(Server42& servers);
 
 		int					getCurrentLine() const;
 		std::vector<cToken>	getAllTokens() const;
@@ -65,18 +65,18 @@ class	ConfParser {
 		cToken				defineToken(); //returns defined token
 		void				skipWhiteSpaceComment(); //skips white spaces & comments
 
-		int					semicolonCheck(const tokenType& type, size_t line); //checks if each line is closed with semicolon
-		void				validateBraces(); // runs the check on number of braces
-		int					validateIP(const std::string& ip, size_t line); //validates the IP address
-		int					validatePort(const std::string& port, size_t line); //validates the port number
+		void					semicolonCheck(const tokenType& type, size_t line); //checks if each line is closed with semicolon
+		void					validateBraces(); // runs the check on number of braces
+		void					validateIP(const std::string& ip, size_t line); //validates the IP address
+		void					validatePort(const std::string& port, size_t line); //validates the port number
 
-		int					populateServers(Server42& servers, size_t& i);
-		int					addIP(SingleServer& newServer, size_t& i);
-		int					addPort(SingleServer& newServer, size_t& i);
-		int					addServerName(SingleServer& newServer, size_t& i);
-		int					addLocation(SingleServer& server, size_t& i);
-		int					addMaxBodySize(SingleServer& newServer, size_t& i);
-		int					addErrorPages(SingleServer& newServer, size_t& i);
+		void					populateServers(Server42& servers, size_t& i);
+		void					addIP(SingleServer& newServer, size_t& i);
+		void					addPort(SingleServer& newServer, size_t& i);
+		void					addServerName(SingleServer& newServer, size_t& i);
+		void					addLocation(SingleServer& server, size_t& i);
+		void					addMaxBodySize(SingleServer& newServer, size_t& i);
+		void					addErrorPages(SingleServer& newServer, size_t& i);
 
 
 	private:

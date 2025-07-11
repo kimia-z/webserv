@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>                +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/13 10:37:48 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/06/18 10:48:05 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/07/11 09:53:12 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,31 +35,25 @@ int	main(int argc, char **argv)
 		return (-1);
 	}
 	std::ifstream	confFile;
-	// std::cout << "hello main()" << std::endl;
 	try {
-		 openConfFile(argc == 2 ? argv[1] : "webserv.conf", confFile);
+		openConfFile(argc == 2 ? argv[1] : "webserv.conf", confFile);
+		
+		std::stringstream	buffer;
+		buffer << confFile.rdbuf();
+		confFile.close();
+		
+		ConfParser	conf(buffer.str());
+		Server42	servers;
+		
+		conf.parseConfig(servers);
+		for (SingleServer& server : servers.getServers()) {
+			server.initSocket();
+			server.acceptConnections();
+		}
 	}
 	catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-		return (-1);
+		std::cerr << "Unexpected error: " << e.what() << std::endl;
+		return (EXIT_FAILURE);
 	}
-	std::stringstream	buffer;
-	buffer << confFile.rdbuf();
-	confFile.close();
-
-	// std::cout << "after openConfFile()" << std::endl;
-	ConfParser	conf(buffer.str());
-	Server42	servers;
-	if (conf.parseConfig(servers) == EXIT_FAILURE) {
-		std::cerr << "Error: failure of config parsing" << std::endl;
-		return (-1);
-	}
-	// std::cout << "here?" << std::endl;
-	//parse the config file and populate the server
-	
-	for (SingleServer& server : servers.getServers()) {
-		server.initSocket();
-		server.acceptConnections();
-		}
-	return (0);
+	return (EXIT_SUCCESS);
 }
