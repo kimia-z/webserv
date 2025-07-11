@@ -6,23 +6,19 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/12 11:27:51 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/07/11 09:50:07 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/07/11 09:58:43 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../incl/ConfParser.hpp"
 
 ConfParser::ConfParser(): currentLine_(1) {
-	// std::cout << "ConfParser default constructor called" << std::endl;
 }
 
 ConfParser::ConfParser(const std::string& config):
 	allConfig_(config),
 	currentPos_(allConfig_.begin()),
 	currentLine_(1) {
-		// std::cout << "ConfParser constructor with param called" << std::endl;
-		// std::cout << allConfig_ << std::endl;
-		// std::cout << "Current position: " << *currentPos_ << std::endl;
 }
 
 ConfParser::ConfParser(const ConfParser& copy):
@@ -30,7 +26,6 @@ ConfParser::ConfParser(const ConfParser& copy):
 	currentPos_(copy.currentPos_),
 	currentLine_(copy.currentLine_),
 	allTokens_(copy.allTokens_) {
-		// std::cout << "ConfParser copy constructor called" << std::endl;
 }
 
 ConfParser& ConfParser::operator=(const ConfParser& copy) {
@@ -40,12 +35,10 @@ ConfParser& ConfParser::operator=(const ConfParser& copy) {
 		currentLine_ = copy.currentLine_;
 		allTokens_ = copy.allTokens_;
 	}
-	// std::cout << "ConfParser copy assignment operator called" << std::endl;
 	return (*this);
 }
 
 ConfParser::~ConfParser() {
-	// std::cout << "ConfParser default destructor called" << std::endl;
 }
 
 //exception class
@@ -102,7 +95,6 @@ cToken	ConfParser::defineToken() {
 	while (currentPos_ != allConfig_.end()) {
 		skipWhiteSpaceComment();
 		if (currentPos_ == allConfig_.end()) {
-			// std::cout << "EOF found" << std::endl;
 			tValue = "";
 			return (cToken(END_OF_FILE, tValue, currentLine_));
 		}
@@ -111,28 +103,23 @@ cToken	ConfParser::defineToken() {
 		switch (currentChar) {
 			case '{':
 				currentPos_++;
-				// std::cout << "{ found" << std::endl;
 				tValue = "{";
 				return (cToken(OPEN_BRACE, tValue, currentLine_));
 			case '}':
 				currentPos_++;
-				// std::cout << "} found" << std::endl;
 				tValue = "}";
 				return (cToken(CLOSE_BRACE, tValue, currentLine_));
 			case ':':
 				currentPos_++;
-				// std::cout << ": found" << std::endl;
 				tValue = ":";
 				return (cToken(COLON, tValue, currentLine_));
 			case ';':
 				currentPos_++;
-				// std::cout << "; found" << std::endl;
 				tValue = ";";
 				return (cToken(SEMICOLON, tValue, currentLine_));
 			case '\n':
 				currentLine_++;
 				currentPos_++;
-				// std::cout << "\\n found" << std::endl;
 				continue; // skip to the next character
 			default:
 				break;
@@ -141,7 +128,6 @@ cToken	ConfParser::defineToken() {
 			while (currentPos_ != allConfig_.end() && *currentPos_ != '\n' && (isdigit(*currentPos_) || *currentPos_ == '.')) {
 				tValue += *currentPos_;
 				currentPos_++;			}
-			// std::cout << tValue << " found" << std::endl;
 			return (cToken(NUMBER, tValue, currentLine_));
 		}
 		else if (isalpha(*currentPos_) || *currentPos_ == '/') {
@@ -149,7 +135,6 @@ cToken	ConfParser::defineToken() {
 				tValue.push_back(*currentPos_);
 				currentPos_++;
 			}
-			// std::cout << tValue << " found" << std::endl;
 			return (cToken(STRING, tValue, currentLine_));
 		}
 		else {
@@ -157,12 +142,10 @@ cToken	ConfParser::defineToken() {
 				tValue += *currentPos_;
 				currentPos_++;
 			}
-			// std::cout << "Unknown input: " << tValue << " found on line " << currentLine_ << std::endl;
 			return (cToken(UNKNOWN, tValue, currentLine_));
 		}
 	}
 		if (currentPos_ == allConfig_.end()) {
-		// std::cout << "EOF found" << std::endl;
 		tValue = "";
 		return (cToken(END_OF_FILE, tValue, currentLine_));
 	}
@@ -177,7 +160,6 @@ void	ConfParser::validateBraces() {
 	if (allTokens_.empty()) {
 		throw ConfParser::ConfParserException("no tokens retrived ", 0);
 	}
-	//checking the the braces are matched
 	int	braceCount(0);
 	int	openBraceLine(0);
 	
@@ -511,8 +493,6 @@ void ConfParser::parseConfig(Server42& servers) {
 	}
 	catch (const ConfParserException& e) {
 		throw std::runtime_error(e.what());
-		// std::cerr << e.what() << std::endl;
-		// return (EXIT_FAILURE);
 	}
 		
 	size_t i(0);
@@ -529,10 +509,7 @@ void ConfParser::parseConfig(Server42& servers) {
 		}
 		catch (const ConfParserException& e) {
 			throw std::runtime_error(e.what());
-			// std::cerr << e.what() << std::endl;
-			// return (EXIT_FAILURE);
 		}
 		i++;
 	}
-	// return (EXIT_SUCCESS);
 }
