@@ -20,6 +20,9 @@
 #include <string> //for to_string()
 #include <vector> //for std::vector
 #include <unordered_map> // for std::unordered_map
+#include <fcntl.h> //for fcntl()
+#include <sys/epoll.h> //for epoll
+#include <map>         //for map
 
 #include "Webserv42.hpp"
 
@@ -27,6 +30,8 @@
 #define RED     "\033[31m"
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
+#define MAX_EVENTS 64
+#define BUFFER_SIZE 30000
 
 class Location;
 
@@ -71,6 +76,18 @@ class SingleServer {
 		
 		void	initSocket();
 		void	acceptConnections();
+		void	eventLoop();
+
+		//epoll
+		void setUpEpoll();
+		void addFdToEpoll(int fd, uint32_t events);
+		void removeFdFromEpoll(int fd);
+
+		//reading and parsing for a client
+		void handleClientRead(int clientFd);
+	
+		// writing and sending responses
+		void handleClientWrite(int clientFd);
 	
 	private:
 		std::string								serverName_; // server's name of the domain
@@ -85,7 +102,10 @@ class SingleServer {
 		int										maxBodySize_; //max size of the uploadable file in bytes
 		std::unordered_map<int, std::string>	errorPages_; //all error pages, key = error number & value = page path
 		struct addrinfo							*res_; //getaddrinfo() results, needed for bind() & accept()
-		// std::string								rawRequest_;
+		/// explaination??
+		int										epollFd_;
+		std::vector<epoll_event>				events_;
+		std::map<int, Request>					clients_requests_;
 };
 
 # endif

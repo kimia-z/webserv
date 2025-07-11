@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   main.cpp                                           :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kziari <kziari@student.42.fr>                +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/13 10:37:48 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/07/11 09:53:12 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   main.cpp                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/05 10:43:12 by mstencel          #+#    #+#             */
+/*   Updated: 2025/07/11 14:09:03 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,8 @@ int	main(int argc, char **argv)
 		for (SingleServer& server : servers.getServers()) {
 			server.initSocket();
 			server.acceptConnections();
+			// server.setUpEpoll();
+			// server.eventLoop();
 		}
 	}
 	catch (const std::exception& e) {
