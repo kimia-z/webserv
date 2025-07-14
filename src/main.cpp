@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 10:43:12 by mstencel          #+#    #+#             */
-/*   Updated: 2025/07/11 14:09:03 by kziari           ###   ########.fr       */
+/*   Updated: 2025/07/11 15:25:40 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,9 +48,8 @@ int	main(int argc, char **argv)
 		conf.parseConfig(servers);
 		for (SingleServer& server : servers.getServers()) {
 			server.initSocket();
-			server.acceptConnections();
-			// server.setUpEpoll();
-			// server.eventLoop();
+			server.setUpEpoll();
+			server.eventLoop();
 		}
 	}
 	catch (const std::exception& e) {

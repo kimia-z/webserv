@@ -20,7 +20,6 @@
 #include <string> //for to_string()
 #include <vector> //for std::vector
 #include <unordered_map> // for std::unordered_map
-#include <fcntl.h> //for fcntl()
 #include <sys/epoll.h> //for epoll
 #include <map>         //for map
 
@@ -34,7 +33,7 @@
 #define BUFFER_SIZE 30000
 
 class Location;
-
+class Request;
 
 class SingleServer {
 	
@@ -75,7 +74,6 @@ class SingleServer {
 
 		
 		void	initSocket();
-		void	acceptConnections();
 		void	eventLoop();
 
 		//epoll
@@ -87,7 +85,7 @@ class SingleServer {
 		void handleClientRead(int clientFd);
 	
 		// writing and sending responses
-		void handleClientWrite(int clientFd);
+		// void handleClientWrite(int clientFd);
 	
 	private:
 		std::string								serverName_; // server's name of the domain

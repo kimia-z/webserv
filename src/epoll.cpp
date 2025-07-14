@@ -1,6 +1,6 @@
-#include "../incl/ServerMain.hpp"
+#include "../incl/Webserv42.hpp"
 
-void ServerMain::setUpEpoll()
+void SingleServer::setUpEpoll()
 {
 	epollFd_ = epoll_create1(0);
 	if (epollFd_ == -1){
@@ -11,7 +11,7 @@ void ServerMain::setUpEpoll()
 	addFdToEpoll(serverFd_, EPOLLIN);
 }
 
-void ServerMain::addFdToEpoll(int fd, uint32_t events)
+void SingleServer::addFdToEpoll(int fd, uint32_t events)
 {
 	epoll_event event;
 	event.events = events;
@@ -23,7 +23,7 @@ void ServerMain::addFdToEpoll(int fd, uint32_t events)
 	std::cout << "Added FD " << fd << " to epoll with events " << events << std::endl;
 }
 
-void ServerMain::removeFdFromEpoll(int fd)
+void SingleServer::removeFdFromEpoll(int fd)
 {
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1)
 	{

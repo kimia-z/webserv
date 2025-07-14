@@ -255,21 +255,6 @@ void	SingleServer::initSocket() {
 		std::cerr << RED << "Could not bind to any address: " << strerror(errno) << RESET << std::endl;
 		throw std::runtime_error("Failed to bind socket"); // Stop program if no address worked
 	}
-	
-	int flags = fcntl(serverFd_, F_GETFL, 0);
-	if (flags == -1)
-	{
-		std::cerr << RED << "fcntl(F_GETFL) failed for server socket: " << strerror(errno) << RESET << std::endl;
-		close(serverFd_);
-		throw std::runtime_error("Failed to get socket flags");
-	}
-	flags |= O_NONBLOCK;
-	if (fcntl(serverFd_, F_SETFL, flags) == -1)
-	{
-		std::cerr << RED << "fcntl(F_SETFL, O_NONBLOCK) failed for server socket: " << strerror(errno) << RESET << std::endl;
-		close(serverFd_);
-		throw std::runtime_error("Failed to set socket flags");
-	}
 	if (listen(serverFd_, 10) == -1) {
 		std::cerr << RED << "listen() failed: " << strerror(errno) << RESET << std::endl;
 		close(serverFd_); // Close if listen fails
@@ -313,15 +298,6 @@ void SingleServer::eventLoop()
 					}
 					continue;
 				}
-
-				// Set clientFd to non-blocking and FD_CLOEXEC
-				int clientFlags = fcntl(clientFd, F_GETFL, 0);
-				if (clientFlags == -1 || (fcntl(clientFd, F_SETFL, clientFlags | O_NONBLOCK) == -1)) {
-					std::cerr << RED << "fcntl failed for clientFd " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-					close(clientFd);
-					continue;
-				}
-				
 				// Add new client FD to map with a new Request object
 				clients_requests_.insert(std::make_pair(clientFd, Request()));
 
@@ -332,7 +308,6 @@ void SingleServer::eventLoop()
 			} else {
 				// Handle events on a client socket
 				if (currentEvents & EPOLLIN) {
-					// --- NEW ---
 					handleClientRead(currentFd); // Call the new helper function
 				}
 				// --- LATER: Add handleClientWrite for EPOLLOUT events ---
@@ -373,16 +348,13 @@ void SingleServer::handleClientRead(int clientFd) {
 		removeFdFromEpoll(clientFd);
 		close(clientFd);
 		clients_requests_.erase(clientFd);
-	} else { // bytesReceived > 0
+	} else {
 		it->second.appendRawData(buffer, bytesReceived);
 		// Loop to process all complete requests that might be in the buffer
 		while (it->second.processRequestData()) {
 			// At this point, it->second contains a fully parsed request.
 			it->second.print();
-			// --- YOUR MAIN HTTP REQUEST PROCESSING LOGIC GOES HERE ---
-			// Use it->second.getMethod(), it->second.getPath(), it->second.getHeaders(), etc.
-			// to generate the appropriate HTTP response.
-			// For demonstration, let's use a simple response string:
+
 			std::string dummy_response = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from Server";
 
 			// You'll likely need a place to store the response to be sent in your Request or ClientConnection
