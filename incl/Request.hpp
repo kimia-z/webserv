@@ -1,5 +1,5 @@
-#ifndef REQUEST
-# define REQUEST
+#ifndef REQUEST_HPP
+# define REQUEST_HPP
 
 #include "Webserv42.hpp"
 #include <sstream>

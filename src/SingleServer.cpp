@@ -240,24 +240,24 @@ void	SingleServer::initSocket() {
 			continue;
 		}
 		int	yes = 1;
-		if (setsockopt(serverFd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) { // SOL_SOCK for APIs & SO_REUSEADDR for
+		if (setsockopt(serverFd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
 			std::cerr << RED << "setsockopt() failed: " << strerror(errno) << RESET << std::endl;
 			close (serverFd_);
 			continue;
 		}
 		if (bind(serverFd_, iterationPointer->ai_addr, iterationPointer->ai_addrlen) == 0) {
-			break ; //bind worked!
+			break ;
 		}
-		close(serverFd_); // Close socket if bind failed, try next address
+		close(serverFd_);
 	}
 
 	if (iterationPointer == NULL) {
 		std::cerr << RED << "Could not bind to any address: " << strerror(errno) << RESET << std::endl;
-		throw std::runtime_error("Failed to bind socket"); // Stop program if no address worked
+		throw std::runtime_error("Failed to bind socket");
 	}
 	if (listen(serverFd_, 10) == -1) {
 		std::cerr << RED << "listen() failed: " << strerror(errno) << RESET << std::endl;
-		close(serverFd_); // Close if listen fails
+		close(serverFd_);
 		throw std::runtime_error("Failed to listen on socket");
 	}
 	std::cout << "listening on port " << serverPortString_ << std::endl;
@@ -271,7 +271,6 @@ void SingleServer::eventLoop()
 	while (true) {
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1);
 		if (numEvents == -1) {
-			// ... handle epoll_wait error ...
 			throw std::runtime_error("epoll_wait failed");
 		}
 
@@ -283,12 +282,11 @@ void SingleServer::eventLoop()
 				std::cerr << RED << "Epoll error or hangup on FD " << currentFd << RESET << std::endl;
 				removeFdFromEpoll(currentFd);
 				close(currentFd);
-				clients_requests_.erase(currentFd); // Remove state from map
+				clients_requests_.erase(currentFd);
 				continue;
 			}
 
 			if (currentFd == serverFd_) {
-				// Handle new connection on listening socket
 				struct sockaddr_storage client_addr;
 				socklen_t client_addr_len = sizeof(client_addr);
 				int clientFd = accept(serverFd_, (struct sockaddr *)&client_addr, &client_addr_len);
@@ -298,19 +296,15 @@ void SingleServer::eventLoop()
 					}
 					continue;
 				}
-				// Add new client FD to map with a new Request object
 				clients_requests_.insert(std::make_pair(clientFd, Request()));
 
-				// Add new client FD to epoll for EPOLLIN (reading)
-				addFdToEpoll(clientFd, EPOLLIN | EPOLLRDHUP | EPOLLET); // Add RDHUP and ET from start
+				addFdToEpoll(clientFd, EPOLLIN | EPOLLRDHUP | EPOLLET);
 				std::cout << "Accepted new client (FD: " << clientFd << ")" << std::endl;
 
 			} else {
-				// Handle events on a client socket
 				if (currentEvents & EPOLLIN) {
-					handleClientRead(currentFd); // Call the new helper function
+					handleClientRead(currentFd);
 				}
-				// --- LATER: Add handleClientWrite for EPOLLOUT events ---
 				// if (currentEvents & EPOLLOUT) {
 				//     handleClientWrite(currentFd);
 				// }
@@ -325,7 +319,6 @@ void SingleServer::handleClientRead(int clientFd) {
 
 	std::map<int, Request>::iterator it = clients_requests_.find(clientFd);
 	if (it == clients_requests_.end()) {
-		// Should not happen if inserted on accept, but robust check.
 		std::cerr << RED << "Error: No Request object found for FD " << clientFd << " during read." << RESET << std::endl;
 		removeFdFromEpoll(clientFd);
 		close(clientFd);
@@ -336,7 +329,7 @@ void SingleServer::handleClientRead(int clientFd) {
 
 	if (bytesReceived == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			return; // No data currently available, not an error.
+			return;
 		} else {
 			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 			removeFdFromEpoll(clientFd);
@@ -350,54 +343,38 @@ void SingleServer::handleClientRead(int clientFd) {
 		clients_requests_.erase(clientFd);
 	} else {
 		it->second.appendRawData(buffer, bytesReceived);
-		// Loop to process all complete requests that might be in the buffer
 		while (it->second.processRequestData()) {
 			// At this point, it->second contains a fully parsed request.
 			it->second.print();
+			//check before Response
 
 			std::string dummy_response = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from Server";
-
-			// You'll likely need a place to store the response to be sent in your Request or ClientConnection
-			// Example: it->second.setResponseToSend(dummy_response); // You'd add this setter and _responseBuffer to Request class
-
-			// Attempt to send response (simplified for now, actual non-blocking send logic is more complex)
 			ssize_t bytesSent = send(clientFd, dummy_response.c_str(), dummy_response.length(), 0);
 			if (bytesSent == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					std::cerr << RED << "Send buffer full on FD " << clientFd << ", will try later (need EPOLLOUT handling)." << RESET << std::endl;
-					// You MUST modify epoll_ctl to add EPOLLOUT here if not all data sent.
-					// For this example, we'll just close for simplicity if buffer is full.
 				} else {
 					std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 				}
 				removeFdFromEpoll(clientFd);
 				close(clientFd);
 				clients_requests_.erase(clientFd);
-				return; // Exit this handler
+				return;
 			} else {
 				std::cout << "Sent " << bytesSent << " bytes to FD " << clientFd << std::endl;
 			}
-
-			// If the entire response was sent in one go, prepare for next request
-			// If not, you'd handle partial send (EPOLLOUT)
-			if (bytesSent == static_cast<ssize_t>(dummy_response.length())) { // Check if all sent
-				 it->second.clearParsedRequest(); // Clear buffer and reset state for next request
-				 // If you want to keep connection open (HTTP/1.1 persistent), you MUST switch FD back to EPOLLIN if it's currently EPOLLOUT
-				 // epoll_event event; // Example, but you'd be careful with this based on your send buffer
-				 // event.events = EPOLLIN | EPOLLRDHUP | EPOLLET; // Only read for next request
-				 // event.data.fd = clientFd;
-				 // epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event);
+			if (bytesSent == static_cast<ssize_t>(dummy_response.length())) {
+				 it->second.clearParsedRequest();
+				 epoll_event event;
+				 event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+				 event.data.fd = clientFd;
+				 epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event);
 			} else {
-				// Only partial send, client still expects more.
-				// You need to store the remaining part of dummy_response in Request::_responseBuffer.
-				// And ensure EPOLLOUT is set for this FD.
 				std::cerr << "Partial send on FD " << clientFd << ". Remaining " << (dummy_response.length() - bytesSent) << " bytes." << std::endl;
-				// This implies adding handleClientWrite() and managing state.
-				// For now, if partial, we'll just close connection for simplicity, but it's not ideal.
 				removeFdFromEpoll(clientFd);
 				close(clientFd);
 				clients_requests_.erase(clientFd);
-				return; // Exit this handler
+				return;
 			}
 		}
 		// If the while loop finishes, either all complete requests were processed,
