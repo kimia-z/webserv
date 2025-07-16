@@ -2,6 +2,7 @@
 # define ROUTER_HPP
 
 #include "Webserv42.hpp"
+#include <sys/stat.h> // struct stat
 
 struct ActionParameters {
 	const SingleServer*	matchedServer; // Pointer to the determined server config
@@ -27,11 +28,15 @@ struct ActionParameters {
 	int					errorCode;     // e.g., 400, 404, 405, 413
 	std::string			errorPagePath; // Path to custom error page (if configured for matchedServer)
 
+	bool				isDeleteOperation; // True if the action is to delete a file/directory(maybe not neccessary)??
+	bool				isDeleteDirectory;
+
 	// Default constructor to initialize flags
 	ActionParameters() : matchedServer(nullptr), matchedLocation(nullptr),
 						 isRedirect(false), redirectCode(0),
 						 isCGI(false), isUpload(false), isStaticFile(false),
-						 isAutoindex(false), errorCode(0) {}
+						 isAutoindex(false), errorCode(0), isDeleteOperation(false),
+						 isDeleteDirectory(false) {}
 };
 
 class Router
@@ -42,8 +47,9 @@ private:
 	const SingleServer* selectServerBlock(const Request& request, int listeningPort) const;
 	const Location* findBestMatchingLocation(const Request& request, const SingleServer* server) const;
 	ActionParameters determineAction(const Request& request, const SingleServer* selectedServer, const Location* selectedLocation) const;
-	bool fileExists(const std::string& path) const;
+	bool isFileExists(const std::string& path) const;
 	bool isDirectory(const std::string& path) const;
+	bool hasWriteAccess(const std::string& path) const;
 
 public:
 	Router(const Server42& allServersConfig);

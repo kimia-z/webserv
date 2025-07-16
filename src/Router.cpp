@@ -3,7 +3,33 @@
 Router::Router(const Server42& allServersConfig): allServers_(allServersConfig)
 {}
 ActionParameters Router::routeRequest(const Request& request, int listeningPort) const
-{}
+{
+	ActionParameters params;
+	const SingleServer *selectedServer = selectServerBlock(request,listeningPort);
+	if (!selectedServer){
+		params.errorCode = 500;
+		return params;
+	}
+	params.matchedServer = selectedServer;
+
+	const Location *selectedLocation = findBestMatchingLocation(request, selectedServer);
+	if(!selectedLocation){
+		params.errorCode = 404;
+		return params;
+	}
+	params.matchedLocation = selectedLocation;
+
+	params = determineAction(request, params.matchedServer, params.matchedLocation);
+	if (params.errorCode != 0 && params.matchedServer){
+		const std::unordered_map<int, std::string>	&errorPages = params.matchedServer->getErrorPages();
+		std::unordered_map<int, std::string>::const_iterator it = errorPages.find(params.errorCode);
+		if (it != errorPages.end()){
+			params.errorPagePath = it->second;
+		}
+	}
+
+	return params;
+}
 
 const SingleServer* Router::selectServerBlock(const Request& request, int listeningPort) const
 {
@@ -53,8 +79,7 @@ const Location* Router::findBestMatchingLocation(const Request& request, const S
 	for(int i = 0; i < locations.size(); i++){
 		const Location &location = locations[i];
 		const std::string &locationPath = location.getPath();
-		// TODO:double check!!
-		if (requestPath.rfind(locationPath, 0) == 0) {
+		if (requestPath.find(locationPath, 0) == 0) {
 			if (locationPath.length() > longestMatchLength) {
 				longestMatchLength = locationPath.length();
 				matchedLocation = &location;
@@ -96,10 +121,110 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		params.errorCode = 413;
 		return params;
 	}
+
+	std::string fileSystemPath = selectedLocation->getRoot();
+	std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
+
+	if (!fileSystemPath.empty() && fileSystemPath.back() != '/' && !relativePath.empty() && relativePath[0] != '/')
+	{
+		fileSystemPath += "/";
+	}
+	fileSystemPath += relativePath;
+		//TODO:double check?
+	if (fileSystemPath.empty() || fileSystemPath.back() == '/') {
+		if (!selectedLocation->getIndex().empty()) {
+			std::string indexPath = fileSystemPath;
+			if (indexPath.empty() || indexPath.back() != '/') indexPath += "/";
+			indexPath += selectedLocation->getIndex();
+			if (isFileExists(indexPath)) {
+				fileSystemPath = indexPath;
+			}
+		}
+	}
+	bool isDir = isDirectory(fileSystemPath);
+	bool isFile = isFileExists(fileSystemPath);
+
+
+	// CGI?????????
+
+	// POST
+	if (request.getMethod() == "POST" && !selectedLocation->getUploadPath().empty())
+	{
+		params.isUpload = true;
+		params.uploadTargetDir = selectedLocation->getUploadPath();
+		// TODO: how is getUploadPath() return the value?
+		size_t lastSlash = fileSystemPath.rfind('/');
+		if (lastSlash != std::string::npos){
+			params.uploadFilename = fileSystemPath.substr(lastSlash + 1);
+		} else {
+			params.uploadFilename = fileSystemPath;
+		}
+		return params;
+	}	// TODO: what should be the proper error code for if it is POST but there isn't upload path?
+
+	// DELETE
+	if (request.getMethod() == "DELETE"){
+		if (!isFileExists && !isDir) {
+			params.errorCode = 404;
+		} else if (!isDir) {
+			params.filePath = fileSystemPath;
+			// params.isDeleteOperation = true;
+		} else {
+			if (request.getPath().back() != '/') { // URI does not end with '/'
+				params.errorCode = 409;
+			} else {
+				if (!hasWriteAccess(fileSystemPath)) {
+					params.errorCode = 403;
+				} else {
+					params.filePath = fileSystemPath;
+					params.isDeleteOperation = true;
+					params.isDeleteDirectory = true;
+				}
+			}
+		}
+		return params;
+	}
+
+	//GET
+	if (request.getMethod() == "GET"){
+		if (isDir){
+			if (request.getPath().back() != '/'){
+				params.errorCode = 301;
+				params.isRedirect = true;
+				params.redirectCode = 301;
+				params.redirectUrl = request.getPath()+ "/";
+			}
+			else if(selectedLocation->getAutoindex()){
+				params.isStaticFile = true;
+				params.isAutoindex = true;
+				params.filePath = fileSystemPath;
+			} else{
+				params.errorCode = 403;
+			}
+		} else if(isFileExists){
+			params.isStaticFile = true;
+			params.filePath = fileSystemPath;
+		} else{
+			params.errorCode = 404;
+		}
+		return params;
+	}
+	params.errorCode = 501;
+	return params;
 }
 
 
-bool Router::fileExists(const std::string& path) const
-{}
+bool Router::isFileExists(const std::string& path) const
+{
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode));
+}
 bool Router::isDirectory(const std::string& path) const
-{}
+{
+	struct stat buffer;
+	return (stat(path.c_str(), &buffer) == 0 && S_ISDIR(buffer.st_mode));
+}
+
+bool Router::hasWriteAccess(const std::string& path) const {
+	return access(path.c_str(), W_OK) == 0;
+}
