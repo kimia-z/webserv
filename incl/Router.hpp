@@ -31,7 +31,6 @@ struct ActionParameters {
 	bool				isDeleteOperation; // True if the action is to delete a file/directory(maybe not neccessary)??
 	bool				isDeleteDirectory;
 
-	// Default constructor to initialize flags
 	ActionParameters() : matchedServer(nullptr), matchedLocation(nullptr),
 						 isRedirect(false), redirectCode(0),
 						 isCGI(false), isUpload(false), isStaticFile(false),
@@ -43,7 +42,8 @@ class Router
 {
 
 private:
-	const Server42& allServers_;
+	const Server42&		allServers_;
+
 	const SingleServer* selectServerBlock(const Request& request, int listeningPort) const;
 	const Location* findBestMatchingLocation(const Request& request, const SingleServer* server) const;
 	ActionParameters determineAction(const Request& request, const SingleServer* selectedServer, const Location* selectedLocation) const;
