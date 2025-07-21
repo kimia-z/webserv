@@ -147,6 +147,25 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	// CGI?????????
 
+	// TODO: create necessary functions in request e.g. getHeader(std::string key), getUri(),
+	if (params.isCGI) {
+		try {
+			Cgi cgi(request, *selectedLocation);
+			std::string cgiBody = cgi.runCgi();
+
+			//TODO figure here if it is response or params
+			params.errorCode = cgi.getStatusCode();
+			params.body = cgiBody;
+			params.header.setHeader("Content-Type", cgi.getContentType());
+		}
+		catch (const Cgi::CgiException& e) {
+			params.errorCode = 500;
+			params.body = "CGI Error: " + std::string(e.what());
+			params.header.setHeader("Content-Type", "text/plain");
+			return params;
+		}
+	}
+
 	// POST
 	if (request.getMethod() == "POST" && !selectedLocation->getUploadPath().empty())
 	{

@@ -18,6 +18,7 @@ ITALIC = \033[3m
 NAME = webserv
 
 SRC_FILES = src/main.cpp \
+			src/Cgi.cpp \
 			src/ConfParser.cpp \
 			src/epoll.cpp \
 			src/Location.cpp \

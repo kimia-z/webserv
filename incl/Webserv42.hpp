@@ -16,6 +16,7 @@
 
 #include "Server42.hpp"
 #include "SingleServer.hpp"
+#include "Cgi.hpp"
 #include "ConfParser.hpp"
 #include "Location.hpp"
 #include "HttpException.hpp"

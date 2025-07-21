@@ -4,6 +4,7 @@
 #include "Webserv42.hpp"
 #include <sys/stat.h> // struct stat
 
+class Cgi;
 class Server42;
 
 struct ActionParameters {
