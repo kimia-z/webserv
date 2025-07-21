@@ -76,7 +76,7 @@ const Location* Router::findBestMatchingLocation(const Request& request, const S
 	
 	const std::vector<Location> &locations = server->getLocations();
 	std::string requestPath = request.getPath();
-	for(int i = 0; i < locations.size(); i++){
+	for(int i = 0; i < (int)locations.size(); i++){
 		const Location &location = locations[i];
 		const std::string &locationPath = location.getPath();
 		if (requestPath.find(locationPath, 0) == 0) {
@@ -98,7 +98,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 	// Methods Allowed
 	std::vector<std::string> methods = selectedLocation->getAllowedMethods();
 	bool findAllowedMethod = false;
-	for (int i = 0; i < methods.size(); i++){
+	for (int i = 0; i < (long)methods.size(); i++){
 		if (methods[i] == request.getMethod()){
 			findAllowedMethod = true;
 			break;
@@ -164,7 +164,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	// DELETE
 	if (request.getMethod() == "DELETE"){
-		if (!isFileExists && !isDir) {
+		if (!isFile && !isDir) {
 			params.errorCode = 404;
 		} else if (!isDir) {
 			params.filePath = fileSystemPath;
@@ -201,7 +201,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 			} else{
 				params.errorCode = 403;
 			}
-		} else if(isFileExists){
+		} else if(isFile){
 			params.isStaticFile = true;
 			params.filePath = fileSystemPath;
 		} else{

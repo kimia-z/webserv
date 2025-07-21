@@ -22,6 +22,8 @@ SRC_FILES = src/main.cpp \
 			src/epoll.cpp \
 			src/Location.cpp \
 			src/Request.cpp \
+			src/Response.cpp \
+			src/Router.cpp \
 			src/Server42.cpp \
 			src/SingleServer.cpp
 

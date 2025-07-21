@@ -4,6 +4,8 @@
 #include "Webserv42.hpp"
 #include <sys/stat.h> // struct stat
 
+class Server42;
+
 struct ActionParameters {
 	const SingleServer*	matchedServer; // Pointer to the determined server config
 	const Location*		matchedLocation;   // Pointer to the determined location config
