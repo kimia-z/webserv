@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 10:37:22 by mstencel          #+#    #+#             */
-/*   Updated: 2025/07/15 18:54:35 by kziari           ###   ########.fr       */
+/*   Updated: 2025/07/22 12:50:23 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ class Server42 {
 		
 	
 	private:
-		std::vector<SingleServer>	servers_;	
+		std::vector<SingleServer>	servers_;
 };
 
 #endif

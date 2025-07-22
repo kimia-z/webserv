@@ -14,11 +14,16 @@ private:
 
 	std::string getDefaultStatusMessage(int code) const;
 	void addMandatoryHeaders();
+	void buildErrorResponse(int statusCode, const std::string& customErrorPageContent);
+	void buildRedirectResponse(int statusCode, const std::string& locationUrl);
+	void buildStaticFileResponse(const std::string& fileContent, const std::string& mimeType, int statusCode);
+	void buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType = "text/html");
 public:
 	Response();
 	~Response();
 
 	std::string toString() const;
+	void buildFromAction(const ActionParameters& action, const std::string& content = "", int actionStatusCode = 0);
 
 	// Setters
 	void setStatusCode(int code);
