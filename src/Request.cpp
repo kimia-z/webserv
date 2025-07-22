@@ -90,7 +90,7 @@ bool Request::processRequestData() {
 				// _codeStatus = 400;
 				return true;
 			}
-		} else if (_method == "POST" || _method == "PUT") {
+		} else if (_method == "POST") {
 			// If POST/PUT without CL or TE, it's generally an error (HTTP/1.1 requires one)
 			// Unless it's a specific type of POST that's allowed without body.
 			// For this project, assume it needs one.

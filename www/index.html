@@ -1,13 +1,74 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Travels - Mountains & Sea</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
 
-<html>
-	<head>
-		<title>webserv</title>
-		<link rel="icon" type="image/x-icon" href="images/favicon.ico">
-	</head>
-	<body>
-		<h1>
-			webserv's homepage
-		</h1>
-	</body>
+    .section {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .mountains {
+      background-color: #f0f8ff;
+    }
+
+    .sea {
+      background-color: #e0ffff;
+    }
+
+    .section img {
+      width: 100%;
+      max-height: 250px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #008CBA;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      margin-top: 10px;
+    }
+
+    .btn:hover {
+      background-color: #005f73;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="section mountains">
+    <h2>Mountain trips</h2>
+    <img src="images/mountains.jpg" alt="mountain photo">
+    <a href="mountains.html" class="btn">leave your details for the mountain trip</a>
+  </div>
+
+  <div class="section sea">
+    <h2>Sea travels</h2>
+    <img src="images/sea.jpg" alt="sea photo">
+    <a href="sea.html" class="btn">leave your details for the sea trip</a>
+  </div>
+</body>
 </html>
