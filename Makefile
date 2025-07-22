@@ -1,12 +1,12 @@
 # **************************************************************************** #
 #                                                                              #
-#                                                         :::      ::::::::    #
-#    Makefile                                           :+:      :+:    :+:    #
-#                                                     +:+ +:+         +:+      #
-#    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
-#                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/07/11 14:07:21 by kziari           ###   ########.fr        #
+#                                                         ::::::::             #
+#    Makefile                                           :+:    :+:             #
+#                                                      +:+                     #
+#    By: kziari <kziari@student.42.fr>                +#+                      #
+#                                                    +#+                       #
+#    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
+#    Updated: 2025/07/22 11:02:01 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,7 +24,6 @@ SRC_FILES = src/main.cpp \
 			src/Location.cpp \
 			src/Request.cpp \
 			src/Response.cpp \
-			src/Router.cpp \
 			src/Server42.cpp \
 			src/SingleServer.cpp
 

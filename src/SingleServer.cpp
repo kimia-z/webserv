@@ -316,26 +316,51 @@ void SingleServer::handleClientRead(int clientFd) {
 	if (bytesReceived == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
 			return;
-		} else {
+		}
+		else {
 			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 			removeFdFromEpoll(clientFd);
 			close(clientFd);
 			clients_requests_.erase(clientFd);
 		}
-	} else if (bytesReceived == 0) {
+	} 
+	else if (bytesReceived == 0) {
 		std::cout << "Client (FD: " << clientFd << ") disconnected gracefully." << std::endl;
 		removeFdFromEpoll(clientFd);
 		close(clientFd);
 		clients_requests_.erase(clientFd);
-	} else {
+	}
+	else {
 		it->second.appendRawData(buffer, bytesReceived);
 		while (it->second.processRequestData()) {
 			// At this point, it->second contains a fully parsed request.
 			it->second.print();
 			//check before Response
 
-			std::string dummy_response = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from Server";
-			ssize_t bytesSent = send(clientFd, dummy_response.c_str(), dummy_response.length(), 0);
+			Response	res;
+			std::string	resString;
+
+			//running CGI case
+			if (it->second.getPath().find("cgi-bin") == 0){
+				std::string scriptPath = serverRoot_ + it->second.getPath();
+				try {
+					Cgi cgi(it->second, scriptPath);
+					std::string cgiOutput = cgi.runCgi();
+					res.setStatusCode(200);
+					res.setBody(cgiOutput);
+				}
+				catch (const std::exception&e) {
+					res.setStatusCode(500);
+					res.setBody("CGI Error: " + std::string(e.what()));
+				}
+			}
+
+			resString = res.toString();
+
+
+
+			// std::string dummy_response = "HTTP/1.1 200 OK\r\nContent-Length: 17\r\n\r\nHello from Server";
+			ssize_t bytesSent = send(clientFd, resString.c_str(), resString.length(), 0);
 			if (bytesSent == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					std::cerr << RED << "Send buffer full on FD " << clientFd << ", will try later (need EPOLLOUT handling)." << RESET << std::endl;
@@ -349,14 +374,14 @@ void SingleServer::handleClientRead(int clientFd) {
 			} else {
 				std::cout << "Sent " << bytesSent << " bytes to FD " << clientFd << std::endl;
 			}
-			if (bytesSent == static_cast<ssize_t>(dummy_response.length())) {
+			if (bytesSent == static_cast<ssize_t>(resString.length())) {
 				 it->second.clearParsedRequest();
 				 epoll_event event;
 				 event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 				 event.data.fd = clientFd;
 				 epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event);
 			} else {
-				std::cerr << "Partial send on FD " << clientFd << ". Remaining " << (dummy_response.length() - bytesSent) << " bytes." << std::endl;
+				std::cerr << "Partial send on FD " << clientFd << ". Remaining " << (resString.length() - bytesSent) << " bytes." << std::endl;
 				removeFdFromEpoll(clientFd);
 				close(clientFd);
 				clients_requests_.erase(clientFd);

@@ -34,6 +34,7 @@
 
 class Location;
 class Request;
+class Response;
 
 class SingleServer {
 	
