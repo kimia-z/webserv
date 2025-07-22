@@ -91,8 +91,7 @@ std::string Cgi::runCgi() {
 
 		char* argv[] = { const_cast<char*>(scriptPath_.c_str()), NULL };
 		execve(scriptPath_.c_str(), argv, envp);
-
-		// Błąd execve
+		
 		perror("execve");
 		exit(1);
 	}

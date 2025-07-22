@@ -4,71 +4,62 @@
   <meta charset="UTF-8" />
   <title>Travels - Mountains & Sea</title>
   <style>
-    body {
+        body {
       margin: 0;
       font-family: Arial, sans-serif;
-      display: flex;
-      height: 100vh;
+      background-color: #f5faff;
+      text-align: center;
     }
 
-    .section {
-      width: 50%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: start;
+    .header {
       padding: 20px;
-      box-sizing: border-box;
     }
 
-    .mountains {
-      background-color: #f0f8ff;
+    .images {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
     }
 
-    .sea {
-      background-color: #e0ffff;
-    }
-
-    .section img {
-      width: 100%;
-      max-height: 250px;
+    .images img {
+      width: 45%;
+      max-height: 300px;
       object-fit: cover;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .btn-container {
+      margin-top: 30px;
     }
 
     .btn {
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 14px 28px;
+      font-size: 18px;
       background-color: #008CBA;
       color: white;
       border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      border-radius: 10px;
       text-decoration: none;
-      margin-top: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
     }
 
     .btn:hover {
       background-color: #005f73;
     }
-
-    h2 {
-      margin-top: 0;
-    }
   </style>
 </head>
 <body>
-  <div class="section mountains">
-    <h2>Mountain trips</h2>
-    <img src="images/mountains.jpg" alt="mountain photo">
-    <a href="mountains.html" class="btn">leave your details for the mountain trip</a>
+	<div class="header"><h2>Travels</h2></div>
+  <div class="images">
+    <img src="images/mountains.jpg" alt="photo of the mountains">
+    <img src="images/sea.jpg" alt="photo of the sea">
   </div>
 
-  <div class="section sea">
-    <h2>Sea travels</h2>
-    <img src="images/sea.jpg" alt="sea photo">
-    <a href="sea.html" class="btn">leave your details for the sea trip</a>
+  <div class="btn-container">
+    <a href="form.html" class="btn">leave your contact details to organise your next trip</a>
   </div>
 </body>
 </html>

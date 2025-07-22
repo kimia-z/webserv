@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/05 10:43:12 by mstencel          #+#    #+#             */
-/*   Updated: 2025/07/11 15:25:40 by kziari           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   main.cpp                                           :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: kziari <kziari@student.42.fr>                +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2025/05/05 10:43:12 by mstencel      #+#    #+#                 */
+/*   Updated: 2025/07/22 12:53:11 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ int	main(int argc, char **argv)
 		conf.parseConfig(servers);
 		for (SingleServer& server : servers.getServers()) {
 			server.initSocket();
-			server.setUpEpoll();
+			server.setUpEpoll(); //TODO move it outside to Server42
 			server.eventLoop();
 		}
 	}
