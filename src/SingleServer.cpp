@@ -201,7 +201,6 @@ void	SingleServer::setErrorPages(const int& errorNb, const std::string& newError
 
 
 
-
 void	SingleServer::initSocket() {
 	struct addrinfo	hints;
 	struct addrinfo	*iterationPointer;
@@ -219,22 +218,6 @@ void	SingleServer::initSocket() {
 		// rather than just printing and continuing potentially uninitialized.
 		throw std::runtime_error("Failed to get address info"); // Example
 	}
-	// iteration for debugging!
-	// char ipstr[INET6_ADDRSTRLEN];
-	// for (iterationPointer = res_; iterationPointer != NULL; iterationPointer = iterationPointer->ai_next) {
-	// 	void	*addr;
-		
-	// 	if (iterationPointer->ai_family == AF_INET) { //for IPv4
-	// 		struct sockaddr_in *ipv4 = (struct sockaddr_in *)iterationPointer->ai_addr;
-	// 		addr = &(ipv4->sin_addr);
-	// 	}
-	// 	else {//for IPv6
-	// 		struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)iterationPointer->ai_addr;
-	// 		addr = &(ipv6->sin6_addr);
-	// 	}
-	// 	inet_ntop(iterationPointer->ai_family, addr, ipstr, sizeof ipstr);
-	// 	std::cout << "Resolved address: " << ipstr << std::endl;
-	// }
 	
 	for (iterationPointer = res_; iterationPointer != NULL; iterationPointer = iterationPointer->ai_next) {
 		serverFd_ = socket(iterationPointer->ai_family, iterationPointer->ai_socktype, iterationPointer->ai_protocol);

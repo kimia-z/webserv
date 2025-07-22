@@ -280,58 +280,6 @@ const std::unordered_map<std::string, std::string> &Request::getQueryParams() co
 
 size_t Request::findCRLFCRLF(const std::string& buffer) const {return buffer.find("\r\n\r\n");}
 
-// ...#include "../incl/Request.hpp"
-
-// Request::Request(const std::string &rawRequest)
-// {
-// 	try {
-// 		parseRequest(rawRequest);
-// 	} catch (const HttpException &e) {
-// 		std::cerr << "Request parsing failed: " << e.what() << std::endl;
-// 		throw; // Re-throw to be handled by caller
-// 	}
-// }
-
-// Request(const Request& copy);
-// Request& operator=(const Request& copy);
-// ~Request();
-
-
-// Parsings:
-// void Request::parseRequest(const std::string &rawRequest)
-// {
-// 	std::istringstream stream(rawRequest);
-// 	std::string line;
-
-// 	// Step 1: Skip empty lines before the start-line
-// 	while (std::getline(stream, line))
-// 	{
-// 		if (line == "\r" || line.empty()) continue;
-// 		break; // Found the start-line
-// 	}
-// 	// Step 2: Parse start-line: METHOD PATH VERSION
-// 	if (!parseStartLine(line)){
-// 		throw HttpException(400, "Bad Request: Invalid start line");
-// 		// std::cerr << RED << "Parsing the startline failed: " << strerror(errno) << RESET << std::endl;
-// 	}
-// 	// Step 3: Parse headers
-// 	while(std::getline(stream, line))
-// 	{
-// 		if (line == "\r" || line.empty()) break;
-// 		if (!parseHeader(line)){
-// 			throw HttpException(400, "Bad Request: Invalid Header");
-// 			// std::cerr << RED << "Invalid header line: " << strerror(errno) << RESET << std::endl;
-// 		}
-// 	}
-// 	// Header validation: Mandatory Host name in header
-// 	if (_headers.find("Host") == _headers.end()){
-// 		throw HttpException(400, "Bad Request: Missing mandatory 'Host' header");
-// 		//std::cerr << "The request required Host header" << std::endl;
-// 	}
-
-// 	// Step 4: Parse body
-// 	parseBody(rawRequest);
-// }
 
 //TODO: what should it beheaves when failed in parsing?
 bool Request::parseStartLine(std::string line)
@@ -394,53 +342,6 @@ bool Request::parseHeader(std::string line)
 	}
 	return true;
 }
-
-// void Request::parseBody(const std::string &rawRequest)
-// {
-// 	size_t headerEnd = rawRequest.find("\r\n\r\n");
-// 	if (headerEnd == std::string::npos) return;
-
-// 	std::string body = rawRequest.substr(headerEnd + 4);
-// 	auto isTe = _headers.find("Transfer-Encoding");
-// 	auto clIt = _headers.find("Content-Length");
-
-// 	if (isTe != _headers.end() && isTe->second == "chunked") {
-// 		parseChunkedBody(body);
-// 	} else if (clIt != _headers.end()) {
-// 		try {
-// 			int contentLength = std::stoi(clIt->second);
-// 			if (contentLength < 0)
-// 				throw HttpException(400, "Negative Content-Length");
-// 			if ((int)body.size() < contentLength)
-// 				throw HttpException(400, "Body shorter than Content-Length");
-// 			_body = body.substr(0, contentLength);
-// 		} catch (const std::exception &) {
-// 			throw HttpException(400, "Invalid Content-Length value");
-// 		}
-// 	} else if (_method == "POST" || _method == "PUT") {
-// 		throw HttpException(400, "Missing Content-Length or Transfer-Encoding for POST/PUT");
-// 	}
-// }
-
-
-// void Request::parseChunkedBody(const std::string &rawRequest)
-// {
-// 	std::istringstream stream(rawRequest);
-// 	std::string line;
-// 	_body.clear();
-// 	while(std::getline(stream, line)){
-// 		if (!line.empty() && line.back() == '\r') line.pop_back();
-// 		size_t chunkedSize = std::stoul(line, nullptr, 16);
-// 		if (chunkedSize == 0) break;
-// 		char *buffer = new char[chunkedSize];
-// 		stream.read(buffer, chunkedSize);
-// 		_body.append(buffer, chunkedSize);
-// 		delete [] buffer;
-// 		stream.ignore(2);
-// 	}
-
-// 	// Parse tailer headers????
-// }
 
 // Validations:
 bool Request::isValidMethod(const std::string &method) const
