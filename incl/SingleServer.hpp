@@ -36,74 +36,55 @@ class Location;
 class Request;
 
 class SingleServer {
-	
-	public:
-		SingleServer();
-		SingleServer(int port);
-		SingleServer(const SingleServer& copy);
-		SingleServer& operator=(const SingleServer& copy);
-		~SingleServer();
+private:
+	std::string								serverName_; // server's name of the domain
+	// std::vector<std::string>                serverNames_; // List of server names
+	std::vector<Location>					locations_; // server's urls and their locations
+	// std::string							serverHost_; // server's host, e.g. "localhost" - within the serverName_, so not needed?
+	std::string								serverRoot_; // server's root, path to the folder with sites, for us "www"
+	std::string								serverIP_; //server's IP as a string
+	std::string								serverPortString_; //server's port as a string
+	int										serverPortInt_;//server's port as an integer
+	int										serverFd_;   // The listening socket FD for this server
+	int										maxBodySize_; //max size of the uploadable file in bytes
+	std::unordered_map<int, std::string>	errorPages_; //all error pages, key = error number & value = page path
+	addrinfo								*res_;  //getaddrinfo() results, needed for bind() & accept()
+public:
+	SingleServer();
+	SingleServer(int port);
+	SingleServer(const SingleServer& copy);
+	SingleServer& operator=(const SingleServer& copy);
+	~SingleServer();
 
-		//getters:
-		std::string									getServName() const;
-		std::vector<Location>						getLocations() const;
-		// std::string									getServHost() const;
-		std::string									getServRoot() const;
-		std::string									getServIP() const;
-		std::string									getServPortString() const;
-		int											getServPortInt() const;
-		int											getServFd() const;
-		int											getClientFd() const;
-		int											getMaxBodySize() const;
-		const std::unordered_map<int, std::string>	getErrorPages() const;
-		addrinfo*									getResults() const;
+	// Getters
+	std::string									getServName() const;
+	// const std::vector<std::string>& getServerNames() const;
+	const std::vector<Location>&				getLocations() const;
+	std::string									getServRoot() const;
+	std::string									getServIP() const;
+	std::string									getServPortString() const;
+	int											getServPortInt() const;
+	int 										getServFd() const;
+	int											getMaxBodySize() const;
+	const std::unordered_map<int, std::string>&	getErrorPages() const;
+	std::string									getErrorPagePath(int errorCode) const;
+	addrinfo									*getResults() const;
 
-		//setters:
-		void	setServName(const std::string& newServName);
-		void	setLocations(const Location& newLocations);
-		// void	setServHost(const std::string &newServHost);
-		void	setServRoot(const std::string& newServRoot);
-		void	setServIP(const std::string& newIP);
-		void	setServPortString(const std::string& newPortStr);
-		void	setServPortInt(const int& newPortInt);
-		void	setServFd(const int& newServFd);
-		void	setClientFd(const int& newClientFd);
-		void	setMaxBodySize(const int& newMaxBodySize);
-		void	setErrorPages(const int& errorNb, const std::string& newErrorPage);
-		void	setResults(addrinfo* newResult);
+	// Setters
+	void	setServName(const std::string& newServName);
+	// void	addServerName(const std::string& newName); // For multiple server_names
+	void	setLocations(const Location& newLocation);
+	void	setServRoot(const std::string& newServRoot);
+	void	setServIP(const std::string& newServIP);
+	void	setServPortString(const std::string& newServPortStr);
+	void	setServPortInt(const int& newServPortInt);
+	void	setServFd(const int& newServFd);
+	void	setMaxBodySize(const int& newMaxBodySize);
+	void	setErrorPages(const int& errorNb, const std::string& newErrorPage);
+	void	setResults(addrinfo* newResult);
 
-		
-		void	initSocket();
-		void	eventLoop();
-
-		//epoll
-		void setUpEpoll();
-		void addFdToEpoll(int fd, uint32_t events);
-		void removeFdFromEpoll(int fd);
-
-		//reading and parsing for a client
-		void handleClientRead(int clientFd);
-	
-		// writing and sending responses
-		// void handleClientWrite(int clientFd);
-	
-	private:
-		std::string								serverName_; // server's name of the domain
-		std::vector<Location>					locations_; // server's urls and their locations
-		// std::string								serverHost_; // server's host, e.g. "localhost" - within the serverName_, so not needed?
-		std::string								serverRoot_; // server's root, path to the folder with sites, for us "www"
-		std::string								serverIP_; //server's IP as a string
-		std::string								serverPortString_; //server's port as a string
-		int										serverPortInt_; //server's port as an integer
-		int										serverFd_; //socket() fd
-		int										clientFd_; //accept() fd
-		int										maxBodySize_; //max size of the uploadable file in bytes
-		std::unordered_map<int, std::string>	errorPages_; //all error pages, key = error number & value = page path
-		struct addrinfo							*res_; //getaddrinfo() results, needed for bind() & accept()
-		/// explaination??
-		int										epollFd_;
-		std::vector<epoll_event>				events_;
-		std::map<int, Request>					clients_requests_;
+	// Socket Initialization (sets up listening FD, makes it non-blocking)
+	void	initSocket();
 };
 
-# endif
+#endif
