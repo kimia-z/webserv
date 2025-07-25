@@ -1,36 +1,34 @@
 #include "../incl/Webserv.hpp"
 
-#include "../incl/Webserv.hpp" // Include its own header first
-
 // --- Constructor ---
 Webserv::Webserv(const Server42& config)
-	: _allServersConfig(config), // Initialize const reference
-	  _epollFd(-1),              // Initialize epollFd
-	  _router(config)            // Initialize Router, passing config
+	: allServersConfig_(config), // Initialize const reference
+	  epollFd_(-1),              // Initialize epollFd
+	  router_(config)            // Initialize Router, passing config
 {
-	_epollFd = epoll_create1(0); // Create the single epoll instance
-	if (_epollFd == -1) {
+	epollFd_ = epoll_create1(0); // Create the single epoll instance
+	if (epollFd_ == -1) {
 		throw std::runtime_error("Webserv: Failed to create epoll instance");
 	}
-	_events.resize(MAX_EVENTS); // Resize event buffer
-	std::cout << "Webserv orchestrator created with epoll FD: " << _epollFd << std::endl;
+	events_.resize(MAX_EVENTS); // Resize event buffer
+	std::cout << "Webserv orchestrator created with epoll FD: " << epollFd_ << std::endl;
 }
 
 // --- Destructor ---
 Webserv::~Webserv() {
 	// Close the central epoll instance FD
-	if (_epollFd != -1) {
-		close(_epollFd);
+	if (epollFd_ != -1) {
+		close(epollFd_);
 	}
 
 	// Close all remaining client FDs if any are still open (robust cleanup)
-	for (std::map<int, Request>::iterator it = _clientRequests.begin(); it != _clientRequests.end(); ++it) {
+	for (std::map<int, Request>::iterator it = clientRequests_.begin(); it != clientRequests_.end(); ++it) {
 		close(it->first); // Close the client socket
 	}
-	_clientRequests.clear();    // Clear all client state maps
-	_clientResponses.clear();
-	_listenerMap.clear();       // Clear listener map (listeners closed by SingleServer destructor)
-	_clientToServerMap.clear();
+	clientRequests_.clear();    // Clear all client state maps
+	clientResponses_.clear();
+	listenerMap_.clear();       // Clear listener map (listeners closed by SingleServer destructor)
+	clientToServerMap_.clear();
 
 	std::cout << "Webserv orchestrator destructed." << std::endl;
 }
@@ -40,7 +38,7 @@ Webserv::~Webserv() {
 // Sets up all listening sockets and adds them to the central epoll instance
 void Webserv::start() {
 	std::cout << "Starting Webserv..." << std::endl;
-	const std::vector<SingleServer>& servers = _allServersConfig.getServers(); // Get server configs
+	const std::vector<SingleServer>& servers = allServersConfig_.getServers(); // Get server configs
 
 	if (servers.empty()) {
 		throw std::runtime_error("No server configurations loaded. Please check your config file.");
@@ -51,8 +49,8 @@ void Webserv::start() {
 		SingleServer& server = const_cast<SingleServer&>(servers[i]); // Need non-const ref to call initSocket()
 		try {
 			server.initSocket(); // This sets up server.serverFd_ and makes it non-blocking
-			_addFdToEpoll(server.getServFd(), EPOLLIN); // Add listener FD to central epoll
-			_listenerMap[server.getServFd()] = &server; // Map listener FD to its config
+			addFdToEpoll(server.getServFd(), EPOLLIN); // Add listener FD to central epoll
+			listenerMap_[server.getServFd()] = &server; // Map listener FD to its config
 			std::cout << GREEN << "  -> Server '" << server.getServName() << "' listening on port "
 					  << server.getServPortInt() << " (FD: " << server.getServFd() << ")" << RESET << std::endl;
 		} catch (const std::exception& e) {
@@ -69,34 +67,34 @@ void Webserv::start() {
 // Runs the central epoll_wait loop, dispatching events
 void Webserv::runEventLoop() {
 	while (true) {
-		int numEvents = epoll_wait(_epollFd, _events.data(), _events.size(), -1); // -1 for infinite timeout
+		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1); // -1 for infinite timeout
 		if (numEvents == -1) {
 			std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
 			throw std::runtime_error("epoll_wait failed, critical error.");
 		}
 
 		for (int i = 0; i < numEvents; ++i) {
-			int currentFd = _events[i].data.fd;
-			uint32_t currentEvents = _events[i].events;
+			int currentFd = events_[i].data.fd;
+			uint32_t currentEvents = events_[i].events;
 
 			// Handle errors or hangup on the FD
 			if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
 				std::cerr << RED << "Epoll error, hangup or remote shutdown on FD " << currentFd << RESET << std::endl;
-				_closeClientConnection(currentFd); // Clean up the problematic connection
+				closeClientConnection(currentFd); // Clean up the problematic connection
 				continue;
 			}
 
 			// If it's a listening socket (new connection)
-			if (_listenerMap.count(currentFd)) {
-				_handleNewConnection(currentFd);
+			if (listenerMap_.count(currentFd)) {
+				handleNewConnection(currentFd);
 			}
 			// If it's a client socket (data to read or write)
 			else {
 				if (currentEvents & EPOLLIN) {
-					_handleClientRead(currentFd);
+					handleClientRead(currentFd);
 				}
 				if (currentEvents & EPOLLOUT) {
-					_handleClientWrite(currentFd);
+					handleClientWrite(currentFd);
 				}
 			}
 		}
@@ -105,31 +103,31 @@ void Webserv::runEventLoop() {
 
 // --- Private Helper Implementations (Epoll Management) ---
 
-void Webserv::_addFdToEpoll(int fd, uint32_t events) {
+void Webserv::addFdToEpoll(int fd, uint32_t events) {
 	epoll_event event;
 	event.events = events | EPOLLRDHUP | EPOLLET; // Always include RDHUP for graceful disconnect, ET for edge-triggered
 	event.data.fd = fd;
-	if (epoll_ctl(_epollFd, EPOLL_CTL_ADD, fd, &event) == -1) {
+	if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &event) == -1) {
 		std::cerr << RED << "epoll_ctl(ADD, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 		throw std::runtime_error("Failed to add FD to epoll");
 	}
 	// std::cout << "Added FD " << fd << " to epoll for events " << events << std::endl; // Debug
 }
 
-void Webserv::_removeFdFromEpoll(int fd) {
-	if (epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {
+void Webserv::removeFdFromEpoll(int fd) {
+	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 	}
 	// std::cout << "Removed FD " << fd << " from epoll" << std::endl; // Debug
 }
 
-void Webserv::_closeClientConnection(int clientFd) {
-	_removeFdFromEpoll(clientFd); // Remove from epoll monitoring
+void Webserv::closeClientConnection(int clientFd) {
+	removeFdFromEpoll(clientFd); // Remove from epoll monitoring
 	close(clientFd);             // Close the actual socket FD
 
-	_clientRequests.erase(clientFd);    // Remove client's request state
-	_clientResponses.erase(clientFd);   // Remove client's response state
-	_clientToServerMap.erase(clientFd); // Remove mapping to server config
+	clientRequests_.erase(clientFd);    // Remove client's request state
+	clientResponses_.erase(clientFd);   // Remove client's response state
+	clientToServerMap_.erase(clientFd); // Remove mapping to server config
 
 	std::cout << YELLOW << "Closed connection for FD: " << clientFd << RESET << std::endl;
 }
@@ -137,7 +135,7 @@ void Webserv::_closeClientConnection(int clientFd) {
 // --- Private Helper Implementations (Event Handling) ---
 
 // Handles a new incoming connection on a listener socket
-void Webserv::_handleNewConnection(int listenerFd) {
+void Webserv::handleNewConnection(int listenerFd) {
 	struct sockaddr_storage client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
 	int clientFd = accept(listenerFd, (struct sockaddr *)&client_addr, &client_addr_len);
@@ -149,23 +147,23 @@ void Webserv::_handleNewConnection(int listenerFd) {
 	}
 
 	// Map this client to the SingleServer config that accepted it (for routing)
-	_clientToServerMap[clientFd] = _listenerMap[listenerFd];
-	_clientRequests.insert(std::make_pair(clientFd, Request())); // Initialize a Request object for this client
+	clientToServerMap_[clientFd] = listenerMap_[listenerFd];
+	clientRequests_.insert(std::make_pair(clientFd, Request())); // Initialize a Request object for this client
 
-	_addFdToEpoll(clientFd, EPOLLIN); // Add client FD to epoll for reading
+	addFdToEpoll(clientFd, EPOLLIN); // Add client FD to epoll for reading
 	std::cout << GREEN << "Accepted new client (FD: " << clientFd << ") on listener " << listenerFd << RESET << std::endl;
 }
 
 // Handles incoming data from a client socket
-void Webserv::_handleClientRead(int clientFd) {
+void Webserv::handleClientRead(int clientFd) {
 	char buffer[BUFFER_SIZE];
 	memset(buffer, 0, sizeof(buffer));
 
 	// Get the Request object for this client
-	std::map<int, Request>::iterator request_it = _clientRequests.find(clientFd);
-	if (request_it == _clientRequests.end()) {
+	std::map<int, Request>::iterator request_it = clientRequests_.find(clientFd);
+	if (request_it == clientRequests_.end()) {
 		std::cerr << RED << "Error: No Request object found for FD " << clientFd << " during read. Closing connection." << RESET << std::endl;
-		_closeClientConnection(clientFd);
+		closeClientConnection(clientFd);
 		return;
 	}
 
@@ -174,12 +172,12 @@ void Webserv::_handleClientRead(int clientFd) {
 	if (bytesReceived == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
 			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-			_closeClientConnection(clientFd);
+			closeClientConnection(clientFd);
 		}
 		return;
 	} else if (bytesReceived == 0) { // Client disconnected gracefully
 		std::cout << "Client (FD: " << clientFd << ") disconnected gracefully." << std::endl;
-		_closeClientConnection(clientFd);
+		closeClientConnection(clientFd);
 		return;
 	} else { // Data received
 		request_it->second.appendRawData(buffer, bytesReceived);
@@ -189,15 +187,15 @@ void Webserv::_handleClientRead(int clientFd) {
 			// Request is fully parsed into request_it->second
 
 			// Get the SingleServer config associated with this client for routing
-			const SingleServer* clientServer = _clientToServerMap[clientFd];
+			const SingleServer* clientServer = clientToServerMap_[clientFd];
 			if (!clientServer) {
 				std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
-				_closeClientConnection(clientFd);
+				closeClientConnection(clientFd);
 				return;
 			}
 
 			// --- Perform URL Routing ---
-			ActionParameters action = _router.routeRequest(request_it->second, clientServer->getServPortInt());
+			ActionParameters action = router_.routeRequest(request_it->second, clientServer->getServPortInt());
 
 			// --- Perform Action & Generate Response ---
 			std::string responseContent = ""; // Content for the response body
@@ -210,7 +208,7 @@ void Webserv::_handleClientRead(int clientFd) {
 				if (responseContent.empty()) { // If no custom page, provide a generic one
 					responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
 				} else { // Read custom error page file content
-					responseContent = _readFileContent(responseContent); // Webserv reads the error page
+					responseContent = readFileContent(responseContent); // Webserv reads the error page
 				}
 			}
 			// --- Specific Action Execution (CGI, POST/Upload, DELETE) ---
@@ -225,11 +223,11 @@ void Webserv::_handleClientRead(int clientFd) {
 			}
 			else if (action.isStaticFile) { // This includes GET/HEAD for files and autoindex directories
 				if (action.isAutoindex) {
-					responseContent = _generateDirectoryListing(action.filePath);
+					responseContent = generateDirectoryListing(action.filePath);
 					finalStatusCode = 200;
 				} else {
-					responseContent = _readFileContent(action.filePath);
-					if (responseContent.empty() && _fileExists(action.filePath)) { // Check if empty means read error for non-empty file
+					responseContent = readFileContent(action.filePath);
+					if (responseContent.empty() && fileExists(action.filePath)) { // Check if empty means read error for non-empty file
 						finalStatusCode = 500; // Read error
 						responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
 					} else {
@@ -252,15 +250,15 @@ void Webserv::_handleClientRead(int clientFd) {
 			std::string rawResponseString = response_object.toString();
 
 			// --- Store and Prepare for Sending ---
-			_clientResponses[clientFd] = rawResponseString; // Store the complete raw response
+			clientResponses_[clientFd] = rawResponseString; // Store the complete raw response
 
 			// Change epoll event to EPOLLOUT to start sending the response
 			epoll_event event_mod;
 			event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET; // Want to write AND continue reading
 			event_mod.data.fd = clientFd;
-			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 				std::cerr << RED << "epoll_ctl(MOD, EPOLLOUT|EPOLLIN) failed for FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-				_closeClientConnection(clientFd);
+				closeClientConnection(clientFd);
 			}
 			request_it->second.clearParsedRequest(); // Clear request buffer for next request on this connection
 		}
@@ -269,16 +267,16 @@ void Webserv::_handleClientRead(int clientFd) {
 }
 
 // Handles sending data to a client socket
-void Webserv::_handleClientWrite(int clientFd) {
-	std::map<int, std::string>::iterator response_it = _clientResponses.find(clientFd);
-	if (response_it == _clientResponses.end() || response_it->second.empty()) {
+void Webserv::handleClientWrite(int clientFd) {
+	std::map<int, std::string>::iterator response_it = clientResponses_.find(clientFd);
+	if (response_it == clientResponses_.end() || response_it->second.empty()) {
 		// No response pending or already sent. Switch back to EPOLLIN if connection is persistent.
 		epoll_event event_mod;
 		event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 		event_mod.data.fd = clientFd;
-		if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+		if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 			std::cerr << RED << "epoll_ctl(MOD, EPOLLIN) failed for FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-			_closeClientConnection(clientFd);
+			closeClientConnection(clientFd);
 		}
 		return;
 	}
@@ -292,7 +290,7 @@ void Webserv::_handleClientWrite(int clientFd) {
 			// std::cerr << "Send buffer full for FD " << clientFd << ", waiting for EPOLLOUT." << std::endl; // Debug
 		} else { // Real error during send
 			std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-			_closeClientConnection(clientFd);
+			closeClientConnection(clientFd);
 		}
 	} else {
 		// Data sent. Remove sent bytes from buffer.
@@ -301,15 +299,15 @@ void Webserv::_handleClientWrite(int clientFd) {
 		if (response_it->second.empty()) {
 			// All data sent.
 			std::cout << GREEN << "All response data sent for FD " << clientFd << "." << RESET << std::endl;
-			_clientResponses.erase(clientFd); // Remove response from map
+			clientResponses_.erase(clientFd); // Remove response from map
 
 			// Connection is persistent by default (HTTP/1.1), switch back to EPOLLIN
 			epoll_event event_mod;
 			event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
-			if (epoll_ctl(_epollFd, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 				std::cerr << RED << "epoll_ctl(MOD, EPOLLIN) failed for FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-				_closeClientConnection(clientFd);
+				closeClientConnection(clientFd);
 			}
 		}
 	}
@@ -318,7 +316,7 @@ void Webserv::_handleClientWrite(int clientFd) {
 // --- Private Helper Implementations (File System Operations) ---
 
 // Reads content of a file into a string
-std::string Webserv::_readFileContent(const std::string& path) const {
+std::string Webserv::readFileContent(const std::string& path) const {
 	std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
 	if (!file.is_open()) {
 		std::cerr << RED << "Error: Could not open file for reading: " << path << RESET << std::endl;
@@ -331,33 +329,33 @@ std::string Webserv::_readFileContent(const std::string& path) const {
 }
 
 // Determines the MIME type based on file extension
-std::string Webserv::_getMimeType(const std::string& filePath) const {
-	size_t dotPos = filePath.rfind('.');
-	if (dotPos == std::string::npos) return "application/octet-stream";
+// std::string Webserv::getMimeType(const std::string& filePath) const {
+// 	size_t dotPos = filePath.rfind('.');
+// 	if (dotPos == std::string::npos) return "application/octet-stream";
 
-	std::string ext = filePath.substr(dotPos);
-	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower); // Case-insensitive
+// 	std::string ext = filePath.substr(dotPos);
+// 	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower); // Case-insensitive
 
-	if (ext == ".html" || ext == ".htm") return "text/html";
-	else if (ext == ".css") return "text/css";
-	else if (ext == ".js") return "application/javascript";
-	else if (ext == ".json") return "application/json";
-	else if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
-	else if (ext == ".png") return "image/png";
-	else if (ext == ".gif") return "image/gif";
-	else if (ext == ".ico") return "image/x-icon";
-	else if (ext == ".txt") return "text/plain";
-	else if (ext == ".pdf") return "application/pdf";
-	else if (ext == ".xml") return "application/xml";
-	else if (ext == ".mp3") return "audio/mpeg";
-	else if (ext == ".mp4") return "video/mp4";
-	// Add more as needed
+// 	if (ext == ".html" || ext == ".htm") return "text/html";
+// 	else if (ext == ".css") return "text/css";
+// 	else if (ext == ".js") return "application/javascript";
+// 	else if (ext == ".json") return "application/json";
+// 	else if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
+// 	else if (ext == ".png") return "image/png";
+// 	else if (ext == ".gif") return "image/gif";
+// 	else if (ext == ".ico") return "image/x-icon";
+// 	else if (ext == ".txt") return "text/plain";
+// 	else if (ext == ".pdf") return "application/pdf";
+// 	else if (ext == ".xml") return "application/xml";
+// 	else if (ext == ".mp3") return "audio/mpeg";
+// 	else if (ext == ".mp4") return "video/mp4";
+// 	// Add more as needed
 	
-	return "application/octet-stream";
-}
+// 	return "application/octet-stream";
+// }
 
 // Generates an HTML listing for a directory
-// std::string Webserv::_generateDirectoryListing(const std::string& directoryPath) const {
+// std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const {
 // 	std::stringstream html_listing;
 // 	html_listing << "<!DOCTYPE html>\r\n"
 // 				 << "<html>\r\n"
@@ -401,24 +399,24 @@ std::string Webserv::_getMimeType(const std::string& filePath) const {
 // }
 
 // Checks if a path points to a regular file
-bool Webserv::_fileExists(const std::string& path) const {
+bool Webserv::fileExists(const std::string& path) const {
 	struct stat buffer;
 	return (stat(path.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode));
 }
 
 // Checks if a path points to a directory
-bool Webserv::_isDirectory(const std::string& path) const {
+bool Webserv::isDirectory(const std::string& path) const {
 	struct stat buffer;
 	return (stat(path.c_str(), &buffer) == 0 && S_ISDIR(buffer.st_mode));
 }
 
 // Checks if a path has write access
-bool Webserv::_hasWriteAccess(const std::string& path) const {
+bool Webserv::hasWriteAccess(const std::string& path) const {
 	return access(path.c_str(), W_OK) == 0;
 }
 
 // Checks if a path has execute access (for CGI scripts)
-bool Webserv::_isExecutable(const std::string& path) const {
-	struct stat buffer;
-	return (stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & S_IXUSR || buffer.st_mode & S_IXGRP || buffer.st_mode & S_IXOTH));
-}
+// bool Webserv::isExecutable(const std::string& path) const {
+// 	struct stat buffer;
+// 	return (stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & S_IXUSR || buffer.st_mode & S_IXGRP || buffer.st_mode & S_IXOTH));
+// }

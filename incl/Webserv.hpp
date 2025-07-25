@@ -2,48 +2,50 @@
 # define WEBSERV_HPP
 
 #include "Webserv42.hpp"
+class Server42;
+class Router;
 
 class Webserv {
 private:
-	const Server42&                     _allServersConfig; 
+	const Server42&						_allServersConfig; 
 
-	int                                 _epollFd;
-	std::vector<epoll_event>            _events;
+	int									epollFd_;
+	std::vector<epoll_event>			events_;
 	
 	// Maps listener FD to its SingleServer config (for new connections)
-	std::map<int, const SingleServer*>  _listenerMap; 
+	std::map<int, const SingleServer*>	listenerMap_;
 
 	// Maps client FD to its associated SingleServer (for routing)
-	std::map<int, const SingleServer*>  _clientToServerMap;
+	std::map<int, const SingleServer*>	clientToServerMap_;
 
 	// Maps client FD to its Request object (for accumulating incoming data)
-	std::map<int, Request>              _clientRequests;
+	std::map<int, Request>				clientRequests_;
 	
 	// Maps client FD to its pending raw HTTP response string (for sending)
-	std::map<int, std::string>          _clientResponses; 
+	std::map<int, std::string>			clientResponses_;
 
 	// --- Router Instance ---
-	Router                              _router; // One instance of the Router
+	Router								router_; // One instance of the Router
 
 	// --- Private Helper Methods (for Epoll Management) ---
-	void _addFdToEpoll(int fd, uint32_t events);
-	void _removeFdFromEpoll(int fd);
-	void _closeClientConnection(int clientFd); // Utility to clean up a client connection
+	void addFdToEpoll(int fd, uint32_t events);
+	void removeFdFromEpoll(int fd);
+	void closeClientConnection(int clientFd); // Utility to clean up a client connection
 
 	// --- Private Helper Methods (for Event Handling) ---
-	void _handleNewConnection(int listenerFd);
-	void _handleClientRead(int clientFd);
-	void _handleClientWrite(int clientFd);
+	void handleNewConnection(int listenerFd);
+	void handleClientRead(int clientFd);
+	void handleClientWrite(int clientFd);
 
 	// --- Private Helper Methods (for File System Operations) ---
 	// These functions perform the actual file/directory I/O
-	std::string _readFileContent(const std::string& path) const;
-	std::string _getMimeType(const std::string& filePath) const;
-	std::string _generateDirectoryListing(const std::string& directoryPath) const;
-	bool        _fileExists(const std::string& path) const; // Checks for regular files
-	bool        _isDirectory(const std::string& path) const; // Checks for directories
-	bool        _hasWriteAccess(const std::string& path) const; // Checks write permissions
-	bool        _isExecutable(const std::string& path) const; // Checks execute permissions
+	std::string	readFileContent(const std::string& path) const;
+	// std::string	getMimeType(const std::string& filePath) const;
+	std::string	generateDirectoryListing(const std::string& directoryPath) const;
+	bool		fileExists(const std::string& path) const; // Checks for regular files
+	bool		isDirectory(const std::string& path) const; // Checks for directories
+	bool		hasWriteAccess(const std::string& path) const; // Checks write permissions
+	// bool		isExecutable(const std::string& path) const; // Checks execute permissions
 
 public:
 	// Constructor takes the complete parsed configuration

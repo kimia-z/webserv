@@ -15,7 +15,7 @@
 //basic canonical form
 SingleServer::SingleServer():
 	serverName_(""),
-	serverNames_(),
+	// serverNames_(),
 	// serverHost_(""),
 	locations_(),
 	serverRoot_(""),
@@ -32,7 +32,7 @@ SingleServer::SingleServer():
 
 SingleServer::SingleServer(int port):
 	serverName_(""),
-	serverNames_(),
+	// serverNames_(),
 	// serverHost_(""),
 	locations_(),
 	serverRoot_(""),
@@ -49,7 +49,7 @@ SingleServer::SingleServer(int port):
 
 SingleServer::SingleServer(const SingleServer& copy):
 	serverName_(copy.serverName_),
-	serverNames_(copy.serverNames_),
+	// serverNames_(copy.serverNames_),
 	// serverHost_(copy.serverHost_),
 	locations_(copy.locations_),
 	serverRoot_(copy.serverRoot_),
@@ -76,7 +76,7 @@ SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 		}
 
 		serverName_ = copy.serverName_;
-		serverNames_ = copy.serverNames_;
+		// serverNames_ = copy.serverNames_;
 		locations_ = copy.locations_;
 		serverRoot_ = copy.serverRoot_;
 		serverIP_ = copy.serverIP_;
@@ -107,7 +107,7 @@ SingleServer::~SingleServer() {
 
 // getters
 std::string SingleServer::getServName() const { return (serverName_); }
-const std::vector<std::string>& SingleServer::getServerNames() const { return (serverNames_); }
+// const std::vector<std::string>& SingleServer::getServerNames() const { return (serverNames_); }
 const std::vector<Location>& SingleServer::getLocations() const { return (locations_); }
 std::string  SingleServer::getServRoot() const { return (serverRoot_); }
 std::string SingleServer::getServIP() const { return (serverIP_); }
@@ -129,7 +129,7 @@ std::string SingleServer::getErrorPagePath(int errorCode) const {
 
 // setters
 void    SingleServer::setServName(const std::string& newServName) { serverName_ = newServName; }
-void    SingleServer::addServerName(const std::string& newName) { serverNames_.push_back(newName); }
+// void    SingleServer::addServerName(const std::string& newName) { serverNames_.push_back(newName); }
 void    SingleServer::setLocations(const Location& newLocation) { locations_.push_back(newLocation); }
 void    SingleServer::setServRoot(const std::string& newServRoot) { serverRoot_ = newServRoot; }
 void    SingleServer::setServIP(const std::string& newServIP) { serverIP_ = newServIP; }

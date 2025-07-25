@@ -6,6 +6,7 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
+#include <unordered_map> // for std::unordered_map
 #include "HttpException.hpp"
 
 

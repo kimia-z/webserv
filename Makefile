@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>              +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/05 10:26:11 by mstencel          #+#    #+#              #
-#    Updated: 2025/07/11 14:07:21 by kziari           ###   ########.fr        #
+#    Updated: 2025/07/25 14:15:50 by kziari           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,11 +19,13 @@ NAME = webserv
 
 SRC_FILES = src/main.cpp \
 			src/ConfParser.cpp \
-			src/epoll.cpp \
 			src/Location.cpp \
 			src/Request.cpp \
 			src/Server42.cpp \
-			src/SingleServer.cpp
+			src/SingleServer.cpp \
+			src/Router.cpp \
+			src/Response.cpp \
+			src/Webserv.cpp
 
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)

@@ -4,6 +4,11 @@
 #include "Webserv42.hpp"
 #include <sys/stat.h> // struct stat
 
+class Server42;
+// class Router;
+// class Request;
+// class SingleServer;
+
 struct ActionParameters {
 	const SingleServer*	matchedServer; // Pointer to the determined server config
 	const Location*		matchedLocation;   // Pointer to the determined location config
@@ -44,16 +49,22 @@ class Router
 private:
 	const Server42&		allServers_;
 
-	const SingleServer* selectServerBlock(const Request& request, int listeningPort) const;
-	const Location* findBestMatchingLocation(const Request& request, const SingleServer* server) const;
-	ActionParameters determineAction(const Request& request, const SingleServer* selectedServer, const Location* selectedLocation) const;
-	bool isFileExists(const std::string& path) const;
-	bool isDirectory(const std::string& path) const;
-	bool hasWriteAccess(const std::string& path) const;
+	const SingleServer*	selectServerBlock(const Request& request, int listeningPort) const;
+	const Location*		findBestMatchingLocation(const Request& request, const SingleServer* server) const;
+	ActionParameters	determineAction(const Request& request, const SingleServer* selectedServer, const Location* selectedLocation) const;
+	bool				isFileExists(const std::string& path) const;
+	bool				isDirectory(const std::string& path) const;
+	bool				hasWriteAccess(const std::string& path) const;
 
 public:
+
 	Router(const Server42& allServersConfig);
-	ActionParameters routeRequest(const Request& request, int listeningPort) const;
+	ActionParameters	routeRequest(const Request& request, int listeningPort) const;
+
+	// Helper
+	bool		isExecutable(const std::string& path) const; // Checks execute permissions
+	// bool		fileExists(const std::string& path) const; // Checks for regular files
+
 };
 
 
