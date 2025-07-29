@@ -2,12 +2,14 @@
 # define WEBSERV_HPP
 
 #include "Webserv42.hpp"
+#include <dirent.h> //for readdir()
+
 class Server42;
 class Router;
 
 class Webserv {
 private:
-	const Server42&						_allServersConfig; 
+	const Server42&						allServersConfig_; 
 
 	int									epollFd_;
 	std::vector<epoll_event>			events_;

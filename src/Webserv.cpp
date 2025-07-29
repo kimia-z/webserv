@@ -415,6 +415,57 @@ bool Webserv::hasWriteAccess(const std::string& path) const {
 	return access(path.c_str(), W_OK) == 0;
 }
 
+// Generates an HTML listing for a directory
+std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const {
+	std::stringstream html_listing;
+	html_listing << "<!DOCTYPE html>\r\n"
+				 << "<html>\r\n"
+				 << "<head><title>Directory Listing for " << directoryPath << "</title></head>\r\n"
+				 << "<body>\r\n"
+				 << "<h1>Directory Listing for " << directoryPath << "</h1>\r\n"
+				 << "<hr>\r\n" // Horizontal rule for separation
+				 << "<ul>\r\n";
+
+	DIR *dir = opendir(directoryPath.c_str());
+	if (dir == NULL) {
+		std::cerr << RED << "Error opening directory for listing: " << directoryPath << ": " << strerror(errno) << RESET << std::endl;
+		html_listing << "<p>Error: Could not open directory.</p>\r\n";
+	} else {
+		struct dirent *entry;
+		while ((entry = readdir(dir)) != NULL) {
+			std::string name = entry->d_name;
+			// Skip current directory (.) and parent directory (..) as per common practice
+			if (name == "." || name == "..") continue; 
+
+			std::string fullEntryPath = directoryPath;
+			if (fullEntryPath.back() != '/') fullEntryPath += "/"; // Ensure trailing slash if missing
+			fullEntryPath += name;
+
+			html_listing << "<li><a href=\""; // Start link
+			html_listing << name; // Link target name
+
+			// Append a trailing slash to the link if it's a directory
+			// Use stat() to check if it's a directory, as d_type might not be reliable on all systems
+			struct stat entry_stat;
+			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
+				html_listing << "/"; 
+			}
+			html_listing << "\">" << name; // Link text
+			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
+				html_listing << "/"; 
+			}
+			html_listing << "</a></li>\r\n";
+		}
+		closedir(dir); // Close the directory stream
+	}
+
+	html_listing << "</ul>\r\n"
+				 << "<hr>\r\n" // Another horizontal rule
+				 << "</body>\r\n"
+				 << "</html>\r\n";
+	return html_listing.str();
+}
+
 // Checks if a path has execute access (for CGI scripts)
 // bool Webserv::isExecutable(const std::string& path) const {
 // 	struct stat buffer;
