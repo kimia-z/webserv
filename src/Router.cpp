@@ -11,15 +11,16 @@ ActionParameters Router::routeRequest(const Request& request, int listeningPort)
 		return params;
 	}
 	params.matchedServer = selectedServer;
-
+	std::cout << "DEBUG: After selectServerBlock." << std::endl;
 	const Location *selectedLocation = findBestMatchingLocation(request, selectedServer);
+	std::cout << "DEBUG: After findBestMatchingLocation." << std::endl;
 	if(!selectedLocation){
 		params.errorCode = 404;
 		return params;
 	}
 	params.matchedLocation = selectedLocation;
-
 	params = determineAction(request, params.matchedServer, params.matchedLocation);
+	std::cout << "DEBUG: After determineAction." << std::endl;
 	if (params.errorCode != 0 && params.matchedServer){
 		const std::unordered_map<int, std::string>	&errorPages = params.matchedServer->getErrorPages();
 		std::unordered_map<int, std::string>::const_iterator it = errorPages.find(params.errorCode);
@@ -27,6 +28,7 @@ ActionParameters Router::routeRequest(const Request& request, int listeningPort)
 			params.errorPagePath = it->second;
 		}
 	}
+	std::cout << "DEBUG: After catch the error page." << std::endl;
 
 	return params;
 }
@@ -74,11 +76,15 @@ const Location* Router::findBestMatchingLocation(const Request& request, const S
 	const Location* matchedLocation = nullptr;
 	size_t longestMatchLength = 0;
 	
-	const std::vector<Location> &locations = server->getLocations();
+	const std::vector<Location> locations = server->getLocations();
+	std::cout << "DEBUG: After getLocations." << std::endl;
 	std::string requestPath = request.getPath();
+	std::cout << "DEBUG: After request.getPath." << requestPath << std::endl;
 	for(int i = 0; i < (int)locations.size(); i++){
 		const Location &location = locations[i];
+		std::cout << "DEBUG: After loop[" << i << "]." << std::endl;
 		const std::string &locationPath = location.getPath();
+		std::cout << "DEBUG: After location.getPath."<< locationPath << std::endl;
 		if (requestPath.find(locationPath, 0) == 0) {
 			if (locationPath.length() > longestMatchLength) {
 				longestMatchLength = locationPath.length();

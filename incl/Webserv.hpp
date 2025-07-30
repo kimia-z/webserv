@@ -27,7 +27,7 @@ private:
 	std::map<int, std::string>			clientResponses_;
 
 	// --- Router Instance ---
-	Router								router_; // One instance of the Router
+	// Router								*router_; // One instance of the Router
 
 	// --- Private Helper Methods (for Epoll Management) ---
 	void addFdToEpoll(int fd, uint32_t events);

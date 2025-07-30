@@ -3,8 +3,8 @@
 // --- Constructor ---
 Webserv::Webserv(const Server42& config)
 	: allServersConfig_(config), // Initialize const reference
-	  epollFd_(-1),              // Initialize epollFd
-	  router_(config)            // Initialize Router, passing config
+	  epollFd_(-1)              // Initialize epollFd
+	//   router_(config)            // Initialize Router, passing config
 {
 	epollFd_ = epoll_create1(0); // Create the single epoll instance
 	if (epollFd_ == -1) {
@@ -148,9 +148,13 @@ void Webserv::handleNewConnection(int listenerFd) {
 
 	// Map this client to the SingleServer config that accepted it (for routing)
 	clientToServerMap_[clientFd] = listenerMap_[listenerFd];
+	std::cout << "DEBUG: Before creating Request object." << std::endl;
 	clientRequests_.insert(std::make_pair(clientFd, Request())); // Initialize a Request object for this client
+	std::cout << "DEBUG: After creating Request object." << std::endl;
 
+	std::cout << "DEBUG: Before adding FD to epoll." << std::endl;
 	addFdToEpoll(clientFd, EPOLLIN); // Add client FD to epoll for reading
+	std::cout << "DEBUG: After adding FD to epoll." << std::endl;
 	std::cout << GREEN << "Accepted new client (FD: " << clientFd << ") on listener " << listenerFd << RESET << std::endl;
 }
 
@@ -168,6 +172,7 @@ void Webserv::handleClientRead(int clientFd) {
 	}
 
 	ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer), 0);
+	std::cout << "DEBUG: After receiving data." << std::endl;
 
 	if (bytesReceived == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
@@ -180,12 +185,13 @@ void Webserv::handleClientRead(int clientFd) {
 		closeClientConnection(clientFd);
 		return;
 	} else { // Data received
+		
 		request_it->second.appendRawData(buffer, bytesReceived);
-
 		// Loop to process all complete requests that might be in the buffer
+		std::cout << "DEBUG: Before parsing Request." << std::endl;
 		while (request_it->second.processRequestData()) {
 			// Request is fully parsed into request_it->second
-
+			std::cout << "DEBUG: after parsing one of the Request." << std::endl;
 			// Get the SingleServer config associated with this client for routing
 			const SingleServer* clientServer = clientToServerMap_[clientFd];
 			if (!clientServer) {
@@ -193,10 +199,11 @@ void Webserv::handleClientRead(int clientFd) {
 				closeClientConnection(clientFd);
 				return;
 			}
-
+			Router router(allServersConfig_);
+			std::cout << "DEBUG: after router creation." << std::endl;
 			// --- Perform URL Routing ---
-			ActionParameters action = router_.routeRequest(request_it->second, clientServer->getServPortInt());
-
+			ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
+			std::cout << "DEBUG: after determine the action." << std::endl;
 			// --- Perform Action & Generate Response ---
 			std::string responseContent = ""; // Content for the response body
 			int finalStatusCode = 0;        // Status determined by action execution
@@ -262,6 +269,7 @@ void Webserv::handleClientRead(int clientFd) {
 			}
 			request_it->second.clearParsedRequest(); // Clear request buffer for next request on this connection
 		}
+		std::cout << "DEBUG: After parsing Request." << std::endl;
 		// If while loop finishes, either all complete requests processed, or buffer holds incomplete request.
 	}
 }

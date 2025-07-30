@@ -130,12 +130,12 @@ void Response::buildStaticFileResponse(const std::string& fileContent, const std
 	setBody(fileContent);
 	setHeader("Content-Type", mimeType);
 }
-void Response::buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType = "text/html"){
+void Response::buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType){
 	setStatusCode(statusCode);
 	setBody(bodyText);
 	setHeader("Content-Type", contentType);
 }
-void Response::buildFromAction(const ActionParameters& action, const std::string& content = "", int actionStatusCode = 0){
+void Response::buildFromAction(const ActionParameters& action, const std::string& content, int actionStatusCode){
 	
 	// Reset internal state for a fresh response
 	setStatusCode(200); // Default OK
