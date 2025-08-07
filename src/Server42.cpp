@@ -37,13 +37,24 @@ Server42::~Server42() {
 
 //getters:
 
-std::vector<SingleServer> Server42::getServers() const {
-
-	return (servers_);
+// Update getter implementation
+const std::vector<std::shared_ptr<SingleServer>>& Server42::getServers() const {
+    return servers_;
 }
 
 //setters:
 
-void	Server42::addServer(const SingleServer& newServer) {
-	servers_.push_back(newServer);
+void Server42::addServer(const std::shared_ptr<SingleServer> newServer) {
+    servers_.push_back(newServer);
+
+    std::cout << "Logging first location of each server in servers_:" << std::endl;
+    for (size_t i = 0; i < servers_.size(); ++i) {
+        const std::vector<std::shared_ptr<Location>>& serverLocs = servers_[i]->getLocations();
+        if (!serverLocs.empty() && serverLocs[0]) {
+            std::cout << "USE_COUNT  Server[" << i << "] -> Location[0]: " << serverLocs[0].use_count() << std::endl;
+            std::cout << "  Server[" << i << "] -> Location[0]: " << serverLocs[0]->getPath() << std::endl;
+        } else {
+            std::cerr << "  Server[" << i << "] -> No valid first location!" << std::endl;
+        }
+    }
 }

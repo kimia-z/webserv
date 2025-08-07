@@ -18,6 +18,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <memory> // for std::shared_ptr
 
 class SingleServer;
 
@@ -30,16 +31,16 @@ class Server42 {
 		~Server42();
 
 		// getters:
-		std::vector<SingleServer>	getServers() const;
+		const std::vector<std::shared_ptr<SingleServer>>&	getServers() const;
 		
 		
 		//setters:
-		void	addServer(const SingleServer& newServer);
+		void	addServer(const std::shared_ptr<SingleServer> newServer);
 
 		
 	
 	private:
-		std::vector<SingleServer>	servers_;
+		std::vector<std::shared_ptr<SingleServer>>	servers_;
 };
 
 #endif
