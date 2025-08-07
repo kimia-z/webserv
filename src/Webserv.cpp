@@ -37,31 +37,32 @@ Webserv::~Webserv() {
 
 // Sets up all listening sockets and adds them to the central epoll instance
 void Webserv::start() {
-	std::cout << "Starting Webserv..." << std::endl;
-	const std::vector<SingleServer>& servers = allServersConfig_.getServers(); // Get server configs
+    std::cout << "Starting Webserv..." << std::endl;
+    const std::vector<std::shared_ptr<SingleServer>>& servers = allServersConfig_.getServers();
 
-	if (servers.empty()) {
-		throw std::runtime_error("No server configurations loaded. Please check your config file.");
-	}
+    if (servers.empty()) {
+        throw std::runtime_error("No server configurations loaded. Please check your config file.");
+    }
 
-	// Initialize each SingleServer's listening socket
-	for (size_t i = 0; i < servers.size(); ++i) {
-		SingleServer& server = const_cast<SingleServer&>(servers[i]); // Need non-const ref to call initSocket()
-		try {
-			server.initSocket(); // This sets up server.serverFd_ and makes it non-blocking
-			addFdToEpoll(server.getServFd(), EPOLLIN); // Add listener FD to central epoll
-			listenerMap_[server.getServFd()] = &server; // Map listener FD to its config
-			std::cout << GREEN << "  -> Server '" << server.getServName() << "' listening on port "
-					  << server.getServPortInt() << " (FD: " << server.getServFd() << ")" << RESET << std::endl;
-		} catch (const std::exception& e) {
-			std::cerr << RED << "Error initializing server on port " << server.getServPortInt()
-					  << ": " << e.what() << RESET << std::endl;
-			// Decide whether to continue or exit if a server fails to initialize
-			// For now, we continue, but consider program termination if a critical listener fails.
-		}
-	}
-	std::cout << "All listeners set up. Running main event loop." << std::endl;
-	runEventLoop(); // Start the central event loop
+    // Initialize each SingleServer's listening socket
+    for (const auto& serverPtr : servers) {
+        try {
+            serverPtr->initSocket(); // This sets up serverFd_ and makes it non-blocking
+            addFdToEpoll(serverPtr->getServFd(), EPOLLIN); // Add listener FD to central epoll
+            listenerMap_[serverPtr->getServFd()] = serverPtr.get(); // Map listener FD to its config
+            std::cout << GREEN << "  -> Server '" << serverPtr->getServName() << "' listening on port "
+                     << serverPtr->getServPortInt() << " (FD: " << serverPtr->getServFd() << ")" 
+                     << RESET << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << RED << "Error initializing server on port " << serverPtr->getServPortInt()
+                     << ": " << e.what() << RESET << std::endl;
+            // Decide whether to continue or exit if a server fails to initialize
+            // For now, we continue, but consider program termination if a critical listener fails.
+        }
+    }
+    
+    std::cout << "All listeners set up. Running main event loop." << std::endl;
+    runEventLoop(); // Start the central event loop
 }
 
 // Runs the central epoll_wait loop, dispatching events

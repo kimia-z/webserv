@@ -59,7 +59,7 @@ SingleServer::SingleServer(const SingleServer& copy):
 	serverFd_(copy.serverFd_),
 	maxBodySize_(copy.maxBodySize_),
 	errorPages_(copy.errorPages_),
-	res_(nullptr)
+	res_(copy.res_)
 	{
 }
 
@@ -69,10 +69,6 @@ SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 		if (serverFd_ >= 0) {
 			close(serverFd_);
 			serverFd_ = -1;
-		}
-		if (res_) {
-			freeaddrinfo(res_);
-			res_ = nullptr;
 		}
 
 		serverName_ = copy.serverName_;
@@ -92,10 +88,7 @@ SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 }
 
 SingleServer::~SingleServer() {
-	// Only free res_ if this instance owns it (not a copied pointer)
-	if (res_)
-		freeaddrinfo(res_);
-	
+
 	// Only close serverFd_ if this instance created it and owns it.
 	// If you allowed shallow copy, this is dangerous.
 	// It's safer if serverFd_ is only ever closed by the original creator.
@@ -108,7 +101,7 @@ SingleServer::~SingleServer() {
 // getters
 std::string SingleServer::getServName() const { return (serverName_); }
 // const std::vector<std::string>& SingleServer::getServerNames() const { return (serverNames_); }
-const std::vector<Location>& SingleServer::getLocations() const { return (locations_); }
+const std::vector<std::shared_ptr<Location>>& SingleServer::getLocations() const { return (locations_); }
 std::string  SingleServer::getServRoot() const { return (serverRoot_); }
 std::string SingleServer::getServIP() const { return (serverIP_); }
 std::string SingleServer::getServPortString() const { return (serverPortString_); }
@@ -116,7 +109,7 @@ int SingleServer::getServPortInt() const { return (serverPortInt_); }
 int SingleServer::getServFd() const { return (serverFd_); }
 int SingleServer::getMaxBodySize() const { return (maxBodySize_); }
 const std::unordered_map<int, std::string>& SingleServer::getErrorPages() const { return (errorPages_); }
-addrinfo    *SingleServer::getResults() const { return (res_); }
+addrinfo    *SingleServer::getResults() const { return res_.get(); }
 
 // Helper to get custom error page path
 std::string SingleServer::getErrorPagePath(int errorCode) const {
@@ -130,7 +123,7 @@ std::string SingleServer::getErrorPagePath(int errorCode) const {
 // setters
 void    SingleServer::setServName(const std::string& newServName) { serverName_ = newServName; }
 // void    SingleServer::addServerName(const std::string& newName) { serverNames_.push_back(newName); }
-void    SingleServer::setLocations(const Location& newLocation) { locations_.push_back(newLocation); }
+void    SingleServer::setLocations(const std::shared_ptr<Location>& newLocation) { locations_.push_back(newLocation); }
 void    SingleServer::setServRoot(const std::string& newServRoot) { serverRoot_ = newServRoot; }
 void    SingleServer::setServIP(const std::string& newServIP) { serverIP_ = newServIP; }
 void    SingleServer::setServPortString(const std::string& newServPortStr) { serverPortString_ = newServPortStr; }
@@ -139,8 +132,7 @@ void    SingleServer::setServFd(const int& newServFd) { serverFd_ = newServFd; }
 void    SingleServer::setMaxBodySize(const int& newMaxBodySize) { maxBodySize_ = newMaxBodySize; }
 void    SingleServer::setErrorPages(const int& errorNb, const std::string& newErrorPage) { errorPages_[errorNb] = newErrorPage; }
 void    SingleServer::setResults(addrinfo* newResult) {
-	if (res_) freeaddrinfo(res_);
-	res_ = newResult;
+	res_ = std::shared_ptr<addrinfo>(newResult, freeaddrinfo); // 💡 managed safely
 }
 
 // Socket Initialization (sets up listening FD, makes it non-blocking)
@@ -154,11 +146,15 @@ void	SingleServer::initSocket() {
 	hints.ai_socktype = SOCK_STREAM; //for the TCP
 	hints.ai_flags = AI_PASSIVE; // fills it in with the localhost address (0.0.0.0 or ::)
 
-	if ((status = getaddrinfo(serverIP_.c_str(), serverPortString_.c_str(), &hints, &res_)) != 0) {
+	addrinfo* raw_res = nullptr;
+	if ((status = getaddrinfo(serverIP_.c_str(), serverPortString_.c_str(), &hints, &raw_res)) != 0) {
 		std::cerr << RED << "getaddrinfo error for port " << serverPortString_ << ": " << gai_strerror(status) << RESET << std::endl;
 		throw std::runtime_error("Failed to get address info for server socket.");
 	}
-	for (iterationPointer = res_; iterationPointer != NULL; iterationPointer = iterationPointer->ai_next) {
+
+	res_ = std::shared_ptr<addrinfo>(raw_res, freeaddrinfo); // 👈 wrapped safely
+
+	for (iterationPointer = res_.get(); iterationPointer != NULL; iterationPointer = iterationPointer->ai_next) {
 		serverFd_ = socket(iterationPointer->ai_family, iterationPointer->ai_socktype, iterationPointer->ai_protocol);
 		if (serverFd_ == -1) {
 			std::cerr << RED << "Socket() failed for port " << serverPortString_ << ": " << strerror(errno) << RESET << std::endl;

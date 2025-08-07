@@ -71,12 +71,12 @@ class	ConfParser {
 		void					validatePort(const std::string& port, size_t line); //validates the port number
 
 		void					populateServers(Server42& servers, size_t& i);
-		void					addIP(SingleServer& newServer, size_t& i);
-		void					addPort(SingleServer& newServer, size_t& i);
-		void					addServerName(SingleServer& newServer, size_t& i);
-		void					addLocation(SingleServer& server, size_t& i);
-		void					addMaxBodySize(SingleServer& newServer, size_t& i);
-		void					addErrorPages(SingleServer& newServer, size_t& i);
+		void					addIP(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addPort(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addServerName(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addLocation(std::shared_ptr<SingleServer> server, size_t& i);
+		void					addMaxBodySize(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addErrorPages(std::shared_ptr<SingleServer> newServer, size_t& i);
 
 
 	private:

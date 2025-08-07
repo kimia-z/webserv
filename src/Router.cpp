@@ -52,17 +52,17 @@ const SingleServer* Router::selectServerBlock(const Request& request, int listen
 	if (posColon != std::string::npos) {
 		hostWithoutPort = hostWithoutPort.substr(0, posColon);
 	}
-	const std::vector<SingleServer> &servers = allServers_.getServers();
+	const std::vector<std::shared_ptr<SingleServer>>& servers = allServers_.getServers();
 	for (size_t i = 0; i < servers.size(); i++)
 	{
-		const SingleServer &server = servers[i];
-		if (server.getServPortInt() == listeningPort){
+		const SingleServer *server = servers[i].get();
+		if (server->getServPortInt() == listeningPort){
 			if(!defaultServer){
-				defaultServer = &server;
+				defaultServer = server;
 			}
 		}
-		if (server.getServName() == hostWithoutPort){
-			selectedServer = &server;
+		if (server->getServName() == hostWithoutPort){
+			selectedServer = server;
 			break;
 		}
 	}
@@ -76,19 +76,28 @@ const Location* Router::findBestMatchingLocation(const Request& request, const S
 	const Location* matchedLocation = nullptr;
 	size_t longestMatchLength = 0;
 	
-	const std::vector<Location> locations = server->getLocations();
+	const std::vector<std::shared_ptr<Location>>& locations = server->getLocations();
+
+
+	// if (!locations.empty() && locations[0] && locations[0] != nullptr) {
+	// 		std::cout << "  Server[" << 0 << "] -> Location[0]: " << locations[0] << std::endl;
+	// } else {
+	// 		std::cerr << "  Server[" << 0 << "] -> No valid first location!" << std::endl;
+	// }
+
 	std::cout << "DEBUG: After getLocations." << std::endl;
 	std::string requestPath = request.getPath();
 	std::cout << "DEBUG: After request.getPath." << requestPath << std::endl;
+	std::cout << "DEBUG: Locations size: " << locations[1].get()->getPath() << std::endl;
 	for(int i = 0; i < (int)locations.size(); i++){
-		const Location &location = locations[i];
+		const std::shared_ptr<Location>& location = locations[i];
 		std::cout << "DEBUG: After loop[" << i << "]." << std::endl;
-		const std::string &locationPath = location.getPath();
+		const std::string &locationPath = location->getPath();
 		std::cout << "DEBUG: After location.getPath."<< locationPath << std::endl;
 		if (requestPath.find(locationPath, 0) == 0) {
 			if (locationPath.length() > longestMatchLength) {
 				longestMatchLength = locationPath.length();
-				matchedLocation = &location;
+				matchedLocation = location.get();
 			}
 		}
 	}

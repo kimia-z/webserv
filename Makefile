@@ -33,7 +33,7 @@ OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 HEADER_DIR = incl
 
 CPP = c++
-CPP_FLAGS = -Werror -Wextra -Wall -I $(HEADER_DIR) -std=c++11 #delete c++11 on Linux - redundant
+CPP_FLAGS = -Wextra -Wall -I $(HEADER_DIR) -std=c++11 #delete c++11 on Linux - redundant
 
 RM = rm -rf
 

@@ -251,7 +251,7 @@ void	ConfParser::validateIP(const std::string& ip, size_t line) {
 	}
 }
 
-void	ConfParser::addIP(SingleServer& newServer, size_t& i) {
+void	ConfParser::addIP(std::shared_ptr<SingleServer> newServer, size_t& i) {
 	i++; //move to the token after listen
 	
 	if (allTokens_[i].type != NUMBER && allTokens_[i].value != "localhost") {
@@ -259,11 +259,11 @@ void	ConfParser::addIP(SingleServer& newServer, size_t& i) {
 	}
 	
 	if (allTokens_[i].value == "localhost") {
-		newServer.setServIP("127.0.0.1");
+		newServer->setServIP("127.0.0.1");
 	}
 	else {
 		validateIP(allTokens_[i].value, allTokens_[i].line);
-		newServer.setServIP(allTokens_[i].value);
+		newServer->setServIP(allTokens_[i].value);
 	}
 	i++; // moved to the semicolon?
 	semicolonCheck(allTokens_[i].type, allTokens_[i].line);
@@ -280,38 +280,38 @@ void	ConfParser::validatePort(const std::string& port, size_t line) {
 /// @param newServer 
 /// @param i 
 /// @return 
-void	ConfParser::addPort(SingleServer& newServer, size_t& i) {
+void	ConfParser::addPort(std::shared_ptr<SingleServer> newServer, size_t& i) {
 	
 	i++; //moved to the token after "port"
 	if (allTokens_[i].type != NUMBER) {
 		throw ConfParserException("expected port number after 'port'", allTokens_[i].line);
 	}
 	validatePort(allTokens_[i].value, allTokens_[i].line);
-	if (newServer.getServPortInt() == -1) {
-		newServer.setServPortString(allTokens_[i].value);
-		newServer.setServPortInt(std::stoi(allTokens_[i].value));
+	if (newServer->getServPortInt() == -1) {
+		newServer->setServPortString(allTokens_[i].value);
+		newServer->setServPortInt(std::stoi(allTokens_[i].value));
 	}
 	i++; //moved to the semicolon?
 	semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 }
 
-void	ConfParser::addServerName(SingleServer& newServer, size_t& i) {
+void	ConfParser::addServerName(std::shared_ptr<SingleServer> newServer, size_t& i) {
 	i++; //moving to the token after 'server_name'
 	if (allTokens_[i].type != STRING) {
 		throw ConfParserException("expected string after server_name directive", allTokens_[i].line);
 	}
-	newServer.setServName(allTokens_[i].value);
+	newServer->setServName(allTokens_[i].value);
 	i++; //moved to the semicolon?
 	semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 }
 
-void	ConfParser::addLocation(SingleServer& server, size_t& i) {
+void	ConfParser::addLocation(std::shared_ptr<SingleServer> server, size_t& i) {
 	i++; // move to the location's path
 	if (allTokens_[i].type != STRING) {
 		throw ConfParserException("expected location's path after 'location' directive", allTokens_[i].line);
 	}
-	Location newLocation;
-	newLocation.setPath(allTokens_[i].value);
+	std::shared_ptr<Location> newLocation = std::make_shared<Location>();
+	newLocation->setPath(allTokens_[i].value);
 	i++; // move to the opening brace
 	if (allTokens_[i].type != OPEN_BRACE) {
 		throw ConfParserException("expected '{' after location's path", allTokens_[i].line);
@@ -323,7 +323,7 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 			if (allTokens_[i].type != STRING) {
 				throw ConfParserException("expected a string value after root directive", allTokens_[i].line);
 			}
-			newLocation.setRoot(allTokens_[i].value);
+			newLocation->setRoot(allTokens_[i].value);
 			i++; //move to the semicolon?
 			semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 		}
@@ -332,7 +332,7 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 			if (allTokens_[i].type != STRING) {
 				throw ConfParserException("expected a string value after index directive",allTokens_[i].line);
 			}
-			newLocation.setIndex(allTokens_[i].value);
+			newLocation->setIndex(allTokens_[i].value);
 			i++; //move to the semicolon?
 			semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 		}
@@ -345,7 +345,7 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 				if (allTokens_[i].value != "GET" && allTokens_[i].value != "POST" && allTokens_[i].value != "DELETE") {
 					throw ConfParserException("expected one of valid allowed_methods (GET, POST or DELETE)", allTokens_[i].line);
 				}
-				newLocation.setAllowedMethods(allTokens_[i].value);
+				newLocation->setAllowedMethods(allTokens_[i].value);
 				i++; //move to the semicolon?
 			}
 			semicolonCheck(allTokens_[i].type, allTokens_[i].line);
@@ -356,10 +356,10 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 				throw ConfParserException("expected a string value after index directive", allTokens_[i].line);
 			}
 			if (allTokens_[i].value == "on") {
-				newLocation.setAutoindex(true);
+				newLocation->setAutoindex(true);
 			}
 			else if (allTokens_[i].value == "off") {
-				newLocation.setAutoindex(false);
+				newLocation->setAutoindex(false);
 			}
 			else {
 				throw ConfParserException("expected 'on' or 'off' after autoindex directive", allTokens_[i].line);
@@ -372,12 +372,12 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 			if (allTokens_[i].type != NUMBER || (allTokens_[i].value != "301" && allTokens_[i].value != "302")) {
 				throw ConfParserException("expected the redirection code 301 or 302 after 'return'", allTokens_[i].line);
 			}
-			newLocation.setRedirectionCode(std::stoi(allTokens_[i].value));
+			newLocation->setRedirectionCode(std::stoi(allTokens_[i].value));
 			i++; //move to the redirect path
 			if (allTokens_[i].type != STRING) {
 				throw ConfParserException("exptected the redirection path after the redirection code", allTokens_[i].line);
 			}
-			newLocation.setRedirectionsPath(allTokens_[i].value);
+			newLocation->setRedirectionsPath(allTokens_[i].value);
 			i++; //move to the semicolon
 			semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 		}
@@ -386,7 +386,7 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 			if (allTokens_[i].type != STRING) {
 				throw ConfParserException("expected a string after 'upload_path directive", allTokens_[i].line);
 			}
-			newLocation.setUploadPath(allTokens_[i].value);
+			newLocation->setUploadPath(allTokens_[i].value);
 			i++; //move to the semicolon
 			semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 		}
@@ -396,11 +396,11 @@ void	ConfParser::addLocation(SingleServer& server, size_t& i) {
 	if (allTokens_[i].type != CLOSE_BRACE) {
 		throw ConfParserException("expected '}' at the end of the location block", allTokens_[i].line);
 	}
-	std::cout << newLocation << std::endl;
-	server.setLocations(newLocation);
+	std::cout << newLocation.get()->getPath() << std::endl;
+	server->setLocations(newLocation);
 }
 
-void	ConfParser::addMaxBodySize(SingleServer& newServer, size_t& i) {
+void	ConfParser::addMaxBodySize(std::shared_ptr<SingleServer> newServer, size_t& i) {
 	i++; //move to the next token
 	if (allTokens_[i].type != NUMBER) {
 		throw ConfParserException("expected a number after 'client_max_body_size' directive", allTokens_[i].line);
@@ -412,12 +412,12 @@ void	ConfParser::addMaxBodySize(SingleServer& newServer, size_t& i) {
 	if (maxSize < 0 || maxSize > 10485760) {
 		throw ConfParserException("'client_max_body_size' value can be between 1 - 10485760", allTokens_[i].line);
 	}
-	newServer.setMaxBodySize(maxSize);
+	newServer->setMaxBodySize(maxSize);
 	i++; //moved to the semicolon?
 	semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 }
 
-void	ConfParser::addErrorPages(SingleServer& newServer, size_t& i) {
+void	ConfParser::addErrorPages(std::shared_ptr<SingleServer> newServer, size_t& i) {
 	i++; // move to the next token
 	if (allTokens_[i].type != NUMBER && allTokens_[i].value.length() != 3) {
 		//TODO change it according to our error pages
@@ -428,7 +428,7 @@ void	ConfParser::addErrorPages(SingleServer& newServer, size_t& i) {
 	}
 	int	errorCode = std::stoi(allTokens_[i].value);
 	i++; // move to the error page path
-	newServer.setErrorPages(errorCode, allTokens_[i].value);;
+	newServer->setErrorPages(errorCode, allTokens_[i].value);;
 	i++; //moved to the semicolon?
 	semicolonCheck(allTokens_[i].type, allTokens_[i].line);
 }
@@ -439,13 +439,13 @@ void	ConfParser::addErrorPages(SingleServer& newServer, size_t& i) {
 /// @param i current token's position
 /// @return failure or success
 void	ConfParser::populateServers(Server42& servers, size_t& i) {
-	
+
 	i++; //moving to the open brace token
 	if (allTokens_[i].type != OPEN_BRACE) {
 		throw ConfParserException("expected '{' after 'server' directive ", allTokens_[i].line);
 	}
 	i++; // go to the next token after the opening brace
-	SingleServer	newServer;
+	std::shared_ptr<SingleServer> newServer = std::make_shared<SingleServer>();
 
 	while (i < allTokens_.size() && allTokens_[i].value != "server") {
 		if (allTokens_[i].type == DIRECTIVE) {
@@ -477,6 +477,17 @@ void	ConfParser::populateServers(Server42& servers, size_t& i) {
 		else if (allTokens_[i].type == CLOSE_BRACE) {
 			i++; //move to the next token after the closing brace
 			servers.addServer(newServer);
+			// std::cout << "****END OF POPULATE INSIDE**** "<< std::endl;
+			// for (size_t i = 0; i < servers.getServers().size(); ++i) {
+			// 	const std::vector<std::shared_ptr<Location>>& serverLocs = (servers.getServers()).[i].getLocations();
+			// 	if (!serverLocs.empty() && serverLocs[0]) {
+			// 		std::cout << "USE_COUNT  Server[" << i << "] -> Location[0]: " << serverLocs[0].use_count() << std::endl;
+			// 		// std::cout << "  Server[" << i << "] -> Location[1]: " << serverLocs[1]->getPath() << std::endl;
+			// 	} else {
+			// 		std::cerr << "  Server[" << i << "] -> No valid first location!" << std::endl;
+			// 	}
+			// }
+			// std::cout << "****END OF POPULATE INSIDE **** "<< std::endl;
 			return ;
 		}
 		else {
@@ -501,6 +512,16 @@ void ConfParser::parseConfig(Server42& servers) {
 		try {
 			if (allTokens_[i].type == DIRECTIVE && allTokens_[i].value == "server") {
 				populateServers(servers, i);
+				// std::cout << "****END OF POPULATE OUTSIDE**** "<< std::endl;
+				// for (size_t i = 0; i < servers.getServers().size(); ++i) {
+				// 	const std::vector<std::shared_ptr<Location>>& serverLocs = servers.getServers()[i].getLocations();
+				// 	if (!serverLocs.empty() && serverLocs[0]) {
+				// 		std::cout << "  Server[" << i << "] -> Location[0]: " << serverLocs[0]->getPath() << std::endl;
+				// 	} else {
+				// 		std::cerr << "  Server[" << i << "] -> No valid first location!" << std::endl;
+				// 	}
+				// }
+				// std::cout << "****END OF POPULATE OUTSIDE **** "<< std::endl;
 				continue;
 			}
 			else {
