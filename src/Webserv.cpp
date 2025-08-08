@@ -1,87 +1,71 @@
 #include "../incl/Webserv.hpp"
 
-// --- Constructor ---
 Webserv::Webserv(const Server42& config)
-	: allServersConfig_(config), // Initialize const reference
-	  epollFd_(-1)              // Initialize epollFd
-	//   router_(config)            // Initialize Router, passing config
+	: allServersConfig_(config),
+	  epollFd_(-1)
 {
-	epollFd_ = epoll_create1(0); // Create the single epoll instance
+	epollFd_ = epoll_create1(0);
 	if (epollFd_ == -1) {
 		throw std::runtime_error("Webserv: Failed to create epoll instance");
 	}
-	events_.resize(MAX_EVENTS); // Resize event buffer
-	std::cout << "Webserv orchestrator created with epoll FD: " << epollFd_ << std::endl;
+	events_.resize(MAX_EVENTS);
+	std::cout << "Webserv created with epoll FD: " << epollFd_ << std::endl;
 }
 
-// --- Destructor ---
 Webserv::~Webserv() {
-	// Close the central epoll instance FD
 	if (epollFd_ != -1) {
 		close(epollFd_);
 	}
-
-	// Close all remaining client FDs if any are still open (robust cleanup)
 	for (std::map<int, Request>::iterator it = clientRequests_.begin(); it != clientRequests_.end(); ++it) {
-		close(it->first); // Close the client socket
+		close(it->first);
 	}
-	clientRequests_.clear();    // Clear all client state maps
+	clientRequests_.clear();
 	clientResponses_.clear();
-	listenerMap_.clear();       // Clear listener map (listeners closed by SingleServer destructor)
+	listenerMap_.clear();
 	clientToServerMap_.clear();
-
-	std::cout << "Webserv orchestrator destructed." << std::endl;
+	std::cout << "Webserv destructed." << std::endl;
 }
 
-// --- Main Server Control Methods ---
-
-// Sets up all listening sockets and adds them to the central epoll instance
 void Webserv::start() {
-    std::cout << "Starting Webserv..." << std::endl;
-    const std::vector<std::shared_ptr<SingleServer>>& servers = allServersConfig_.getServers();
-
-    if (servers.empty()) {
-        throw std::runtime_error("No server configurations loaded. Please check your config file.");
-    }
-
-    // Initialize each SingleServer's listening socket
-    for (const auto& serverPtr : servers) {
-        try {
-            serverPtr->initSocket(); // This sets up serverFd_ and makes it non-blocking
-            addFdToEpoll(serverPtr->getServFd(), EPOLLIN); // Add listener FD to central epoll
-            listenerMap_[serverPtr->getServFd()] = serverPtr.get(); // Map listener FD to its config
-            std::cout << GREEN << "  -> Server '" << serverPtr->getServName() << "' listening on port "
-                     << serverPtr->getServPortInt() << " (FD: " << serverPtr->getServFd() << ")" 
-                     << RESET << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << RED << "Error initializing server on port " << serverPtr->getServPortInt()
-                     << ": " << e.what() << RESET << std::endl;
-            // Decide whether to continue or exit if a server fails to initialize
-            // For now, we continue, but consider program termination if a critical listener fails.
-        }
-    }
-    
-    std::cout << "All listeners set up. Running main event loop." << std::endl;
-    runEventLoop(); // Start the central event loop
+	std::cout << "Starting Webserv..." << std::endl;
+	const std::vector<std::shared_ptr<SingleServer>>& servers = allServersConfig_.getServers();
+	if (servers.empty()) {
+		throw std::runtime_error("No server configurations loaded. Please check your config file.");
+	}
+	for (const auto& serverPtr : servers) {
+		try {
+			serverPtr->initSocket();
+			addFdToEpoll(serverPtr->getServFd(), EPOLLIN);
+			listenerMap_[serverPtr->getServFd()] = serverPtr.get();
+			std::cout << GREEN << "Server '" << serverPtr->getServName() << "' listening on port "
+					 << serverPtr->getServPortInt() << " (FD: " << serverPtr->getServFd() << ")" 
+					 << RESET << std::endl;
+		} catch (const std::exception& e) {
+			std::cerr << RED << "Error initializing server on port " << serverPtr->getServPortInt()
+					 << ": " << e.what() << RESET << std::endl;
+			// ?????? Throw something to main?????
+		}
+	}
+	try {
+		runEventLoop();
+	} catch (const std::exception& e) {
+		std::cerr << RED << "Error in event loop : " << e.what() << RESET << std::endl;
+	}
 }
 
-// Runs the central epoll_wait loop, dispatching events
 void Webserv::runEventLoop() {
 	while (true) {
-		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1); // -1 for infinite timeout
+		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1);
 		if (numEvents == -1) {
-			std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
 			throw std::runtime_error("epoll_wait failed, critical error.");
 		}
-
 		for (int i = 0; i < numEvents; ++i) {
 			int currentFd = events_[i].data.fd;
 			uint32_t currentEvents = events_[i].events;
 
-			// Handle errors or hangup on the FD
 			if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
 				std::cerr << RED << "Epoll error, hangup or remote shutdown on FD " << currentFd << RESET << std::endl;
-				closeClientConnection(currentFd); // Clean up the problematic connection
+				closeClientConnection(currentFd);
 				continue;
 			}
 
@@ -102,46 +86,39 @@ void Webserv::runEventLoop() {
 	}
 }
 
-// --- Private Helper Implementations (Epoll Management) ---
-
 void Webserv::addFdToEpoll(int fd, uint32_t events) {
 	epoll_event event;
-	event.events = events | EPOLLRDHUP | EPOLLET; // Always include RDHUP for graceful disconnect, ET for edge-triggered
+	event.events = events | EPOLLRDHUP | EPOLLET;
 	event.data.fd = fd;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &event) == -1) {
-		std::cerr << RED << "epoll_ctl(ADD, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 		throw std::runtime_error("Failed to add FD to epoll");
 	}
-	// std::cout << "Added FD " << fd << " to epoll for events " << events << std::endl; // Debug
 }
 
 void Webserv::removeFdFromEpoll(int fd) {
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 	}
-	// std::cout << "Removed FD " << fd << " from epoll" << std::endl; // Debug
+	// ?????? it should throw or not?!
 }
 
 void Webserv::closeClientConnection(int clientFd) {
-	removeFdFromEpoll(clientFd); // Remove from epoll monitoring
-	close(clientFd);             // Close the actual socket FD
+	removeFdFromEpoll(clientFd);		// Remove from epoll monitoring
+	close(clientFd);					// Close the actual socket FD
 
-	clientRequests_.erase(clientFd);    // Remove client's request state
-	clientResponses_.erase(clientFd);   // Remove client's response state
-	clientToServerMap_.erase(clientFd); // Remove mapping to server config
+	clientRequests_.erase(clientFd);	// Remove client's request state
+	clientResponses_.erase(clientFd);	// Remove client's response state
+	clientToServerMap_.erase(clientFd);	// Remove mapping to server config
 
 	std::cout << YELLOW << "Closed connection for FD: " << clientFd << RESET << std::endl;
 }
 
-// --- Private Helper Implementations (Event Handling) ---
-
-// Handles a new incoming connection on a listener socket
 void Webserv::handleNewConnection(int listenerFd) {
 	struct sockaddr_storage client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
 	int clientFd = accept(listenerFd, (struct sockaddr *)&client_addr, &client_addr_len);
 	if (clientFd == -1) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Expected for non-blocking accept
+		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			std::cerr << RED << "Accept failed on listener FD " << listenerFd << ": " << strerror(errno) << RESET << std::endl;
 		}
 		return;
@@ -149,51 +126,36 @@ void Webserv::handleNewConnection(int listenerFd) {
 
 	// Map this client to the SingleServer config that accepted it (for routing)
 	clientToServerMap_[clientFd] = listenerMap_[listenerFd];
-	std::cout << "DEBUG: Before creating Request object." << std::endl;
-	clientRequests_.insert(std::make_pair(clientFd, Request())); // Initialize a Request object for this client
-	std::cout << "DEBUG: After creating Request object." << std::endl;
-
-	std::cout << "DEBUG: Before adding FD to epoll." << std::endl;
-	addFdToEpoll(clientFd, EPOLLIN); // Add client FD to epoll for reading
-	std::cout << "DEBUG: After adding FD to epoll." << std::endl;
+	clientRequests_.insert(std::make_pair(clientFd, Request()));
+	addFdToEpoll(clientFd, EPOLLIN);
 	std::cout << GREEN << "Accepted new client (FD: " << clientFd << ") on listener " << listenerFd << RESET << std::endl;
 }
 
-// Handles incoming data from a client socket
 void Webserv::handleClientRead(int clientFd) {
 	char buffer[BUFFER_SIZE];
 	memset(buffer, 0, sizeof(buffer));
 
-	// Get the Request object for this client
 	std::map<int, Request>::iterator request_it = clientRequests_.find(clientFd);
 	if (request_it == clientRequests_.end()) {
 		std::cerr << RED << "Error: No Request object found for FD " << clientFd << " during read. Closing connection." << RESET << std::endl;
 		closeClientConnection(clientFd);
 		return;
 	}
-
 	ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer), 0);
-	std::cout << "DEBUG: After receiving data." << std::endl;
-
 	if (bytesReceived == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
 			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 			closeClientConnection(clientFd);
 		}
 		return;
-	} else if (bytesReceived == 0) { // Client disconnected gracefully
-		std::cout << "Client (FD: " << clientFd << ") disconnected gracefully." << std::endl;
+	} else if (bytesReceived == 0) { // Client disconnected
+		std::cout << "Client (FD: " << clientFd << ") disconnected." << std::endl;
 		closeClientConnection(clientFd);
 		return;
 	} else { // Data received
-		
 		request_it->second.appendRawData(buffer, bytesReceived);
-		// Loop to process all complete requests that might be in the buffer
-		std::cout << "DEBUG: Before parsing Request." << std::endl;
-		while (request_it->second.processRequestData()) {
-			// Request is fully parsed into request_it->second
-			std::cout << "DEBUG: after parsing one of the Request." << std::endl;
-			// Get the SingleServer config associated with this client for routing
+		while (request_it->second.processRequestData())
+		{
 			const SingleServer* clientServer = clientToServerMap_[clientFd];
 			if (!clientServer) {
 				std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
@@ -201,13 +163,10 @@ void Webserv::handleClientRead(int clientFd) {
 				return;
 			}
 			Router router(allServersConfig_);
-			std::cout << "DEBUG: after router creation." << std::endl;
-			// --- Perform URL Routing ---
 			ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
-			std::cout << "DEBUG: after determine the action." << std::endl;
-			// --- Perform Action & Generate Response ---
-			std::string responseContent = ""; // Content for the response body
-			int finalStatusCode = 0;        // Status determined by action execution
+
+			std::string responseContent = "";
+			int finalStatusCode = 0;
 
 			// Handle immediate errors from Router
 			if (action.errorCode != 0) {

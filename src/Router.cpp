@@ -11,16 +11,13 @@ ActionParameters Router::routeRequest(const Request& request, int listeningPort)
 		return params;
 	}
 	params.matchedServer = selectedServer;
-	std::cout << "DEBUG: After selectServerBlock." << std::endl;
 	const Location *selectedLocation = findBestMatchingLocation(request, selectedServer);
-	std::cout << "DEBUG: After findBestMatchingLocation." << std::endl;
 	if(!selectedLocation){
 		params.errorCode = 404;
 		return params;
 	}
 	params.matchedLocation = selectedLocation;
 	params = determineAction(request, params.matchedServer, params.matchedLocation);
-	std::cout << "DEBUG: After determineAction." << std::endl;
 	if (params.errorCode != 0 && params.matchedServer){
 		const std::unordered_map<int, std::string>	&errorPages = params.matchedServer->getErrorPages();
 		std::unordered_map<int, std::string>::const_iterator it = errorPages.find(params.errorCode);
@@ -28,8 +25,6 @@ ActionParameters Router::routeRequest(const Request& request, int listeningPort)
 			params.errorPagePath = it->second;
 		}
 	}
-	std::cout << "DEBUG: After catch the error page." << std::endl;
-
 	return params;
 }
 
@@ -77,23 +72,11 @@ const Location* Router::findBestMatchingLocation(const Request& request, const S
 	size_t longestMatchLength = 0;
 	
 	const std::vector<std::shared_ptr<Location>>& locations = server->getLocations();
-
-
-	// if (!locations.empty() && locations[0] && locations[0] != nullptr) {
-	// 		std::cout << "  Server[" << 0 << "] -> Location[0]: " << locations[0] << std::endl;
-	// } else {
-	// 		std::cerr << "  Server[" << 0 << "] -> No valid first location!" << std::endl;
-	// }
-
-	std::cout << "DEBUG: After getLocations." << std::endl;
 	std::string requestPath = request.getPath();
-	std::cout << "DEBUG: After request.getPath." << requestPath << std::endl;
-	std::cout << "DEBUG: Locations size: " << locations[1].get()->getPath() << std::endl;
+
 	for(int i = 0; i < (int)locations.size(); i++){
 		const std::shared_ptr<Location>& location = locations[i];
-		std::cout << "DEBUG: After loop[" << i << "]." << std::endl;
 		const std::string &locationPath = location->getPath();
-		std::cout << "DEBUG: After location.getPath."<< locationPath << std::endl;
 		if (requestPath.find(locationPath, 0) == 0) {
 			if (locationPath.length() > longestMatchLength) {
 				longestMatchLength = locationPath.length();
@@ -110,6 +93,14 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 	params.matchedServer = selectedServer;
 	params.matchedLocation = selectedLocation;
 
+	// Redirect
+	if (selectedLocation->getRedirectionCode() != -1 && !selectedLocation->getRedirectionsPath().empty()) {
+		params.isRedirect = true;
+		params.redirectCode = selectedLocation->getRedirectionCode();
+		params.redirectUrl = selectedLocation->getRedirectionsPath();
+		return params;
+	}
+
 	// Methods Allowed
 	std::vector<std::string> methods = selectedLocation->getAllowedMethods();
 	bool findAllowedMethod = false;
@@ -123,13 +114,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		params.errorCode = 405;
 		return params;
 	}
-	// Redirect
-	if (selectedLocation->getRedirectionCode() != -1 && !selectedLocation->getRedirectionsPath().empty()) {
-		params.isRedirect = true;
-		params.redirectCode = selectedLocation->getRedirectionCode();
-		params.redirectUrl = selectedLocation->getRedirectionsPath();
-		return params;
-	}
+	
 	// Max body limit
 	if (request.getBody().length() > (size_t)selectedServer->getMaxBodySize() && selectedServer->getMaxBodySize() != -1)
 	{
@@ -139,18 +124,19 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	std::string fileSystemPath = selectedLocation->getRoot();
 	std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
-
+	std::cout << "DEBUG: in creatation of fileSystemPath is [" << fileSystemPath << "]" << std::endl;
+	std::cout << "DEBUG: in creatation of relativePath is [" << relativePath << "]" << std::endl;
 	if (!fileSystemPath.empty() && fileSystemPath.back() != '/' && !relativePath.empty() && relativePath[0] != '/')
 	{
 		fileSystemPath += "/";
 	}
 	fileSystemPath += relativePath;
-		//TODO:double check?
 	if (fileSystemPath.empty() || fileSystemPath.back() == '/') {
 		if (!selectedLocation->getIndex().empty()) {
 			std::string indexPath = fileSystemPath;
 			if (indexPath.empty() || indexPath.back() != '/') indexPath += "/";
 			indexPath += selectedLocation->getIndex();
+			std::cout << "DEBUG:indexPath is [" << indexPath << "]"<< std::endl;
 			if (isFileExists(indexPath)) {
 				fileSystemPath = indexPath;
 			}
@@ -200,7 +186,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 	{
 		params.isUpload = true;
 		params.uploadTargetDir = selectedLocation->getUploadPath();
-		// TODO: how is getUploadPath() return the value?
 		size_t lastSlash = fileSystemPath.rfind('/');
 		if (lastSlash != std::string::npos){
 			params.uploadFilename = fileSystemPath.substr(lastSlash + 1);
@@ -242,12 +227,30 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 				params.redirectCode = 301;
 				params.redirectUrl = request.getPath()+ "/";
 			}
-			else if(selectedLocation->getAutoindex()){
-				params.isStaticFile = true;
-				params.isAutoindex = true;
-				params.filePath = fileSystemPath;
-			} else{
-				params.errorCode = 403;
+			else { // URI ends with '/'
+				std::string indexPath;
+				if (!selectedLocation->getIndex().empty()) {
+					// Try to construct the full path to the index file
+					indexPath = fileSystemPath;
+					if (indexPath.back() != '/') indexPath += "/";
+					indexPath += selectedLocation->getIndex();
+				}
+
+				// First, check if the index file exists
+				if (!indexPath.empty() && isFileExists(indexPath)) {
+					params.isStaticFile = true;
+					params.filePath = indexPath; // Set the filePath to the found index file
+				}
+				// If no index file found, then check for autoindex
+				else if(selectedLocation->getAutoindex()){
+					params.isStaticFile = true;
+					params.isAutoindex = true;
+					params.filePath = fileSystemPath; // Path is the directory for listing
+				}
+				// If neither index file nor autoindex is enabled, it's a forbidden access
+				else {
+					params.errorCode = 403;
+				}
 			}
 		} else if(isFileExists(fileSystemPath)){
 			params.isStaticFile = true;

@@ -2,16 +2,14 @@
 # define ROUTER_HPP
 
 #include "Webserv42.hpp"
-#include <sys/stat.h> // struct stat
+#include <sys/stat.h> 
 
 class Server42;
-// class Router;
-// class Request;
-// class SingleServer;
+
 
 struct ActionParameters {
 	const SingleServer*	matchedServer; // Pointer to the determined server config
-	const Location*		matchedLocation;   // Pointer to the determined location config
+	const Location*		matchedLocation;  // Pointer to the determined location config
 
 	bool				isRedirect;
 	std::string			redirectUrl;
@@ -33,7 +31,7 @@ struct ActionParameters {
 	int					errorCode;     // e.g., 400, 404, 405, 413
 	std::string			errorPagePath; // Path to custom error page (if configured for matchedServer)
 
-	bool				isDeleteOperation; // True if the action is to delete a file/directory(maybe not neccessary)??
+	bool				isDeleteOperation;
 	bool				isDeleteDirectory;
 
 	ActionParameters() : matchedServer(nullptr), matchedLocation(nullptr),
