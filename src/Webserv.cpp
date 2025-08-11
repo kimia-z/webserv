@@ -35,24 +35,14 @@ void Webserv::start()
 		throw std::runtime_error("No server configurations loaded. Please check your config file.");
 	}
 	for (const auto& serverPtr : servers) {
-		try {
-			serverPtr->initSocket();
-			addFdToEpoll(serverPtr->getServFd(), EPOLLIN);
-			listenerMap_[serverPtr->getServFd()] = serverPtr.get();
-			std::cout << GREEN << "Server '" << serverPtr->getServName() << "' listening on port "
-					 << serverPtr->getServPortInt() << " (FD: " << serverPtr->getServFd() << ")" 
-					 << RESET << std::endl;
-		} catch (const std::exception& e) {
-			std::cerr << RED << "Error initializing server on port " << serverPtr->getServPortInt()
-					 << ": " << e.what() << RESET << std::endl;
-			// ?????? Throw something to main?????
-		}
+		serverPtr->initSocket();
+		addFdToEpoll(serverPtr->getServFd(), EPOLLIN);
+		listenerMap_[serverPtr->getServFd()] = serverPtr.get();
+		std::cout << GREEN << "Server '" << serverPtr->getServName() << "' listening on port "
+					<< serverPtr->getServPortInt() << " (FD: " << serverPtr->getServFd() << ")" 
+					<< RESET << std::endl;
 	}
-	try {
-		runEventLoop();
-	} catch (const std::exception& e) {
-		std::cerr << RED << "Error in event loop : " << e.what() << RESET << std::endl;
-	}
+	runEventLoop();
 }
 
 void Webserv::runEventLoop()
@@ -161,68 +151,87 @@ void Webserv::handleClientRead(int clientFd)
 		closeClientConnection(clientFd);
 		return;
 	} else { // Data received
+		std::cout << GREEN << "Received " << bytesReceived << " bytes from client FD " << clientFd << RESET << std::endl;
+		std::cout << "Buffer:" << std::string(buffer, bytesReceived) << std::endl;
 		request_it->second.appendRawData(buffer, bytesReceived);
-		while (request_it->second.processRequestData())
-		{
-			const SingleServer* clientServer = clientToServerMap_[clientFd];
-			if (!clientServer) {
-				std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
-				closeClientConnection(clientFd);
-				return;
-			}
-			Router router(allServersConfig_);
-			ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
-
-			std::string responseContent = "";
-			int finalStatusCode = 0;
-
-			// Handle immediate errors from Router
-			if (action.errorCode != 0) {
-				finalStatusCode = action.errorCode;
-				responseContent = action.errorPagePath;
-				if (responseContent.empty()) { // If no custom page, provide a generic one
-					responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
-				} else {
-					responseContent = readFileContent(responseContent);
+		try{
+			while (request_it->second.processRequestData())
+			{
+				const SingleServer* clientServer = clientToServerMap_[clientFd];
+				if (!clientServer) {
+					std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
+					closeClientConnection(clientFd);
+					return;
 				}
-			}
+				Router router(allServersConfig_);
+				ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
 
-			else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
-				// do something??
-			}
+				std::string responseContent = "";
+				int finalStatusCode = 0;
 
-			// Usual Response
-			else if (action.isRedirect) {
-				finalStatusCode = action.redirectCode;
-				responseContent = action.redirectUrl; 
-			}
-			else if (action.isStaticFile) {
-				if (action.isAutoindex) {
-					responseContent = generateDirectoryListing(action.filePath);
-					finalStatusCode = 200;
-				} else {
-					responseContent = readFileContent(action.filePath);
-					if (responseContent.empty() && fileExists(action.filePath)) {
-						finalStatusCode = 500; // Read error
-						responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
+				// Handle immediate errors from Router
+				if (action.errorCode != 0) {
+					finalStatusCode = action.errorCode;
+					responseContent = action.errorPagePath;
+					if (responseContent.empty()) { // If no custom page, provide a generic one
+						responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
 					} else {
-						finalStatusCode = 200;
+						responseContent = readFileContent(responseContent);
 					}
 				}
-			}
-			else { // final safety net
-				finalStatusCode = action.errorCode;
-				if (finalStatusCode == 0) finalStatusCode = 500; // Default to 500 if no specific error
-				responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
-			}
 
-			// Response Builder
-			Response response_object;
-			response_object.buildFromAction(action, responseContent, finalStatusCode); 
-			std::string rawResponseString = response_object.toString();
-			clientResponses_[clientFd] = rawResponseString;
+				else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
+					// do something??
+				}
 
-			// Change epoll event to EPOLLOUT to start sending the response
+				// Usual Response
+				else if (action.isRedirect) {
+					finalStatusCode = action.redirectCode;
+					responseContent = action.redirectUrl; 
+				}
+				else if (action.isStaticFile) {
+					if (action.isAutoindex) {
+						responseContent = generateDirectoryListing(action.filePath);
+						finalStatusCode = 200;
+					} else {
+						responseContent = readFileContent(action.filePath);
+						if (responseContent.empty() && fileExists(action.filePath)) {
+							finalStatusCode = 500; // Read error
+							responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
+						} else {
+							finalStatusCode = 200;
+						}
+					}
+				}
+				else { // final safety net
+					finalStatusCode = action.errorCode;
+					if (finalStatusCode == 0) finalStatusCode = 500; // Default to 500 if no specific error
+					responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
+				}
+
+				// Response Builder
+				Response response_object;
+				response_object.buildFromAction(action, responseContent, finalStatusCode); 
+				std::string rawResponseString = response_object.toString();
+				clientResponses_[clientFd] = rawResponseString;
+
+				// Change epoll event to EPOLLOUT to start sending the response
+				epoll_event event_mod;
+				event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
+				event_mod.data.fd = clientFd;
+				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+					closeClientConnection(clientFd);
+				}
+				request_it->second.clearParsedRequest();
+			}
+		} catch (const HttpException& e) {
+			std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
+			Response errorResponse;
+			errorResponse.setStatusCode(e.getCode());
+			errorResponse.setBody(e.getMessage());
+			clientResponses_[clientFd] = errorResponse.toString();
+
+			// Switch to EPOLLOUT to send the error response
 			epoll_event event_mod;
 			event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
@@ -251,13 +260,8 @@ void Webserv::handleClientWrite(int clientFd)
 
 	ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
 	if (bytesSent == -1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			// Send buffer full, try again later. Do nothing, EPOLLOUT will trigger again.
-			// std::cerr << "Send buffer full for FD " << clientFd << ", waiting for EPOLLOUT." << std::endl; // Debug
-		} else { // Real error during send
-			std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-			closeClientConnection(clientFd);
-		}
+		std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		closeClientConnection(clientFd);
 	} else {
 		// Data sent.
 		response_it->second.erase(0, bytesSent);

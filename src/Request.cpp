@@ -37,7 +37,7 @@ bool Request::processRequestData() {
 		} catch (const HttpException& e) {
 			std::cerr << "Header parsing error: " << e.what() << std::endl;
 			_isRequestComplete = true;
-			return true;
+			throw e;
 		}
 	}
 	// Step 2: check/parse body
@@ -65,11 +65,7 @@ bool Request::processRequestData() {
 			} catch (const HttpException& e) {
 				std::cerr << "Content-Length error: " << e.what() << std::endl;
 				_isRequestComplete = true;
-				return true;
-			} catch (const std::exception& e) {
-				std::cerr << "Invalid Content-Length value: " << e.what() << std::endl;
-				_isRequestComplete = true;
-				return true;
+				throw e;
 			}
 		} else if (_method == "POST") {
 			throw HttpException(400, "Bad Request: Missing Content-Length or Transfer-Encoding for POST/PUT");

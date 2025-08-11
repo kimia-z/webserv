@@ -155,7 +155,12 @@ void Response::buildFromAction(const ActionParameters& action, const std::string
 	else if (action.isStaticFile) {
 		// 'content' here is the file's body or the directory listing HTML, provided by Server42.
 		// 'action.filePath' is used to get the MIME type.
-		buildStaticFileResponse(content, getMimeType(action.filePath), 200); // Status 200 OK
+		if (action.isAutoindex) {
+			buildStaticFileResponse(content, "text/html", 200); 
+		}
+		else {
+			buildStaticFileResponse(content, getMimeType(action.filePath), 200); // Status 200 OK
+		}
 	}
 	else if (actionStatusCode != 0) {
 		// If it's a 204 (No Content, typically from DELETE success), the 'content' string will be empty.
@@ -196,37 +201,3 @@ std::string Response::getMimeType(const std::string& filePath) const {
 	
 	return "application/octet-stream";
 }
-
-/*
-Scenario 1: Error Response (if (action.errorCode != 0))
-
-	Action: Call response_object.setStatusCode(action.errorCode);
-
-	Action: If action.errorPagePath is provided by the router, read that file's content and set it as the body: response_object.setBody(readFileContent(action.errorPagePath)); (or use a default HTML error page if no custom path is given).
-
-	Action: Set Content-Type: text/html.
-
-	Router's Contribution: The Router identified which error occurred and which custom error page to use (if any).
-
-Scenario 2: Redirect Response (else if (action.isRedirect))
-
-	Action: Call response_object.setStatusCode(action.redirectCode);
-
-	Action: Add the Location header: response_object.addHeader("Location", action.redirectUrl);
-
-	Action: Set an empty or minimal body.
-
-	Router's Contribution: The Router flagged it as a redirect and provided the redirect URL and code.
-
-Scenario 3: Static File Response (else if (action.isStaticFile))
-
-	Action: If action.isAutoindex is true, generate an HTML directory listing and set it as the body.
-
-	Action: Else, read the file content from action.filePath using readFileContent() and set it as the body.
-
-	Action: Determine the Content-Type based on the file extension (getMimeType(action.filePath)) and add it as a header.
-
-	Action: Set Content-Length (this is automatically handled if setBody updates it).
-
-	Router's Contribution: The Router indicated it's a static file request, provided the exact filePath, and whether autoindex should be used.
-*/
