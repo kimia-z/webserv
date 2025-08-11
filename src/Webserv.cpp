@@ -151,8 +151,6 @@ void Webserv::handleClientRead(int clientFd)
 		closeClientConnection(clientFd);
 		return;
 	} else { // Data received
-		std::cout << GREEN << "Received " << bytesReceived << " bytes from client FD " << clientFd << RESET << std::endl;
-		std::cout << "Buffer:" << std::string(buffer, bytesReceived) << std::endl;
 		request_it->second.appendRawData(buffer, bytesReceived);
 		try{
 			while (request_it->second.processRequestData())

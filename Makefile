@@ -25,7 +25,8 @@ SRC_FILES = src/main.cpp \
 			src/SingleServer.cpp \
 			src/Router.cpp \
 			src/Response.cpp \
-			src/Webserv.cpp
+			src/Webserv.cpp \
+			src/HttpException.cpp
 
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)

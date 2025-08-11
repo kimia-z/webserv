@@ -477,17 +477,7 @@ void	ConfParser::populateServers(Server42& servers, size_t& i) {
 		else if (allTokens_[i].type == CLOSE_BRACE) {
 			i++; //move to the next token after the closing brace
 			servers.addServer(newServer);
-			// std::cout << "****END OF POPULATE INSIDE**** "<< std::endl;
-			// for (size_t i = 0; i < servers.getServers().size(); ++i) {
-			// 	const std::vector<std::shared_ptr<Location>>& serverLocs = (servers.getServers()).[i].getLocations();
-			// 	if (!serverLocs.empty() && serverLocs[0]) {
-			// 		std::cout << "USE_COUNT  Server[" << i << "] -> Location[0]: " << serverLocs[0].use_count() << std::endl;
-			// 		// std::cout << "  Server[" << i << "] -> Location[1]: " << serverLocs[1]->getPath() << std::endl;
-			// 	} else {
-			// 		std::cerr << "  Server[" << i << "] -> No valid first location!" << std::endl;
-			// 	}
-			// }
-			// std::cout << "****END OF POPULATE INSIDE **** "<< std::endl;
+
 			return ;
 		}
 		else {
@@ -512,16 +502,6 @@ void ConfParser::parseConfig(Server42& servers) {
 		try {
 			if (allTokens_[i].type == DIRECTIVE && allTokens_[i].value == "server") {
 				populateServers(servers, i);
-				// std::cout << "****END OF POPULATE OUTSIDE**** "<< std::endl;
-				// for (size_t i = 0; i < servers.getServers().size(); ++i) {
-				// 	const std::vector<std::shared_ptr<Location>>& serverLocs = servers.getServers()[i].getLocations();
-				// 	if (!serverLocs.empty() && serverLocs[0]) {
-				// 		std::cout << "  Server[" << i << "] -> Location[0]: " << serverLocs[0]->getPath() << std::endl;
-				// 	} else {
-				// 		std::cerr << "  Server[" << i << "] -> No valid first location!" << std::endl;
-				// 	}
-				// }
-				// std::cout << "****END OF POPULATE OUTSIDE **** "<< std::endl;
 				continue;
 			}
 			else {
