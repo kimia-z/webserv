@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   ConfParser.hpp                                     :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/06/12 11:28:20 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/07/11 09:50:23 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   ConfParser.hpp                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/12 11:28:20 by mstencel          #+#    #+#             */
+/*   Updated: 2025/07/25 17:37:53 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,12 +71,12 @@ class	ConfParser {
 		void					validatePort(const std::string& port, size_t line); //validates the port number
 
 		void					populateServers(Server42& servers, size_t& i);
-		void					addIP(SingleServer& newServer, size_t& i);
-		void					addPort(SingleServer& newServer, size_t& i);
-		void					addServerName(SingleServer& newServer, size_t& i);
-		void					addLocation(SingleServer& server, size_t& i);
-		void					addMaxBodySize(SingleServer& newServer, size_t& i);
-		void					addErrorPages(SingleServer& newServer, size_t& i);
+		void					addIP(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addPort(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addServerName(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addLocation(std::shared_ptr<SingleServer> server, size_t& i);
+		void					addMaxBodySize(std::shared_ptr<SingleServer> newServer, size_t& i);
+		void					addErrorPages(std::shared_ptr<SingleServer> newServer, size_t& i);
 
 
 	private:

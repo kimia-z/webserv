@@ -1,24 +1,15 @@
 #include "../incl/Request.hpp"
 
-// Default constructor - important for non-blocking
 Request::Request() : _isHeadersComplete(false), _contentLength(-1),
 					_isChunked(false), _bodyStartPos(0), _isRequestComplete(false)
 {
-	// Initialize parsed data members to empty/default values
 	_method.clear();
 	_path.clear();
 	_queryParams.clear();
 	_version.clear();
 	_headers.clear();
 	_body.clear();
-	//_codeStatus = 200; // Default status, update on error
 }
-
-// You might keep this for testing, but the main flow will use appendRawData
-// Request::Request(const std::string &rawRequest) {
-//     _rawBuffer = rawRequest; // Store initially
-//     processRequestData(); // Attempt to process immediately
-// }
 
 void Request::appendRawData(const char* data, size_t len) {
 	if (data && len > 0) {
@@ -26,12 +17,10 @@ void Request::appendRawData(const char* data, size_t len) {
 	}
 }
 
-// Central function to check completion and incrementally parse
 bool Request::processRequestData() {
-	if (_isRequestComplete) { // Already processed a complete request, need to trim first
-		return true; // Or false if you want to explicitly wait for trim before next parse
+	if (_isRequestComplete) {
+		return true;
 	}
-
 	// Step 1: Check for complete headers if not already done
 	if (!_isHeadersComplete) {
 		size_t header_end_pos = findCRLFCRLF(_rawBuffer);
@@ -40,89 +29,74 @@ bool Request::processRequestData() {
 			return false;
 		}
 		_bodyStartPos = header_end_pos + 4; // Position after "\r\n\r\n"
-		_isHeadersComplete = true; // Mark headers as parsed
-
-		// Now parse the headers since we have the full header block
+		_isHeadersComplete = true;
 		try {
 			parseStartLineAndHeaders();
 		} catch (const HttpException& e) {
-			// Handle parsing errors during header stage
 			std::cerr << "Header parsing error: " << e.what() << std::endl;
-			// You might set an error status code here and mark request complete with error
-			_isRequestComplete = true; // Mark as complete with error state
-			// _codeStatus = e.getStatusCode();
-			return true; // Return true to signal that this (erroneous) request is "processed"
+			_isRequestComplete = true;
+			return true;
 		}
 	}
-
-	// Step 2: If headers are complete, check/parse body
+	// Step 2: check/parse body
 	if (_isHeadersComplete) {
-		// Check for Content-Length or Transfer-Encoding to determine body completeness
 		auto clIt = _headers.find("Content-Length");
 		auto teIt = _headers.find("Transfer-Encoding");
-
 		if (teIt != _headers.end() && teIt->second == "chunked") {
 			// Check if the final "0\r\n\r\n" is present in the raw buffer
 			if (_rawBuffer.length() >= _bodyStartPos + 5) { // Min for "0\r\n\r\n"
 				if (_rawBuffer.find("0\r\n\r\n", _bodyStartPos) != std::string::npos) {
 					_isRequestComplete = true;
-					parseBodyContent(); // Parse the chunked body
+					parseBodyContent();
 				}
 			}
 		} else if (clIt != _headers.end()) {
 			try {
 				_contentLength = std::atol(clIt->second.c_str());
-				if (_contentLength < 0) { // Invalid Content-Length
+				if (_contentLength < 0) {
 					throw HttpException(400, "Bad Request: Negative Content-Length");
 				}
 				if (static_cast<long>(_rawBuffer.length() - _bodyStartPos) >= _contentLength) {
 					_isRequestComplete = true;
-					parseBodyContent(); // Parse the body
+					parseBodyContent();
 				}
 			} catch (const HttpException& e) {
 				std::cerr << "Content-Length error: " << e.what() << std::endl;
-				_isRequestComplete = true; // Mark as complete with error
-				// _codeStatus = e.getStatusCode();
+				_isRequestComplete = true;
 				return true;
-			} catch (const std::exception& e) { // For std::atol conversion errors
+			} catch (const std::exception& e) {
 				std::cerr << "Invalid Content-Length value: " << e.what() << std::endl;
-				_isRequestComplete = true; // Mark as complete with error
-				// _codeStatus = 400;
+				_isRequestComplete = true;
 				return true;
 			}
 		} else if (_method == "POST") {
-			// If POST/PUT without CL or TE, it's generally an error (HTTP/1.1 requires one)
-			// Unless it's a specific type of POST that's allowed without body.
-			// For this project, assume it needs one.
 			throw HttpException(400, "Bad Request: Missing Content-Length or Transfer-Encoding for POST/PUT");
 		} else {
-			// GET, DELETE, or other methods without a body
-			_isRequestComplete = true; // Request is complete once headers are done
+			// GET, DELETE, ...
+			_isRequestComplete = true;
 		}
 	}
 	return _isRequestComplete;
 }
 
-// Parses the request line and headers from _rawBuffer (called once headers are complete)
 void Request::parseStartLineAndHeaders() {
-	std::istringstream stream(_rawBuffer.substr(0, _bodyStartPos)); // Only pass header portion
+	std::istringstream stream(_rawBuffer.substr(0, _bodyStartPos));
 	std::string line;
 
 	// Step 1: Parse start-line: METHOD PATH VERSION
-	if (!std::getline(stream, line)) { // Read first line
+	if (!std::getline(stream, line)) {
 		throw HttpException(400, "Bad Request: Empty request line");
 	}
-	if (line.back() == '\r') line.pop_back(); // Remove trailing \r
-	if (!parseStartLine(line)){ // Use your existing parseStartLine
+	if (line.back() == '\r') line.pop_back(); // Remove \r
+	if (!parseStartLine(line)){
 		throw HttpException(400, "Bad Request: Invalid start line");
 	}
 
 	// Step 2: Parse headers
 	while(std::getline(stream, line)) {
 		if (line == "\r" || line.empty()) break; // End of headers
-		if (line.back() == '\r') line.pop_back(); // Remove trailing \r
-
-		if (!parseHeader(line)){ // Use your existing parseHeader
+		if (line.back() == '\r') line.pop_back(); // Remove \r
+		if (!parseHeader(line)){
 			throw HttpException(400, "Bad Request: Invalid Header");
 		}
 	}
@@ -132,48 +106,29 @@ void Request::parseStartLineAndHeaders() {
 	}
 }
 
-// Parses the body from _rawBuffer (called once _requestComplete is true)
 void Request::parseBodyContent() {
 	if (_bodyStartPos >= _rawBuffer.length()) {
-		_body.clear(); // No body found
+		_body.clear();
 		return;
 	}
 
 	std::string rawBodyPart = _rawBuffer.substr(_bodyStartPos);
 
 	if (_isChunked) {
-		// Your existing parseChunkedBody needs to be adapted or called with rawBodyPart.
-		// Note: parseChunkedBody currently takes rawRequest, it needs to take the body part only
-		// And potentially handle partial chunks if you want full incremental parsing
-		_body = decodeChunkedBody(rawBodyPart); // You'll need to implement/adapt this.
+		_body = decodeChunkedBody(rawBodyPart);
 		if (_body.empty() && rawBodyPart.length() > 0 && rawBodyPart.find("0\r\n\r\n") == std::string::npos) {
-			// If decodeChunkedBody returns empty but the chunked data is not empty AND not complete
-			// this means it's an incomplete chunked body. This scenario should ideally
-			// be handled by checkCompletion, but it's a double check.
 			throw HttpException(400, "Incomplete chunked body.");
 		}
 	} else if (_contentLength != -1) {
-		// Your existing parseBody would be integrated here.
-		// It just needs to take the correct substring and handle length checks.
 		if (static_cast<long>(rawBodyPart.length()) < _contentLength) {
-			// This shouldn't happen if _requestComplete is true and Content-Length valid.
 			throw HttpException(400, "Body shorter than Content-Length after completion check.");
 		}
 		_body = rawBodyPart.substr(0, _contentLength);
 	} else {
-		// No body expected or parsed.
 		_body.clear();
 	}
 }
 
-// Original parsing helpers (adapt where needed, especially `parseBody` will change)
-// ... parseStartLine, parseQueryParams, parseHeader, isValidMethod, isValidPath, isValidVersion, isValidKey, isValidValue ...
-// Make sure they are 'const' if they don't modify member variables:
-// bool Request::isValidMethod(const std::string &method) const { ... }
-
-// Adapting parseChunkedBody: It should take the rawBodyPart string
-// You'll need to implement or integrate `decodeChunkedBody` function here
-// or modify `parseChunkedBody` to return the decoded body.
 std::string Request::decodeChunkedBody(const std::string& chunked_data) {
 	std::string decoded_body;
 	size_t pos = 0;
@@ -192,8 +147,7 @@ std::string Request::decodeChunkedBody(const std::string& chunked_data) {
 		}
 
 
-		if (chunk_size == 0) {
-			// End of chunked stream (0\r\n\r\n)
+		if (chunk_size == 0) { // End of chunked stream (0\r\n\r\n)
 			// Check for final \r\n
 			if (chunk_size_end + 2 + 2 <= chunked_data.length() &&
 				chunked_data.substr(chunk_size_end + 2, 2) == "\r\n") {
@@ -221,42 +175,32 @@ std::string Request::decodeChunkedBody(const std::string& chunked_data) {
 	return decoded_body;
 }
 
-
-// New method to clear a parsed request from the buffer
 void Request::clearParsedRequest() {
-	if (_isRequestComplete) { // Only clear if a complete request was found and processed
+	if (_isRequestComplete) {
 		size_t bytesToErase = 0;
-		if (_isHeadersComplete) { // Headers are always needed to define the request boundary
-			bytesToErase = _bodyStartPos; // Up to end of headers (including "\r\n\r\n")
-
+		if (_isHeadersComplete) {
+			bytesToErase = _bodyStartPos;
 			if (_isChunked) {
 				// For chunked, find the exact end of the last chunk marker "0\r\n\r\n"
 				size_t chunked_end = _rawBuffer.find("0\r\n\r\n", _bodyStartPos);
 				if (chunked_end != std::string::npos) {
 					bytesToErase = chunked_end + 5; // "0\r\n\r\n" is 5 chars
 				} else {
-					// This indicates an error, as _requestComplete should only be true if 0\r\n\r\n was found.
 					std::cerr << "Warning: Inconsistent state - chunked request marked complete but 0\\r\\n\\r\\n not found during trim." << std::endl;
-					// Attempt to find any double CRLF after body start as a fallback, or just return.
-					bytesToErase = _rawBuffer.length(); // Fallback: clear everything
+					bytesToErase = _rawBuffer.length(); // clear everything
 				}
 			} else if (_contentLength != -1) {
 				bytesToErase += _contentLength;
 			}
-			// If no body or non-chunked, _bodyStartPos is the end.
 		}
-
-		// Ensure bytesToErase does not exceed _rawBuffer length
 		if (bytesToErase > _rawBuffer.length()) {
-			bytesToErase = _rawBuffer.length(); // Defensive check
+			bytesToErase = _rawBuffer.length();
 		}
-
 		_rawBuffer.erase(0, bytesToErase);
 	}
-	reset(); // Reset internal state for the *next* request
+	reset();
 }
 
-// Resets the Request object to its initial state for a new request
 void Request::reset() {
 	_method.clear();
 	_path.clear();
@@ -269,19 +213,10 @@ void Request::reset() {
 	_isChunked = false;
 	_bodyStartPos = 0;
 	_isRequestComplete = false;
-	// _codeStatus = 200;
 }
-
-bool Request::isRequestComplete() const {return _isRequestComplete;}
-
-const std::string& Request::getRawBuffer() const {return _rawBuffer;}
-
-const std::unordered_map<std::string, std::string> &Request::getQueryParams() const { return _queryParams; }
 
 size_t Request::findCRLFCRLF(const std::string& buffer) const {return buffer.find("\r\n\r\n");}
 
-
-//TODO: what should it beheaves when failed in parsing?
 bool Request::parseStartLine(std::string line)
 {
 	std::istringstream start_line(line);
@@ -326,9 +261,8 @@ bool Request::parseHeader(std::string line)
 
 	std::string key = line.substr(0, colonPos);
 	std::string value = line.substr(colonPos + 1);
-	// Trim leading and trailing whitespace from value
-	// *Searches the string for the first character that
-	// 	does not match any of the characters specified in its arguments.*
+
+	// Searches the string for the first character that does not match any of the characters specified in its arguments.
 	size_t start = value.find_first_not_of(" \t");
 	size_t end = value.find_last_not_of(" \t");
 	value = (start != std::string::npos && end != std::string::npos) ? value.substr(start, end - start + 1) : "";// value is only spaces
@@ -380,14 +314,19 @@ bool Request::isValidValue(const std::string &value) const
 	return true;
 }
 
+bool Request::isRequestComplete() const {return _isRequestComplete;}
+
+
 // Getters:
 const std::string &Request::getMethod() const { return _method; }
 const std::string &Request::getPath() const { return _path; }
 const std::string &Request::getVersion() const { return _version; }
 const std::unordered_map<std::string, std::string> &Request::getHeaders() const { return _headers; }
 const std::string &Request::getBody() const { return _body; }
+const std::string &Request::getRawBuffer() const {return _rawBuffer;}
+const std::unordered_map<std::string, std::string> &Request::getQueryParams() const { return _queryParams; }
 
-
+// Print
 void Request::print() const
 {
 	std::cout << "Method: " << getMethod() << std::endl;

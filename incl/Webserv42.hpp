@@ -6,7 +6,7 @@
 /*   By: kziari <kziari@student.42.fr>                +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/05 10:30:28 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/07/22 11:35:57 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/08/11 13:24:05 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,9 @@
 #include "Location.hpp"
 #include "HttpException.hpp"
 #include "Request.hpp"
+#include "Router.hpp"
 #include "Response.hpp"
+#include "Webserv.hpp"
 
 //headers for the main.cpp
 #include <fstream> //for ifstream

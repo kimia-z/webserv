@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>                +#+                      #
 #                                                    +#+                       #
 #    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
-#    Updated: 2025/07/22 11:02:01 by mstencel      ########   odam.nl          #
+#    Updated: 2025/08/11 13:31:11 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,12 +20,13 @@ NAME = webserv
 SRC_FILES = src/main.cpp \
 			src/Cgi.cpp \
 			src/ConfParser.cpp \
-			src/epoll.cpp \
 			src/Location.cpp \
 			src/Request.cpp \
 			src/Response.cpp \
 			src/Server42.cpp \
-			src/SingleServer.cpp
+			src/SingleServer.cpp \
+			src/Router.cpp \
+			src/Webserv.cpp
 
 OBJ_DIR = obj
 OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
@@ -33,7 +34,7 @@ OBJ_FILES = $(SRC_FILES:%.cpp=$(OBJ_DIR)/%.o)
 HEADER_DIR = incl
 
 CPP = c++
-CPP_FLAGS = -Werror -Wextra -Wall -I $(HEADER_DIR) -std=c++11 #delete c++11 on Linux - redundant
+CPP_FLAGS = -Wextra -Wall -I $(HEADER_DIR) -std=c++11 #delete c++11 on Linux - redundant
 
 RM = rm -rf
 
