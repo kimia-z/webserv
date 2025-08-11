@@ -171,30 +171,30 @@ void Webserv::handleClientRead(int clientFd) {
 			// Handle immediate errors from Router
 			if (action.errorCode != 0) {
 				finalStatusCode = action.errorCode;
-				responseContent = clientServer->getErrorPagePath(action.errorCode); // Get custom error page path
+				responseContent = action.errorPagePath;
 				if (responseContent.empty()) { // If no custom page, provide a generic one
 					responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
-				} else { // Read custom error page file content
-					responseContent = readFileContent(responseContent); // Webserv reads the error page
+				} else {
+					responseContent = readFileContent(responseContent);
 				}
 			}
-			// --- Specific Action Execution (CGI, POST/Upload, DELETE) ---
+
 			else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
 				// do something??
 			}
-			// --- "Build a Usual Response" (Static File, Redirect, Unhandled GET/HEAD) ---
+
+			// Usual Response
 			else if (action.isRedirect) {
 				finalStatusCode = action.redirectCode;
-				// responseContent holds the redirect URL, Response::buildFromAction handles Location header
 				responseContent = action.redirectUrl; 
 			}
-			else if (action.isStaticFile) { // This includes GET/HEAD for files and autoindex directories
+			else if (action.isStaticFile) {
 				if (action.isAutoindex) {
 					responseContent = generateDirectoryListing(action.filePath);
 					finalStatusCode = 200;
 				} else {
 					responseContent = readFileContent(action.filePath);
-					if (responseContent.empty() && fileExists(action.filePath)) { // Check if empty means read error for non-empty file
+					if (responseContent.empty() && fileExists(action.filePath)) {
 						finalStatusCode = 500; // Read error
 						responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
 					} else {
@@ -281,7 +281,6 @@ void Webserv::handleClientWrite(int clientFd) {
 	}
 }
 
-// --- Private Helper Implementations (File System Operations) ---
 
 // Reads content of a file into a string
 std::string Webserv::readFileContent(const std::string& path) const {
@@ -384,14 +383,15 @@ bool Webserv::hasWriteAccess(const std::string& path) const {
 }
 
 // Generates an HTML listing for a directory
-std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const {
+std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const
+{
 	std::stringstream html_listing;
 	html_listing << "<!DOCTYPE html>\r\n"
 				 << "<html>\r\n"
 				 << "<head><title>Directory Listing for " << directoryPath << "</title></head>\r\n"
 				 << "<body>\r\n"
 				 << "<h1>Directory Listing for " << directoryPath << "</h1>\r\n"
-				 << "<hr>\r\n" // Horizontal rule for separation
+				 << "<hr>\r\n"
 				 << "<ul>\r\n";
 
 	DIR *dir = opendir(directoryPath.c_str());
@@ -402,7 +402,7 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 		struct dirent *entry;
 		while ((entry = readdir(dir)) != NULL) {
 			std::string name = entry->d_name;
-			// Skip current directory (.) and parent directory (..) as per common practice
+			// Skip current directory (.) and parent directory (..)
 			if (name == "." || name == "..") continue; 
 
 			std::string fullEntryPath = directoryPath;

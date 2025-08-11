@@ -124,8 +124,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	std::string fileSystemPath = selectedLocation->getRoot();
 	std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
-	std::cout << "DEBUG: in creatation of fileSystemPath is [" << fileSystemPath << "]" << std::endl;
-	std::cout << "DEBUG: in creatation of relativePath is [" << relativePath << "]" << std::endl;
 	if (!fileSystemPath.empty() && fileSystemPath.back() != '/' && !relativePath.empty() && relativePath[0] != '/')
 	{
 		fileSystemPath += "/";
@@ -136,7 +134,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 			std::string indexPath = fileSystemPath;
 			if (indexPath.empty() || indexPath.back() != '/') indexPath += "/";
 			indexPath += selectedLocation->getIndex();
-			std::cout << "DEBUG:indexPath is [" << indexPath << "]"<< std::endl;
 			if (isFileExists(indexPath)) {
 				fileSystemPath = indexPath;
 			}
@@ -230,7 +227,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 			else { // URI ends with '/'
 				std::string indexPath;
 				if (!selectedLocation->getIndex().empty()) {
-					// Try to construct the full path to the index file
 					indexPath = fileSystemPath;
 					if (indexPath.back() != '/') indexPath += "/";
 					indexPath += selectedLocation->getIndex();
@@ -239,15 +235,14 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 				// First, check if the index file exists
 				if (!indexPath.empty() && isFileExists(indexPath)) {
 					params.isStaticFile = true;
-					params.filePath = indexPath; // Set the filePath to the found index file
+					params.filePath = indexPath;
 				}
 				// If no index file found, then check for autoindex
 				else if(selectedLocation->getAutoindex()){
 					params.isStaticFile = true;
 					params.isAutoindex = true;
-					params.filePath = fileSystemPath; // Path is the directory for listing
+					params.filePath = fileSystemPath;
 				}
-				// If neither index file nor autoindex is enabled, it's a forbidden access
 				else {
 					params.errorCode = 403;
 				}
