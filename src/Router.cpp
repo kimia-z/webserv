@@ -2,6 +2,9 @@
 
 Router::Router(const Server42& allServersConfig): allServers_(allServersConfig)
 {}
+
+Router::~Router(){}
+
 ActionParameters Router::routeRequest(const Request& request, int listeningPort) const
 {
 	ActionParameters params;

@@ -8,28 +8,27 @@ class Server42;
 
 
 struct ActionParameters {
-	const SingleServer*	matchedServer; // Pointer to the determined server config
-	const Location*		matchedLocation;  // Pointer to the determined location config
+	const SingleServer*	matchedServer;
+	const Location*		matchedLocation;
 
 	bool				isRedirect;
 	std::string			redirectUrl;
 	int					redirectCode;
 
 	bool				isCGI;
-	std::string			cgiScriptPath; // e.g., "/usr/bin/php-cgi" (from config)
-	std::string			cgiTargetFile; // The actual script file to execute (resolved from URL)
+	std::string			cgiScriptPath;
+	std::string			cgiTargetFile;
 
 	bool				isUpload;
-	std::string			uploadTargetDir; // Directory to save uploaded files (from config)
-	std::string			uploadFilename;  // Name of the file being uploaded (from request)
+	std::string			uploadTargetDir;	// Directory to save uploaded files (from config)
+	std::string			uploadFilename;		// Name of the file being uploaded (from request)
 
 	bool				isStaticFile;
-	std::string			filePath;      // Full path to the file on the server's filesystem
-	bool				isAutoindex;   // True if directory listing should be generated
+	std::string			filePath;
+	bool				isAutoindex;
 
-	// Error handling: If routing itself determines an error
-	int					errorCode;     // e.g., 400, 404, 405, 413
-	std::string			errorPagePath; // Path to custom error page (if configured for matchedServer)
+	int					errorCode;
+	std::string			errorPagePath;
 
 	bool				isDeleteOperation;
 	bool				isDeleteDirectory;
@@ -57,12 +56,13 @@ private:
 public:
 
 	Router(const Server42& allServersConfig);
+	~Router();
+
+	// Main Method
 	ActionParameters	routeRequest(const Request& request, int listeningPort) const;
 
 	// Helper
-	bool		isExecutable(const std::string& path) const; // Checks execute permissions
-	// bool		fileExists(const std::string& path) const; // Checks for regular files
-
+	bool				isExecutable(const std::string& path) const;
 };
 
 

@@ -11,6 +11,8 @@ Request::Request() : _isHeadersComplete(false), _contentLength(-1),
 	_body.clear();
 }
 
+Request::~Request(){}
+
 void Request::appendRawData(const char* data, size_t len) {
 	if (data && len > 0) {
 		_rawBuffer.append(data, len);

@@ -25,9 +25,9 @@
 #include "Webserv.hpp"
 
 //headers for the main.cpp
-#include <fstream> //for ifstream
-#include <sstream> //for stringstream
-#include <vector> //for vector
+#include <fstream>	//for ifstream
+#include <sstream>	//for stringstream
+#include <vector>	//for vector
 
 #endif
 

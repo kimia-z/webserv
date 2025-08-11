@@ -51,7 +51,7 @@ public:
 	Request();
 	// Request(const Request& copy);
 	// Request& operator=(const Request& copy);
-	// ~Request();
+	~Request();
 	
 	void		appendRawData(const char* data, size_t len);
 	bool		processRequestData(); 

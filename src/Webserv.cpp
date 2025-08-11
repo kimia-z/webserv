@@ -12,7 +12,8 @@ Webserv::Webserv(const Server42& config)
 	std::cout << "Webserv created with epoll FD: " << epollFd_ << std::endl;
 }
 
-Webserv::~Webserv() {
+Webserv::~Webserv()
+{
 	if (epollFd_ != -1) {
 		close(epollFd_);
 	}
@@ -26,7 +27,8 @@ Webserv::~Webserv() {
 	std::cout << "Webserv destructed." << std::endl;
 }
 
-void Webserv::start() {
+void Webserv::start()
+{
 	std::cout << "Starting Webserv..." << std::endl;
 	const std::vector<std::shared_ptr<SingleServer>>& servers = allServersConfig_.getServers();
 	if (servers.empty()) {
@@ -53,7 +55,8 @@ void Webserv::start() {
 	}
 }
 
-void Webserv::runEventLoop() {
+void Webserv::runEventLoop()
+{
 	while (true) {
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1);
 		if (numEvents == -1) {
@@ -86,7 +89,8 @@ void Webserv::runEventLoop() {
 	}
 }
 
-void Webserv::addFdToEpoll(int fd, uint32_t events) {
+void Webserv::addFdToEpoll(int fd, uint32_t events)
+{
 	epoll_event event;
 	event.events = events | EPOLLRDHUP | EPOLLET;
 	event.data.fd = fd;
@@ -95,14 +99,16 @@ void Webserv::addFdToEpoll(int fd, uint32_t events) {
 	}
 }
 
-void Webserv::removeFdFromEpoll(int fd) {
+void Webserv::removeFdFromEpoll(int fd)
+{
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 	}
 	// ?????? it should throw or not?!
 }
 
-void Webserv::closeClientConnection(int clientFd) {
+void Webserv::closeClientConnection(int clientFd)
+{
 	removeFdFromEpoll(clientFd);		// Remove from epoll monitoring
 	close(clientFd);					// Close the actual socket FD
 
@@ -113,7 +119,8 @@ void Webserv::closeClientConnection(int clientFd) {
 	std::cout << YELLOW << "Closed connection for FD: " << clientFd << RESET << std::endl;
 }
 
-void Webserv::handleNewConnection(int listenerFd) {
+void Webserv::handleNewConnection(int listenerFd)
+{
 	struct sockaddr_storage client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
 	int clientFd = accept(listenerFd, (struct sockaddr *)&client_addr, &client_addr_len);
@@ -131,7 +138,8 @@ void Webserv::handleNewConnection(int listenerFd) {
 	std::cout << GREEN << "Accepted new client (FD: " << clientFd << ") on listener " << listenerFd << RESET << std::endl;
 }
 
-void Webserv::handleClientRead(int clientFd) {
+void Webserv::handleClientRead(int clientFd)
+{
 	char buffer[BUFFER_SIZE];
 	memset(buffer, 0, sizeof(buffer));
 
@@ -202,56 +210,46 @@ void Webserv::handleClientRead(int clientFd) {
 					}
 				}
 			}
-			else { // Fallback for unhandled paths from Router (e.g., 501 Not Implemented)
-				finalStatusCode = action.errorCode; // Use errorCode from router, if any
+			else { // final safety net
+				finalStatusCode = action.errorCode;
 				if (finalStatusCode == 0) finalStatusCode = 500; // Default to 500 if no specific error
 				responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
 			}
 
-			// --- Call Response Builder ---
+			// Response Builder
 			Response response_object;
-			// Pass the action, the content produced by action execution, and the final status code
 			response_object.buildFromAction(action, responseContent, finalStatusCode); 
-
-			// --- Get the final raw response string ---
 			std::string rawResponseString = response_object.toString();
-
-			// --- Store and Prepare for Sending ---
-			clientResponses_[clientFd] = rawResponseString; // Store the complete raw response
+			clientResponses_[clientFd] = rawResponseString;
 
 			// Change epoll event to EPOLLOUT to start sending the response
 			epoll_event event_mod;
-			event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET; // Want to write AND continue reading
+			event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
 			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-				std::cerr << RED << "epoll_ctl(MOD, EPOLLOUT|EPOLLIN) failed for FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 				closeClientConnection(clientFd);
 			}
-			request_it->second.clearParsedRequest(); // Clear request buffer for next request on this connection
+			request_it->second.clearParsedRequest();
 		}
-		std::cout << "DEBUG: After parsing Request." << std::endl;
-		// If while loop finishes, either all complete requests processed, or buffer holds incomplete request.
 	}
 }
 
 // Handles sending data to a client socket
-void Webserv::handleClientWrite(int clientFd) {
+void Webserv::handleClientWrite(int clientFd)
+{
 	std::map<int, std::string>::iterator response_it = clientResponses_.find(clientFd);
 	if (response_it == clientResponses_.end() || response_it->second.empty()) {
-		// No response pending or already sent. Switch back to EPOLLIN if connection is persistent.
+		// No response pending or already sent. Switch back to EPOLLIN.
 		epoll_event event_mod;
 		event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 		event_mod.data.fd = clientFd;
 		if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-			std::cerr << RED << "epoll_ctl(MOD, EPOLLIN) failed for FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 			closeClientConnection(clientFd);
 		}
 		return;
 	}
 
-	// Attempt to send data
 	ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
-
 	if (bytesSent == -1) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
 			// Send buffer full, try again later. Do nothing, EPOLLOUT will trigger again.
@@ -261,33 +259,31 @@ void Webserv::handleClientWrite(int clientFd) {
 			closeClientConnection(clientFd);
 		}
 	} else {
-		// Data sent. Remove sent bytes from buffer.
+		// Data sent.
 		response_it->second.erase(0, bytesSent);
 
 		if (response_it->second.empty()) {
 			// All data sent.
-			std::cout << GREEN << "All response data sent for FD " << clientFd << "." << RESET << std::endl;
-			clientResponses_.erase(clientFd); // Remove response from map
+			clientResponses_.erase(clientFd);
 
-			// Connection is persistent by default (HTTP/1.1), switch back to EPOLLIN
+			// Switch back to EPOLLIN
 			epoll_event event_mod;
 			event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
 			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-				std::cerr << RED << "epoll_ctl(MOD, EPOLLIN) failed for FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 				closeClientConnection(clientFd);
 			}
 		}
 	}
 }
 
-
 // Reads content of a file into a string
-std::string Webserv::readFileContent(const std::string& path) const {
+std::string Webserv::readFileContent(const std::string& path) const
+{
 	std::ifstream file(path.c_str(), std::ios::in | std::ios::binary);
 	if (!file.is_open()) {
 		std::cerr << RED << "Error: Could not open file for reading: " << path << RESET << std::endl;
-		return ""; // Return empty string on failure
+		return "";
 	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
@@ -295,92 +291,25 @@ std::string Webserv::readFileContent(const std::string& path) const {
 	return buffer.str();
 }
 
-// Determines the MIME type based on file extension
-// std::string Webserv::getMimeType(const std::string& filePath) const {
-// 	size_t dotPos = filePath.rfind('.');
-// 	if (dotPos == std::string::npos) return "application/octet-stream";
-
-// 	std::string ext = filePath.substr(dotPos);
-// 	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower); // Case-insensitive
-
-// 	if (ext == ".html" || ext == ".htm") return "text/html";
-// 	else if (ext == ".css") return "text/css";
-// 	else if (ext == ".js") return "application/javascript";
-// 	else if (ext == ".json") return "application/json";
-// 	else if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
-// 	else if (ext == ".png") return "image/png";
-// 	else if (ext == ".gif") return "image/gif";
-// 	else if (ext == ".ico") return "image/x-icon";
-// 	else if (ext == ".txt") return "text/plain";
-// 	else if (ext == ".pdf") return "application/pdf";
-// 	else if (ext == ".xml") return "application/xml";
-// 	else if (ext == ".mp3") return "audio/mpeg";
-// 	else if (ext == ".mp4") return "video/mp4";
-// 	// Add more as needed
-	
-// 	return "application/octet-stream";
-// }
-
-// Generates an HTML listing for a directory
-// std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const {
-// 	std::stringstream html_listing;
-// 	html_listing << "<!DOCTYPE html>\r\n"
-// 				 << "<html>\r\n"
-// 				 << "<head><title>Directory Listing for " << directoryPath << "</title></head>\r\n"
-// 				 << "<body>\r\n"
-// 				 << "<h1>Directory Listing for " << directoryPath << "</h1>\r\n"
-// 				 << "<ul>\r\n";
-
-// 	DIR *dir = opendir(directoryPath.c_str());
-// 	if (dir == NULL) {
-// 		std::cerr << RED << "Error opening directory for listing: " << directoryPath << ": " << strerror(errno) << RESET << std::endl;
-// 		html_listing << "<p>Error: Could not open directory.</p>\r\n";
-// 	} else {
-// 		struct dirent *entry;
-// 		while ((entry = readdir(dir)) != NULL) {
-// 			std::string name = entry->d_name;
-// 			if (name == "." || name == "..") continue;
-
-// 			std::string fullEntryPath = directoryPath;
-// 			if (fullEntryPath.back() != '/') fullEntryPath += "/";
-// 			fullEntryPath += name;
-
-// 			html_listing << "<li><a href=\"" << name;
-// 			struct stat entry_stat;
-// 			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
-// 				html_listing << "/";
-// 			}
-// 			html_listing << "\">" << name;
-// 			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
-// 				html_listing << "/";
-// 			}
-// 			html_listing << "</a></li>\r\n";
-// 		}
-// 		closedir(dir);
-// 	}
-
-// 	html_listing << "</ul>\r\n"
-// 				 << "</body>\r\n"
-// 				 << "</html>\r\n";
-// 	return html_listing.str();
-// }
-
 // Checks if a path points to a regular file
-bool Webserv::fileExists(const std::string& path) const {
+bool Webserv::fileExists(const std::string& path) const
+{
 	struct stat buffer;
 	return (stat(path.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode));
 }
 
 // Checks if a path points to a directory
-bool Webserv::isDirectory(const std::string& path) const {
+bool Webserv::isDirectory(const std::string& path) const
+{
 	struct stat buffer;
 	return (stat(path.c_str(), &buffer) == 0 && S_ISDIR(buffer.st_mode));
 }
 
 // Checks if a path has write access
-bool Webserv::hasWriteAccess(const std::string& path) const {
-	return access(path.c_str(), W_OK) == 0;
-}
+// bool Webserv::hasWriteAccess(const std::string& path) const
+// {
+// 	return access(path.c_str(), W_OK) == 0;
+// }
 
 // Generates an HTML listing for a directory
 std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const
@@ -434,8 +363,3 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 	return html_listing.str();
 }
 
-// Checks if a path has execute access (for CGI scripts)
-// bool Webserv::isExecutable(const std::string& path) const {
-// 	struct stat buffer;
-// 	return (stat(path.c_str(), &buffer) == 0 && (buffer.st_mode & S_IXUSR || buffer.st_mode & S_IXGRP || buffer.st_mode & S_IXOTH));
-// }
