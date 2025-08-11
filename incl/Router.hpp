@@ -18,6 +18,7 @@ struct ActionParameters {
 	bool				isCGI;
 	std::string			cgiScriptPath; // e.g., "/usr/bin/php-cgi" (from config)
 	std::string			cgiTargetFile; // The actual script file to execute (resolved from URL)
+	std::string			cgiHeader; // headers returned by the CGI
 
 	bool				isUpload;
 	std::string			uploadTargetDir; // Directory to save uploaded files (from config)

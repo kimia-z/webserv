@@ -180,7 +180,36 @@ void Webserv::handleClientRead(int clientFd) {
 			}
 			// --- Specific Action Execution (CGI, POST/Upload, DELETE) ---
 			else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
-				// do something??
+				std::cout << "hello here from CGI" << std::endl;
+				try {
+					Cgi	cgi(request_it->second, action.filePath);
+					std::string cgiOutput = cgi.runCgi();
+
+					//parsing the CGI headers & body
+					size_t	headerEnd = cgiOutput.find("\r\n\r\n");
+					std::string cgiHeaders;
+					if (headerEnd != std::string::npos) {
+						cgiHeaders = cgiOutput.substr(0, headerEnd);
+						responseContent = cgiOutput.substr(headerEnd + 4);
+					}
+					else {
+						cgiHeaders = "Content-Type: text/html";
+						responseContent = cgiOutput;
+					}
+					finalStatusCode = 200;
+					size_t statusPos = cgiHeaders.find("Status:");
+					if (statusPos != std::string::npos) {
+						std::istringstream iss(cgiHeaders.substr(statusPos + 7));
+						iss >> finalStatusCode;
+					}
+
+					action.cgiHeader = cgiHeaders;
+				}
+				catch (const Cgi::CgiException &e) {
+					finalStatusCode = 500;
+					responseContent = "<h1>500 Internal Server Error</h1>""<p>CGI execution failed: " + std::string(e.what()) + "</p>";
+				}
+
 			}
 			// --- "Build a Usual Response" (Static File, Redirect, Unhandled GET/HEAD) ---
 			else if (action.isRedirect) {

@@ -6,7 +6,7 @@
 #    By: kziari <kziari@student.42.fr>                +#+                      #
 #                                                    +#+                       #
 #    Created: 2025/05/05 10:26:11 by mstencel      #+#    #+#                  #
-#    Updated: 2025/08/11 13:31:11 by mstencel      ########   odam.nl          #
+#    Updated: 2025/08/11 13:44:19 by mstencel      ########   odam.nl          #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,9 +23,9 @@ SRC_FILES = src/main.cpp \
 			src/Location.cpp \
 			src/Request.cpp \
 			src/Response.cpp \
+			src/Router.cpp \
 			src/Server42.cpp \
 			src/SingleServer.cpp \
-			src/Router.cpp \
 			src/Webserv.cpp
 
 OBJ_DIR = obj

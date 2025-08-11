@@ -143,43 +143,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		}
 	}
 	bool isDir = isDirectory(fileSystemPath);
-	// bool isFile = isFileExists(fileSystemPath);
-
-	// if (selectedLocation->isCGIEnabled() && (request.getMethod() == "GET" || request.getMethod() == "POST")) {
-		
-	// 	// Extract file extension from the determined filesystemPath
-	// 	size_t dotPos = fileSystemPath.rfind('.');
-	// 	if (dotPos != std::string::npos) {
-	// 		std::string extension = fileSystemPath.substr(dotPos); // Includes the dot, e.g., ".php"
-
-	// 		// Check if this extension is in the list of CGI-allowed extensions for this location
-	// 		const std::vector<std::string>& allowedCgiExtensions = selectedLocation->getCGIAllowedExtensions();
-	// 		bool extensionMatchesCGI = false;
-	// 		for (size_t i = 0; i < allowedCgiExtensions.size(); ++i) {
-	// 			if (allowedCgiExtensions[i] == extension) {
-	// 				extensionMatchesCGI = true;
-	// 				break;
-	// 			}
-	// 		}
-
-	// 		if (extensionMatchesCGI) {
-	// 			// Now, further check if the CGI script file actually exists and is executable
-	// 			// You'll need an _isExecutable helper similar to _fileExists / _isDirectory
-	// 			if (isFileExists(fileSystemPath) && isExecutable(fileSystemPath)) { // _isExecutable checks permission for execute bit
-	// 				params.isCGI = true;
-	// 				params.cgiTargetFile = fileSystemPath;
-	// 				params.cgiExecutor = selectedLocation->getCGIExecutor(); // Get the interpreter path from config
-	// 				return params; // Found CGI, return immediately
-	// 			} else {
-	// 				// Script not found or not executable, even if extension matches config
-	// 				params.errorCode = 404; // Not Found
-	// 				// Or 403 Forbidden if it exists but not executable
-	// 				return params;
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 
 	// POST
 	if (request.getMethod() == "POST" && !selectedLocation->getUploadPath().empty())

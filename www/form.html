@@ -1,22 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<title>Contact Form - Mountains</title>
-</head>
-<body>
-<h2>Leave your contact details</h2>
-<form action="/cgi-bin/form_mountain.py" method="post">
-	<label for="name">Name:</label><br />
-	<input type="text" id="name" name="name" required><br /><br />
+	<head>
+		<meta charset="UTF-8" />
+		<title>Contact Form - Mountains</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: white;
+				color: black;
+				text-align: center;
+				margin: 0;
+				padding: 0;
+			}
+			h2 {
+				color: darkgreen;
+				margin-top: 50px;
+			}
+			</style>
+	</head>
+	<body>
+		<h2>Leave your contact details</h2>
+		<form action="/cgi-bin/form_mountain.py" method="post">
+			<label for="name">Name:</label><br />
+			<input type="text" id="name" name="name" required><br /><br />
 
-	<label for="phone">Phone number:</label><br />
-	<input type="tel" id="phone" name="phone" required><br /><br />
+			<label for="phone">Phone number:</label><br />
+			<input type="tel" id="phone" name="phone" required><br /><br />
 
-	<label for="email">Email address:</label><br />
-	<input type="email" id="email" name="email" required><br /><br />
+			<label for="email">Email address:</label><br />
+			<input type="email" id="email" name="email" required><br /><br />
 
-	<input type="submit" value="Submit">
-</form>
-</body>
+			<input type="submit" value="Submit">
+		</form>
+	</body>
 </html>
