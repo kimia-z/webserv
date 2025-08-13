@@ -182,18 +182,22 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 
 	// POST
-	if (request.getMethod() == "POST" && !selectedLocation->getUploadPath().empty())
-	{
-		params.isUpload = true;
-		params.uploadTargetDir = selectedLocation->getUploadPath();
-		size_t lastSlash = fileSystemPath.rfind('/');
-		if (lastSlash != std::string::npos){
-			params.uploadFilename = fileSystemPath.substr(lastSlash + 1);
-		} else {
-			params.uploadFilename = fileSystemPath;
+	if (request.getMethod() == "POST") {
+		if (!selectedLocation->getUploadPath().empty()) {
+			std::string uploadPath = selectedLocation->getUploadPath();
+			if (!isDirectory(uploadPath) || !hasWriteAccess(uploadPath)) {
+				params.errorCode = 500;
+				return params;
+			}
+		
+			params.isUpload = true;
+			params.uploadTargetDir = uploadPath; // uploadPath = "/upload"
+			// request.getPath() = "/upload/images/cat.jpg"
+			std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
+			params.uploadFilename = relativePath; // uploadFilename = "images/cat.jpg
+			return params;
 		}
-		return params;
-	}	// TODO: what should be the proper error code for if it is POST but there isn't upload path?
+	}
 
 	// DELETE
 	if (request.getMethod() == "DELETE"){

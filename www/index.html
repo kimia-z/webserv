@@ -1,13 +1,156 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Webserv</title>
+	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+		
+		:root {
+			--primary-color: #2c3e50;
+			--secondary-color: #3498db;
+			--accent-color: #e74c3c;
+			--text-color: #f4f4f4;
+			--bg-color: #ecf0f1;
+			--card-bg: #ffffff;
+			--shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+		}
 
-<html>
-	<head>
-		<title>webserv</title>
-		<link rel="icon" type="image/x-icon" href="images/favicon.ico">
-	</head>
-	<body>
+		body {
+			font-family: 'Poppins', sans-serif;
+			background-color: var(--bg-color);
+			margin: 0;
+			padding: 0;
+			color: var(--primary-color);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			text-align: center;
+		}
+
+		.container {
+			background-color: var(--card-bg);
+			padding: 3rem 4rem;
+			border-radius: 16px;
+			box-shadow: var(--shadow);
+			width: 100%;
+			max-width: 700px;
+			transform: translateY(0);
+			transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
+		}
+		
+		.container:hover {
+			transform: translateY(-8px);
+			box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+		}
+
+		h1 {
+			font-size: 4rem;
+			font-weight: 700;
+			color: var(--secondary-color);
+			margin: 0 0 0.5rem;
+			letter-spacing: -2px;
+			position: relative;
+			animation: bounceIn 1s ease-out;
+		}
+
+		@keyframes bounceIn {
+			0% { opacity: 0; transform: scale(0.3); }
+			50% { opacity: 1; transform: scale(1.05); }
+			70% { transform: scale(0.9); }
+			100% { transform: scale(1); }
+		}
+
+		h2 {
+			font-size: 1.8rem;
+			color: var(--primary-color);
+			margin: 0 0 2rem;
+			font-weight: 600;
+		}
+
+		p {
+			font-size: 1.1rem;
+			line-height: 1.8;
+			margin: 0 0 2.5rem;
+		}
+
+		.features {
+			display: flex;
+			justify-content: space-around;
+			flex-wrap: wrap;
+			gap: 2rem;
+		}
+
+		.feature-card {
+			background-color: var(--bg-color);
+			padding: 1.5rem;
+			border-radius: 12px;
+			flex: 1;
+			min-width: 200px;
+			box-shadow: var(--shadow);
+			transition: transform 0.3s ease, box-shadow 0.3s ease;
+		}
+
+		.feature-card:hover {
+			transform: scale(1.05);
+			box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+		}
+
+		.feature-card h3 {
+			color: var(--accent-color);
+			margin: 0 0 0.5rem;
+			font-weight: 700;
+			font-size: 1.2rem;
+		}
+
+		.feature-card p {
+			font-size: 0.9rem;
+			line-height: 1.4;
+			margin: 0;
+			color: #555;
+		}
+		
+		.footer {
+			margin-top: 4rem;
+			font-size: 0.9rem;
+			color: #7f8c8d;
+			border-top: 1px solid #ddd;
+			padding-top: 2rem;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
 		<h1>
-			webserv's homepage
+			webserv 🚀
 		</h1>
-	</body>
+		<h2>
+			A modern HTTP server by Gosia & Kimia
+		</h2>
+		<p>
+			Welcome to our `webserv` homepage! We've built this server from scratch, handling non-blocking I/O, robust routing, and a variety of HTTP features.
+		</p>
+
+		<div class="features">
+			<div class="feature-card">
+				<h3>Non-Blocking I/O</h3>
+				<p>Built on a single `epoll` loop for high-performance and scalability, handling many connections efficiently.</p>
+			</div>
+			<div class="feature-card">
+				<h3>Flexible Routing</h3>
+				<p>Supports configurable `location` blocks and method-specific handling for dynamic responses.</p>
+			</div>
+			<div class="feature-card">
+				<h3>Core HTTP Methods</h3>
+				<p>Fully compliant with `GET`, `POST`, and `DELETE` methods for complete resource management.</p>
+			</div>
+		</div>
+		<div class="footer">
+			Proudly served by our very own `webserv`.
+		</div>
+	</div>
+</body>
 </html>

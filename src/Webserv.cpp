@@ -303,30 +303,117 @@ bool Webserv::fileExists(const std::string& path) const
 	return (stat(path.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode));
 }
 
-// Checks if a path points to a directory
-bool Webserv::isDirectory(const std::string& path) const
-{
-	struct stat buffer;
-	return (stat(path.c_str(), &buffer) == 0 && S_ISDIR(buffer.st_mode));
-}
-
-// Checks if a path has write access
-// bool Webserv::hasWriteAccess(const std::string& path) const
-// {
-// 	return access(path.c_str(), W_OK) == 0;
-// }
-
-// Generates an HTML listing for a directory
 std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const
 {
 	std::stringstream html_listing;
 	html_listing << "<!DOCTYPE html>\r\n"
-				 << "<html>\r\n"
-				 << "<head><title>Directory Listing for " << directoryPath << "</title></head>\r\n"
+				 << "<html lang=\"en\">\r\n"
+				 << "<head>\r\n"
+				 << "    <meta charset=\"UTF-8\">\r\n"
+				 << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
+				 << "    <title>Directory Listing</title>\r\n"
+				 << "    <style>\r\n"
+				 << "        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');\r\n"
+				 << "        \r\n"
+				 << "        :root {\r\n"
+				 << "            --primary-color: #2c3e50;\r\n"
+				 << "            --secondary-color: #3498db;\r\n"
+				 << "            --accent-color: #e74c3c;\r\n"
+				 << "            --text-color: #f4f4f4;\r\n"
+				 << "            --bg-color: #ecf0f1;\r\n"
+				 << "            --card-bg: #ffffff;\r\n"
+				 << "            --shadow: 0 8px 16px rgba(0, 0, 0, 0.1);\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        body {\r\n"
+				 << "            font-family: 'Poppins', sans-serif;\r\n"
+				 << "            background-color: var(--bg-color);\r\n"
+				 << "            margin: 0;\r\n"
+				 << "            padding: 2rem;\r\n"
+				 << "            color: var(--primary-color);\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        .container {\r\n"
+				 << "            background-color: var(--card-bg);\r\n"
+				 << "            padding: 2rem 3rem;\r\n"
+				 << "            border-radius: 12px;\r\n"
+				 << "            box-shadow: var(--shadow);\r\n"
+				 << "            max-width: 800px;\r\n"
+				 << "            margin: 2rem auto;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        h1 {\r\n"
+				 << "            font-size: 2.5rem;\r\n"
+				 << "            font-weight: 700;\r\n"
+				 << "            color: var(--primary-color);\r\n"
+				 << "            border-bottom: 2px solid #ddd;\r\n"
+				 << "            padding-bottom: 1rem;\r\n"
+				 << "            margin-top: 0;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        ul {\r\n"
+				 << "            list-style: none;\r\n"
+				 << "            padding: 0;\r\n"
+				 << "            margin: 0;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        li {\r\n"
+				 << "            display: flex;\r\n"
+				 << "            align-items: center;\r\n"
+				 << "            padding: 0.8rem 0;\r\n"
+				 << "            border-bottom: 1px solid #eee;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        li:last-child {\r\n"
+				 << "            border-bottom: none;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        a {\r\n"
+				 << "            display: flex;\r\n"
+				 << "            align-items: center;\r\n"
+				 << "            text-decoration: none;\r\n"
+				 << "            color: var(--secondary-color);\r\n"
+				 << "            font-weight: 600;\r\n"
+				 << "            font-size: 1rem;\r\n"
+				 << "            transition: color 0.3s ease;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        a:hover {\r\n"
+				 << "            color: var(--accent-color);\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        .icon {\r\n"
+				 << "            font-size: 1.2rem;\r\n"
+				 << "            margin-right: 0.8rem;\r\n"
+				 << "            color: #7f8c8d;\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        .icon-dir::before {\r\n"
+				 << "            content: \"📁\";\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        .icon-file::before {\r\n"
+				 << "            content: \"📄\";\r\n"
+				 << "        }\r\n"
+				 << "\r\n"
+				 << "        .footer {\r\n"
+				 << "            margin-top: 2rem;\r\n"
+				 << "            text-align: center;\r\n"
+				 << "            font-size: 0.8rem;\r\n"
+				 << "            color: #7f8c8d;\r\n"
+				 << "        }\r\n"
+				 << "    </style>\r\n"
+				 << "</head>\r\n"
 				 << "<body>\r\n"
-				 << "<h1>Directory Listing for " << directoryPath << "</h1>\r\n"
-				 << "<hr>\r\n"
-				 << "<ul>\r\n";
+				 << "    <div class=\"container\">\r\n"
+				 << "        <h1>Directory Listing for " << directoryPath << "</h1>\r\n"
+				 << "        <ul>\r\n"
+				 << "            <li>\r\n"
+				 << "                <a href=\"../\">\r\n"
+				 << "                    <span class=\"icon icon-dir\"></span>\r\n"
+				 << "                    .. (Parent Directory)\r\n"
+				 << "                </a>\r\n"
+				 << "            </li>\r\n";
 
 	DIR *dir = opendir(directoryPath.c_str());
 	if (dir == NULL) {
@@ -336,35 +423,38 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 		struct dirent *entry;
 		while ((entry = readdir(dir)) != NULL) {
 			std::string name = entry->d_name;
-			// Skip current directory (.) and parent directory (..)
 			if (name == "." || name == "..") continue; 
 
 			std::string fullEntryPath = directoryPath;
-			if (fullEntryPath.back() != '/') fullEntryPath += "/"; // Ensure trailing slash if missing
+			if (fullEntryPath.back() != '/') fullEntryPath += "/";
 			fullEntryPath += name;
-
-			html_listing << "<li><a href=\""; // Start link
-			html_listing << name; // Link target name
-
-			// Append a trailing slash to the link if it's a directory
-			// Use stat() to check if it's a directory, as d_type might not be reliable on all systems
+			
 			struct stat entry_stat;
 			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
-				html_listing << "/"; 
+				html_listing << "            <li>\r\n"
+							 << "                <a href=\"" << name << "/\">\r\n"
+							 << "                    <span class=\"icon icon-dir\"></span>\r\n"
+							 << "                    " << name << "/\r\n"
+							 << "                </a>\r\n"
+							 << "            </li>\r\n";
+			} else {
+				html_listing << "            <li>\r\n"
+							 << "                <a href=\"" << name << "\">\r\n"
+							 << "                    <span class=\"icon icon-file\"></span>\r\n"
+							 << "                    " << name << "\r\n"
+							 << "                </a>\r\n"
+							 << "            </li>\r\n";
 			}
-			html_listing << "\">" << name; // Link text
-			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
-				html_listing << "/"; 
-			}
-			html_listing << "</a></li>\r\n";
 		}
-		closedir(dir); // Close the directory stream
+		closedir(dir);
 	}
 
-	html_listing << "</ul>\r\n"
-				 << "<hr>\r\n" // Another horizontal rule
+	html_listing << "        </ul>\r\n"
+				 << "    </div>\r\n"
+				 << "    <div class=\"footer\">\r\n"
+				 << "        Generated by `webserv`.\r\n"
+				 << "    </div>\r\n"
 				 << "</body>\r\n"
 				 << "</html>\r\n";
 	return html_listing.str();
 }
-

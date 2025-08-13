@@ -149,10 +149,10 @@ void Response::buildFromAction(const ActionParameters& action, const std::string
 	}
 	else if (action.isStaticFile) {
 		if (action.isAutoindex) {
-			buildStaticFileResponse(content, "text/html", actionStatusCode); 
+			buildStaticFileResponse(actionStatusCode, content, "text/html"); 
 		}
 		else {
-			buildStaticFileResponse(content, getMimeType(action.filePath), actionStatusCode);
+			buildStaticFileResponse(actionStatusCode, content, getMimeType(action.filePath));
 		}
 	}
 	else {

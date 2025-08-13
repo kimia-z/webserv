@@ -32,8 +32,6 @@ private:
 	std::string	readFileContent(const std::string& path) const;
 	std::string	generateDirectoryListing(const std::string& directoryPath) const;
 	bool		fileExists(const std::string& path) const;
-	bool		isDirectory(const std::string& path) const;
-	bool		hasWriteAccess(const std::string& path) const;
 
 public:
 	Webserv(const Server42& config); 
