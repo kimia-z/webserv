@@ -180,6 +180,9 @@ void Webserv::handleClientRead(int clientFd)
 
 				else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
 					// do something??
+					// change the state of Epoll
+					// clear request
+					// return
 				}
 
 				// Usual Response

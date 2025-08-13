@@ -36,16 +36,20 @@ void Response::addMandatoryHeaders(){
 	strftime(buffer, sizeof(buffer),"%a, %d %b %Y %H:%M:%S GMT", gmt);
 	setHeader("Date", buffer);
 	if (body_.empty() && headers_.find("Content-Length") == headers_.end()) {
-		// Status codes 204 (No Content), 1xx (Informational), and 304 (Not Modified)
-		// should not have a body, so Content-Length should be omitted or 0.
-		// For other status codes with an empty body, Content-Length should be 0.
-		if (statusCode_ != 204 && (statusCode_ < 100 || statusCode_ >= 200)) {
-			// Note: 1xx and 304 have no body so no Content-Length is needed
-			// For other empty bodies, a Content-Length of 0 is appropriate.
+		if (statusCode_ >= 100 && statusCode_ < 200) {
+			// Do nothing for 1xx responses, as they have no body.
+		}
+		else if (statusCode_ == 204 || statusCode_ == 304) {
+			// 204 :successful but there is no new information to send back to the client.
+			// 304 :successful but already have the most recent version of this file in the cache, so just use that instead of downloading it again
+			// Do nothing for 204 and 304 responses, as they also have no body.
+		}
+		else {
+			// For all other status codes, if the body is empty, we must specify
+			// a Content-Length of 0.
 			setHeader("Content-Length", "0");
 		}
 	}
-	// TODO:content-lengh?
 }
 
 std::string Response::toString() const {
@@ -125,10 +129,10 @@ void Response::buildRedirectResponse(int statusCode, const std::string& location
 	setHeader("Location", locationUrl);
 	setBody("");
 }
-void Response::buildStaticFileResponse(const std::string& fileContent, const std::string& mimeType, int statusCode){
+void Response::buildStaticFileResponse(int statusCode, const std::string& fileContent, const std::string& contentType){
 	setStatusCode(statusCode);
 	setBody(fileContent);
-	setHeader("Content-Type", mimeType);
+	setHeader("Content-Type", contentType);
 }
 void Response::buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType){
 	setStatusCode(statusCode);
@@ -136,43 +140,27 @@ void Response::buildSimpleTextResponse(int statusCode, const std::string& bodyTe
 	setHeader("Content-Type", contentType);
 }
 void Response::buildFromAction(const ActionParameters& action, const std::string& content, int actionStatusCode){
-	
-	// Reset internal state for a fresh response
-	setStatusCode(200); // Default OK
-	headers_.clear();
-	body_.clear();
 
-	// Priority 1: Router-determined errors
 	if (action.errorCode != 0) {
-		buildErrorResponse(action.errorCode, content);
+		buildErrorResponse(actionStatusCode, content);
 	}
-	// Priority 2: Router-determined Redirects
 	else if (action.isRedirect) {
-		buildRedirectResponse(action.redirectCode, action.redirectUrl);
+		buildRedirectResponse(actionStatusCode, content);
 	}
-	// Priority 3: Static File Serving (GET/HEAD requests)
-	// This is the primary case for 'building a usual response'
 	else if (action.isStaticFile) {
-		// 'content' here is the file's body or the directory listing HTML, provided by Server42.
-		// 'action.filePath' is used to get the MIME type.
 		if (action.isAutoindex) {
-			buildStaticFileResponse(content, "text/html", 200); 
+			buildStaticFileResponse(content, "text/html", actionStatusCode); 
 		}
 		else {
-			buildStaticFileResponse(content, getMimeType(action.filePath), 200); // Status 200 OK
-		}
-	}
-	else if (actionStatusCode != 0) {
-		// If it's a 204 (No Content, typically from DELETE success), the 'content' string will be empty.
-		if (actionStatusCode == 204) {
-			setStatusCode(204); // Explicitly set No Content, no body
-			setBody(""); // Ensure no body
-		} else {
-			buildSimpleTextResponse(actionStatusCode, content, "text/html");
+			buildStaticFileResponse(content, getMimeType(action.filePath), actionStatusCode);
 		}
 	}
 	else {
-		buildSimpleTextResponse(200, "<h1>Default Success Page</h1><p>Request processed.</p>", "text/html");
+		if (content.empty()){
+			buildSimpleTextResponse(200, "<h1>Default Success Page</h1><p>Request processed.</p>", "text/html");
+		} else {
+			buildSimpleTextResponse(200, content, "text/html");
+		}
 	}
 }
 
@@ -197,7 +185,5 @@ std::string Response::getMimeType(const std::string& filePath) const {
 	else if (ext == ".xml") return "application/xml";
 	else if (ext == ".mp3") return "audio/mpeg";
 	else if (ext == ".mp4") return "video/mp4";
-	// Add more as needed
-	
 	return "application/octet-stream";
 }

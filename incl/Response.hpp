@@ -20,7 +20,7 @@ private:
 	void		addMandatoryHeaders();
 	void		buildErrorResponse(int statusCode, const std::string& customErrorPageContent);
 	void		buildRedirectResponse(int statusCode, const std::string& locationUrl);
-	void		buildStaticFileResponse(const std::string& fileContent, const std::string& mimeType, int statusCode);
+	void		buildStaticFileResponse(int statusCode, const std::string& fileContent, const std::string& contentType);
 	void		buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType = "text/html");
 public:
 	Response();
