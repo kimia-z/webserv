@@ -44,11 +44,10 @@ void	openConfFile(const char *path, std::ifstream& conFile) {
 }
 int main(int argc, char **argv)
 {
-	// Register the signal handler for SIGINT (Ctrl+C)
+	// Register the signal handle./we	r for SIGINT (Ctrl+C)
 	struct sigaction sa;
 	sa.sa_flags = 0;
-	sa.__sigaction_u.__sa_handler = signalHandler;
-	// The sa_mask is a set of signals that should be blocked while handler is running
+	sa.sa_handler = signalHandler;	// The sa_mask is a set of signals that should be blocked while handler is running
 	sigemptyset(&sa.sa_mask); // ensures no other signals are blocked.
 	if (sigaction(SIGINT, &sa, NULL) == -1)
 	{

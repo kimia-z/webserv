@@ -1,4 +1,5 @@
 #include "../incl/Webserv.hpp"
+extern volatile sig_atomic_t g_running;
 
 Webserv::Webserv(const Server42& config)
 	: allServersConfig_(config),
@@ -47,11 +48,17 @@ void Webserv::start()
 
 void Webserv::runEventLoop()
 {
-	while (g_running) {
+	while (g_running == 0) {
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1);
 		if (numEvents == -1) {
-			throw std::runtime_error("epoll_wait failed, critical error.");
+            if (errno == EINTR) { // Check if the error was due to an interrupted system call (SIGINT)
+                std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
+                continue;
+            } else {
+                std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
+                throw std::runtime_error("epoll_wait failed, critical error.");
 		}
+	}
 		for (int i = 0; i < numEvents; ++i) {
 			int currentFd = events_[i].data.fd;
 			uint32_t currentEvents = events_[i].events;
