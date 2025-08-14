@@ -16,6 +16,21 @@
 	// checks if the conf file can be opened, if it's empty
 /// @param path 
 /// @return 
+
+// volatile = This prevents the compiler from making assumptions about the variable's value
+// sig_atomic_t = a integer type that can be read or written in a single
+
+volatile sig_atomic_t	g_running = 0;
+
+void	signalHandler(int sig)
+{
+	if (sig == SIGINT)
+	{
+		std::cerr << "\nSIGINT received. Shutting down gracefully..." << std::endl;
+		g_running = 1;
+	}
+}
+
 void	openConfFile(const char *path, std::ifstream& conFile) {
 
 	conFile.open(path, std::ifstream::in);
@@ -29,6 +44,18 @@ void	openConfFile(const char *path, std::ifstream& conFile) {
 }
 int main(int argc, char **argv)
 {
+	// Register the signal handler for SIGINT (Ctrl+C)
+	struct sigaction sa;
+	sa.sa_flags = 0;
+	sa.__sigaction_u.__sa_handler = signalHandler;
+	// The sa_mask is a set of signals that should be blocked while handler is running
+	sigemptyset(&sa.sa_mask); // ensures no other signals are blocked.
+	if (sigaction(SIGINT, &sa, NULL) == -1)
+	{
+		std::cerr << "Failed to register signal handler" << std::endl;
+		return (EXIT_FAILURE);
+	}
+
 	if (argc > 2) {
 		std::cerr << "Error: wrong program usage. Type ./webserv [configuration file]" << std::endl;
 		return (EXIT_FAILURE);

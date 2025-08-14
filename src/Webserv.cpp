@@ -47,7 +47,7 @@ void Webserv::start()
 
 void Webserv::runEventLoop()
 {
-	while (true) {
+	while (g_running) {
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1);
 		if (numEvents == -1) {
 			throw std::runtime_error("epoll_wait failed, critical error.");
