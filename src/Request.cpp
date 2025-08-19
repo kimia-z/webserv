@@ -11,6 +11,8 @@ Request::Request() : _isHeadersComplete(false), _contentLength(-1),
 	_body.clear();
 }
 
+Request::~Request(){}
+
 void Request::appendRawData(const char* data, size_t len) {
 	if (data && len > 0) {
 		_rawBuffer.append(data, len);
@@ -35,7 +37,7 @@ bool Request::processRequestData() {
 		} catch (const HttpException& e) {
 			std::cerr << "Header parsing error: " << e.what() << std::endl;
 			_isRequestComplete = true;
-			return true;
+			throw e;
 		}
 	}
 	// Step 2: check/parse body
@@ -63,11 +65,7 @@ bool Request::processRequestData() {
 			} catch (const HttpException& e) {
 				std::cerr << "Content-Length error: " << e.what() << std::endl;
 				_isRequestComplete = true;
-				return true;
-			} catch (const std::exception& e) {
-				std::cerr << "Invalid Content-Length value: " << e.what() << std::endl;
-				_isRequestComplete = true;
-				return true;
+				throw e;
 			}
 		} else if (_method == "POST") {
 			throw HttpException(400, "Bad Request: Missing Content-Length or Transfer-Encoding for POST/PUT");
@@ -76,6 +74,9 @@ bool Request::processRequestData() {
 			_isRequestComplete = true;
 		}
 	}
+	// for (auto const& header : _headers) {
+	// 	std::cout << header.first << std::endl;
+	// }
 	return _isRequestComplete;
 }
 
@@ -91,7 +92,7 @@ void Request::parseStartLineAndHeaders() {
 	if (!parseStartLine(line)){
 		throw HttpException(400, "Bad Request: Invalid start line");
 	}
-
+	std::cout << "parsed start line: " << _method << " " << _path << " " << _version << std::endl;
 	// Step 2: Parse headers
 	while(std::getline(stream, line)) {
 		if (line == "\r" || line.empty()) break; // End of headers
@@ -215,7 +216,8 @@ void Request::reset() {
 	_isRequestComplete = false;
 }
 
-size_t Request::findCRLFCRLF(const std::string& buffer) const {return buffer.find("\r\n\r\n");}
+size_t Request::findCRLFCRLF(const std::string& buffer) const {
+	return buffer.find("\r\n\r\n");}
 
 bool Request::parseStartLine(std::string line)
 {
@@ -274,6 +276,7 @@ bool Request::parseHeader(std::string line)
 	} else {
 		_headers[key] = value;
 	}
+	// std::cout << "Parsed header: " << key << ": " << value << std::endl;
 	return true;
 }
 

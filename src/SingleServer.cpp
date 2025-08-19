@@ -61,11 +61,6 @@ SingleServer&	SingleServer::operator=(const SingleServer& copy) {
 		locations_ = copy.locations_;
 		serverRoot_ = copy.serverRoot_;
 		serverIP_ = copy.serverIP_;
-		serverPortString_ = copy.serverPortString_;
-		serverPortInt_ = copy.serverPortInt_;
-		serverFd_ = copy.serverFd_;
-		maxBodySize_ = copy.maxBodySize_;
-		errorPages_ = copy.errorPages_;
 		res_ = copy.res_;
 	}
 	return (*this);
@@ -77,29 +72,67 @@ SingleServer::~SingleServer() {
 }
 
 // getters
-std::string SingleServer::getServName() const { return (serverName_); }
-const std::vector<std::shared_ptr<Location>>& SingleServer::getLocations() const { return (locations_); }
-std::string  SingleServer::getServRoot() const { return (serverRoot_); }
-std::string SingleServer::getServIP() const { return (serverIP_); }
-std::string SingleServer::getServPortString() const { return (serverPortString_); }
-int SingleServer::getServPortInt() const { return (serverPortInt_); }
-int SingleServer::getServFd() const { return (serverFd_); }
-int SingleServer::getMaxBodySize() const { return (maxBodySize_); }
-const std::unordered_map<int, std::string>& SingleServer::getErrorPages() const { return (errorPages_); }
-addrinfo *SingleServer::getResults() const { return res_.get(); }
+std::string SingleServer::getServName() const {
+	return (serverName_); }
+
+const std::vector<std::shared_ptr<Location>>& SingleServer::getLocations() const {
+	return (locations_); }
+
+std::string  SingleServer::getServRoot() const {
+	return (serverRoot_); }
+
+std::string SingleServer::getServIP() const {
+	return (serverIP_); }
+
+std::string SingleServer::getServPortString() const {
+	return (serverPortString_); }
+
+int SingleServer::getServPortInt() const {
+	return (serverPortInt_); }
+
+int SingleServer::getServFd() const {
+	return (serverFd_); }
+
+int SingleServer::getMaxBodySize() const {
+	return (maxBodySize_); }
+
+const std::unordered_map<int, std::string>& SingleServer::getErrorPages() const {
+	return (errorPages_); }
+
+addrinfo *SingleServer::getResults() const {
+	return res_.get(); }
 
 // setters
-void    SingleServer::setServName(const std::string& newServName) { serverName_ = newServName; }
-void    SingleServer::setLocations(const std::shared_ptr<Location>& newLocation) { locations_.push_back(newLocation); }
-void    SingleServer::setServRoot(const std::string& newServRoot) { serverRoot_ = newServRoot; }
-void    SingleServer::setServIP(const std::string& newServIP) { serverIP_ = newServIP; }
-void    SingleServer::setServPortString(const std::string& newServPortStr) { serverPortString_ = newServPortStr; }
-void    SingleServer::setServPortInt(const int& newServPortInt) { serverPortInt_ = newServPortInt; }
-void    SingleServer::setServFd(const int& newServFd) { serverFd_ = newServFd; }
-void    SingleServer::setMaxBodySize(const int& newMaxBodySize) { maxBodySize_ = newMaxBodySize; }
-void    SingleServer::setErrorPages(const int& errorNb, const std::string& newErrorPage) { errorPages_[errorNb] = newErrorPage; }
-void    SingleServer::setResults(addrinfo* newResult) { res_ = std::shared_ptr<addrinfo>(newResult, freeaddrinfo);
-}
+void    SingleServer::setServName(const std::string& newServName) {
+	serverName_ = newServName; }
+
+void    SingleServer::setLocations(const std::shared_ptr<Location>& newLocation) {
+	locations_.push_back(newLocation); }
+
+void    SingleServer::setServRoot(const std::string& newServRoot) {
+	serverRoot_ = newServRoot; }
+
+void    SingleServer::setServIP(const std::string& newServIP) {
+	serverIP_ = newServIP; }
+
+void    SingleServer::setServPortString(const std::string& newServPortStr) {
+	serverPortString_ = newServPortStr; }
+
+void    SingleServer::setServPortInt(const int& newServPortInt) {
+	serverPortInt_ = newServPortInt; }
+
+void    SingleServer::setServFd(const int& newServFd) {
+	serverFd_ = newServFd; }
+
+void    SingleServer::setMaxBodySize(const int& newMaxBodySize) {
+	maxBodySize_ = newMaxBodySize; }
+
+void    SingleServer::setErrorPages(const int& errorNb, const std::string& newErrorPage) {
+	errorPages_[errorNb] = newErrorPage; }
+
+void    SingleServer::setResults(addrinfo* newResult) { 
+	res_ = std::shared_ptr<addrinfo>(newResult, freeaddrinfo); }
+
 
 std::string SingleServer::getErrorPagePath(int errorCode) const {
 	auto it = errorPages_.find(errorCode);
@@ -108,7 +141,6 @@ std::string SingleServer::getErrorPagePath(int errorCode) const {
 	}
 	return "";
 }
-
 
 void	SingleServer::initSocket()
 {

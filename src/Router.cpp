@@ -2,6 +2,9 @@
 
 Router::Router(const Server42& allServersConfig): allServers_(allServersConfig)
 {}
+
+Router::~Router(){}
+
 ActionParameters Router::routeRequest(const Request& request, int listeningPort) const
 {
 	ActionParameters params;
@@ -124,8 +127,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	std::string fileSystemPath = selectedLocation->getRoot();
 	std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
-	std::cout << "DEBUG: in creatation of fileSystemPath is [" << fileSystemPath << "]" << std::endl;
-	std::cout << "DEBUG: in creatation of relativePath is [" << relativePath << "]" << std::endl;
 	if (!fileSystemPath.empty() && fileSystemPath.back() != '/' && !relativePath.empty() && relativePath[0] != '/')
 	{
 		fileSystemPath += "/";
@@ -136,7 +137,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 			std::string indexPath = fileSystemPath;
 			if (indexPath.empty() || indexPath.back() != '/') indexPath += "/";
 			indexPath += selectedLocation->getIndex();
-			std::cout << "DEBUG:indexPath is [" << indexPath << "]"<< std::endl;
 			if (isFileExists(indexPath)) {
 				fileSystemPath = indexPath;
 			}
@@ -145,18 +145,22 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 	bool isDir = isDirectory(fileSystemPath);
 
 	// POST
-	if (request.getMethod() == "POST" && !selectedLocation->getUploadPath().empty())
-	{
-		params.isUpload = true;
-		params.uploadTargetDir = selectedLocation->getUploadPath();
-		size_t lastSlash = fileSystemPath.rfind('/');
-		if (lastSlash != std::string::npos){
-			params.uploadFilename = fileSystemPath.substr(lastSlash + 1);
-		} else {
-			params.uploadFilename = fileSystemPath;
+	if (request.getMethod() == "POST") {
+		if (!selectedLocation->getUploadPath().empty()) {
+			std::string uploadPath = selectedLocation->getUploadPath();
+			if (!isDirectory(uploadPath) || !hasWriteAccess(uploadPath)) {
+				params.errorCode = 500;
+				return params;
+			}
+		
+			params.isUpload = true;
+			params.uploadTargetDir = uploadPath; // uploadPath = "/upload"
+			// request.getPath() = "/upload/images/cat.jpg"
+			std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
+			params.uploadFilename = relativePath; // uploadFilename = "images/cat.jpg
+			return params;
 		}
-		return params;
-	}	// TODO: what should be the proper error code for if it is POST but there isn't upload path?
+	}
 
 	// DELETE
 	if (request.getMethod() == "DELETE"){
@@ -193,7 +197,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 			else { // URI ends with '/'
 				std::string indexPath;
 				if (!selectedLocation->getIndex().empty()) {
-					// Try to construct the full path to the index file
 					indexPath = fileSystemPath;
 					if (indexPath.back() != '/') indexPath += "/";
 					indexPath += selectedLocation->getIndex();
@@ -202,25 +205,38 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 				// First, check if the index file exists
 				if (!indexPath.empty() && isFileExists(indexPath)) {
 					params.isStaticFile = true;
-					params.filePath = indexPath; // Set the filePath to the found index file
+					params.filePath = indexPath;
 				}
 				// If no index file found, then check for autoindex
 				else if(selectedLocation->getAutoindex()){
 					params.isStaticFile = true;
 					params.isAutoindex = true;
-					params.filePath = fileSystemPath; // Path is the directory for listing
+					params.filePath = fileSystemPath;
 				}
-				// If neither index file nor autoindex is enabled, it's a forbidden access
 				else {
 					params.errorCode = 403;
 				}
 			}
 		} else if(isFileExists(fileSystemPath)){
+			std::cout << "in file exists" << std::endl;
 			params.isStaticFile = true;
 			params.filePath = fileSystemPath;
 		} else{
 			params.errorCode = 404;
 		}
+		return params;
+	}
+	//CGI
+	std::string	cgiPath = request.getPath();
+	std::cout << "cgiPath: " << cgiPath << std::endl;
+	if (request.getMethod() == "POST" || request.getMethod() == "GET") {
+		// if (!isExecutable(cgiPath)) {
+		// 	params.errorCode = 500; // Internal Server Error
+		// 	return params;
+		// }
+		params.isCGI = true;
+		params.cgiScriptPath = cgiPath; // Path to the CGI script
+		params.cgiTargetFile = fileSystemPath; // Path to the file being processed by CGI
 		return params;
 	}
 	params.errorCode = 501;

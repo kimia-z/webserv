@@ -6,7 +6,7 @@
 /*   By: mstencel <mstencel@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/06/27 13:59:39 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/07/07 13:50:42 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/08/19 14:30:47 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,10 +82,6 @@ std::string		Location::getUploadPath() const {
 	return (uploadPath_);
 }
 
-// std::unordered_map<int, std::string>	Location::getErrorPages() const {
-// 	return (errorPages_);
-// }
-
 int	Location::getRedirectionCode() const {
 	return (redirectionCode_);
 }
@@ -149,6 +145,9 @@ std::ostream& operator<<(std::ostream& os, const Location& location) {
 	if (location.getRedirectionCode() != -1) {
 		os << "\tRedirection code: " << location.getRedirectionCode() << "\n";
 		os << "\tRedirection path: " << location.getRedirectionsPath() << "\n";
+	}
+	else {
+		os << "\tNo scripts defined.\n";
 	}
 	return os;
 }

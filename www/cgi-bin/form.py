@@ -8,7 +8,7 @@ print("Content-Type: text/html\n")
 
 form = cgi.FieldStorage()
 name = html.escape(form.getvalue("name", ""))
-phone = form.escape(form.getvalue("phone", ""))
+phone = html.escape(form.getvalue("phone", ""))
 email = html.escape(form.getvalue("email", ""))
 
 with open("/tmp/form_data.txt", "a", encoding="utf-8") as file:

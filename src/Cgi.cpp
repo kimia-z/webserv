@@ -2,7 +2,8 @@
 
 Cgi::Cgi(const Request& req, const std::string& scriptPath) :
 	request_(req),
-	scriptPath_(scriptPath) {
+	scriptPath_(scriptPath),
+	cgiStatusCode_(200) {
 
 }
 
@@ -21,6 +22,19 @@ const char* Cgi::CgiException::what() const throw() {
 
 Cgi::CgiException::~CgiException() {
 
+}
+
+void Cgi::setScriptPath(const std::string& scriptPath) {
+	scriptPath_ = scriptPath;
+}
+
+void Cgi::setCgiStatusCode(int statusCode) {
+	cgiStatusCode_ = statusCode;
+}
+
+
+int Cgi::getCgiStatusCode() const {
+	return (cgiStatusCode_);
 }
 
 std::unordered_map<std::string, std::string> Cgi::buildEnv() {
@@ -61,23 +75,28 @@ std::unordered_map<std::string, std::string> Cgi::buildEnv() {
 	return (env);
 }
 
-std::string Cgi::runCgi() {
-	int inPipe[2];
-	int outPipe[2];
-	if (pipe(inPipe) == -1 || pipe(outPipe) == -1)
+void	Cgi::startCgi(std::function<void(int, uint32_t)> addtoEpoll) {
+	if (pipe(pipeIn_) == -1 || pipe(pipeOut_) == -1)
 		throw CgiException("Cgi: Pipe creation failed");
+	
+	addtoEpoll(pipeIn_[0], EPOLLIN | EPOLLRDHUP | EPOLLET);
+	addtoEpoll(pipeOut_[1], EPOLLOUT | EPOLLRDHUP | EPOLLET);
+}
 
+std::string Cgi::runCgi() {
+	
+	std::cout << "Running CGI script: " << scriptPath_ << std::endl;
 	pid_t pid = fork();
 	if (pid < 0)
 		throw CgiException("Cgi: Fork failed");
 
 	// child
 	if (pid == 0) {
-		dup2(inPipe[0], STDIN_FILENO);
-		dup2(outPipe[1], STDOUT_FILENO);
+		dup2(pipeIn_[0], STDIN_FILENO);
+		dup2(pipeOut_[1], STDOUT_FILENO);
 
-		close(inPipe[1]);
-		close(outPipe[0]);
+		close(pipeIn_[1]);
+		close(pipeOut_[0]);
 
 		std::unordered_map<std::string, std::string>	env = buildEnv();
 		char* envp[env.size() + 1];
@@ -89,39 +108,55 @@ std::string Cgi::runCgi() {
 		}
 		envp[i] = NULL;
 
-		char* argv[] = { const_cast<char*>(scriptPath_.c_str()), NULL };
-		execve(scriptPath_.c_str(), argv, envp);
+		//TODO -> get rid of the hardcoded www
+		std::string prePath = "www" + scriptPath_;
+		char *path = const_cast<char*>(prePath.c_str());
+		char *argvPath = const_cast<char*>(scriptPath_.c_str());
+		std::cerr << "path = " << path << std::endl;
+
+		char* argv[] = {argvPath, NULL};
+		std::cerr << "argv[0] = " << argv[0] << std::endl;
+		execve(path, argv, envp);
 		
 		perror("execve");
 		exit(1);
 	}
 
 	// parent
-	close(inPipe[0]);
-	close(outPipe[1]);
+	close(pipeIn_[0]);
+	close(pipeOut_[1]);
 
 	// for POST, write body to CGI input
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		std::string body = request_.getBody();
-		write(inPipe[1], body.c_str(), body.length());
+		write(pipeIn_[1], body.c_str(), body.length());
 	}
-	close(inPipe[1]);
+	close(pipeIn_[1]);
 
+	//TODO fix the response
 	std::string	output;
 	char buffer[4096];
-	ssize_t bytesRead;
-	while ((bytesRead = read(outPipe[0], buffer, sizeof(buffer))) > 0) {
-		output.append(buffer, bytesRead);
+	ssize_t n;
+	while ((n = read(pipeOut_[0], buffer, sizeof(buffer))) > 0) {
+		output.append(buffer, n);
 	}
-	close(outPipe[0]);
+	close(pipeOut_[0]);
 
 	int status;
 	waitpid(pid, &status, 0);
-	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		cgiStatusCode_ = WEXITSTATUS(status);
 		throw CgiException("Cgi: Script execution failed");
+	}
 
 	if (output.empty())
+	{
+		cgiStatusCode_ = 500;
 		throw CgiException("Cgi: Empty output_");
+	}
 
+
+	std::cout << "CGI script output: " << output << std::endl;
+	cgiStatusCode_ = 200;
 	return (output);
 }

@@ -6,18 +6,16 @@
 
 class HttpException : public std::exception
 {
-	int _code;
+	int			_code;
 	std::string _msg;
 
 public:
-	HttpException(int code, const std::string& msg)
-		: _code(code), _msg(msg) {}
+	HttpException(int code, const std::string& msg);
 
-	int code() const { return _code; }
-
-	const char* what() const noexcept override {
-		return _msg.c_str();
-	}
+	int getCode() const;
+	const std::string &getMessage() const;
+	
+	const char* what() const noexcept override;
 };
 
 #endif
