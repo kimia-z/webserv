@@ -223,7 +223,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		return params;
 	}
 	//CGI
-	std::string	cgiPath = request.getPath();
+	std::string	cgiPath = selectedLocation->getRoot() + request.getPath();
 	std::cout << "cgiPath: " << cgiPath << std::endl;
 	if (request.getMethod() == "POST" || request.getMethod() == "GET") {
 		// if (!isExecutable(cgiPath)) {
