@@ -249,7 +249,7 @@ void Webserv::handleClientRead(int clientFd)
 
 				// Change epoll event to EPOLLOUT to start sending the response
 				epoll_event event_mod;
-				event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
+				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
 				event_mod.data.fd = clientFd;
 				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 					closeClientConnection(clientFd);
@@ -265,7 +265,7 @@ void Webserv::handleClientRead(int clientFd)
 
 			// Switch to EPOLLOUT to send the error response
 			epoll_event event_mod;
-			event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
+			event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
 			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 				closeClientConnection(clientFd);
@@ -280,13 +280,14 @@ void Webserv::handleClientWrite(int clientFd)
 {
 	std::map<int, std::string>::iterator response_it = clientResponses_.find(clientFd);
 	if (response_it == clientResponses_.end() || response_it->second.empty()) {
+		closeClientConnection(clientFd);
 		// No response pending or already sent. Switch back to EPOLLIN.
-		epoll_event event_mod;
-		event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-		event_mod.data.fd = clientFd;
-		if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-			closeClientConnection(clientFd);
-		}
+		// epoll_event event_mod;
+		// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+		// event_mod.data.fd = clientFd;
+		// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+		// 	closeClientConnection(clientFd);
+		// }
 		return;
 	}
 
@@ -300,15 +301,16 @@ void Webserv::handleClientWrite(int clientFd)
 
 		if (response_it->second.empty()) {
 			// All data sent.
-			clientResponses_.erase(clientFd);
+			closeClientConnection(clientFd);
+			// clientResponses_.erase(clientFd);
 
-			// Switch back to EPOLLIN
-			epoll_event event_mod;
-			event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-			event_mod.data.fd = clientFd;
-			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-				closeClientConnection(clientFd);
-			}
+			// // Switch back to EPOLLIN
+			// epoll_event event_mod;
+			// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+			// event_mod.data.fd = clientFd;
+			// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+			// 	closeClientConnection(clientFd);
+			// }
 		}
 	}
 }

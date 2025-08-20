@@ -141,6 +141,7 @@ void Response::buildSimpleTextResponse(int statusCode, const std::string& bodyTe
 }
 void Response::buildFromAction(const ActionParameters& action, const std::string& content, int actionStatusCode){
 
+	setHeader("Connection", "close");
 	if (action.errorCode != 0) {
 		buildErrorResponse(actionStatusCode, content);
 	}
