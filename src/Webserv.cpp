@@ -51,12 +51,12 @@ void Webserv::runEventLoop()
 	while (g_running == 0) {
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), -1);
 		if (numEvents == -1) {
-            if (errno == EINTR) { // Check if the error was due to an interrupted system call (SIGINT)
-                std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
-                continue;
-            } else {
-                std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
-                throw std::runtime_error("epoll_wait failed, critical error.");
+			if (errno == EINTR) { // Check if the error was due to an interrupted system call (SIGINT)
+				std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
+				continue;
+			} else {
+				std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
+				throw std::runtime_error("epoll_wait failed, critical error.");
 		}
 	}
 		for (int i = 0; i < numEvents; ++i) {
@@ -249,7 +249,7 @@ void Webserv::handleClientRead(int clientFd)
 
 				// Change epoll event to EPOLLOUT to start sending the response
 				epoll_event event_mod;
-				event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
+				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
 				event_mod.data.fd = clientFd;
 				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 					closeClientConnection(clientFd);
@@ -265,7 +265,7 @@ void Webserv::handleClientRead(int clientFd)
 
 			// Switch to EPOLLOUT to send the error response
 			epoll_event event_mod;
-			event_mod.events = EPOLLOUT | EPOLLIN | EPOLLRDHUP | EPOLLET;
+			event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
 			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 				closeClientConnection(clientFd);
@@ -280,13 +280,14 @@ void Webserv::handleClientWrite(int clientFd)
 {
 	std::map<int, std::string>::iterator response_it = clientResponses_.find(clientFd);
 	if (response_it == clientResponses_.end() || response_it->second.empty()) {
+		closeClientConnection(clientFd);
 		// No response pending or already sent. Switch back to EPOLLIN.
-		epoll_event event_mod;
-		event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-		event_mod.data.fd = clientFd;
-		if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-			closeClientConnection(clientFd);
-		}
+		// epoll_event event_mod;
+		// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+		// event_mod.data.fd = clientFd;
+		// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+		// 	closeClientConnection(clientFd);
+		// }
 		return;
 	}
 
@@ -300,15 +301,16 @@ void Webserv::handleClientWrite(int clientFd)
 
 		if (response_it->second.empty()) {
 			// All data sent.
-			clientResponses_.erase(clientFd);
+			closeClientConnection(clientFd);
+			// clientResponses_.erase(clientFd);
 
-			// Switch back to EPOLLIN
-			epoll_event event_mod;
-			event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-			event_mod.data.fd = clientFd;
-			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-				closeClientConnection(clientFd);
-			}
+			// // Switch back to EPOLLIN
+			// epoll_event event_mod;
+			// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+			// event_mod.data.fd = clientFd;
+			// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+			// 	closeClientConnection(clientFd);
+			// }
 		}
 	}
 }

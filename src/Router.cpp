@@ -33,7 +33,6 @@ ActionParameters Router::routeRequest(const Request& request, int listeningPort)
 
 const SingleServer* Router::selectServerBlock(const Request& request, int listeningPort) const
 {
-	const SingleServer* selectedServer = nullptr;
 	const SingleServer* defaultServer = nullptr;
 	std::string requestHostHeader;
 
@@ -55,18 +54,15 @@ const SingleServer* Router::selectServerBlock(const Request& request, int listen
 	{
 		const SingleServer *server = servers[i].get();
 		if (server->getServPortInt() == listeningPort){
+			if (server->getServName() == hostWithoutPort){
+				return server;
+			}
 			if(!defaultServer){
 				defaultServer = server;
 			}
 		}
-		if (server->getServName() == hostWithoutPort){
-			selectedServer = server;
-			break;
-		}
 	}
-	if (!selectedServer)
-		selectedServer = defaultServer;
-	return selectedServer;
+	return defaultServer;
 }
 
 const Location* Router::findBestMatchingLocation(const Request& request, const SingleServer* server) const
@@ -227,7 +223,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		return params;
 	}
 	//CGI
-	std::string	cgiPath = request.getPath();
+	std::string	cgiPath = selectedLocation->getRoot() + request.getPath();
 	std::cout << "cgiPath: " << cgiPath << std::endl;
 	if (request.getMethod() == "POST" || request.getMethod() == "GET") {
 		// if (!isExecutable(cgiPath)) {

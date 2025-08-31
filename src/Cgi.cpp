@@ -109,7 +109,7 @@ std::string Cgi::runCgi() {
 		envp[i] = NULL;
 
 		//TODO -> get rid of the hardcoded www
-		std::string prePath = "www" + scriptPath_;
+		std::string prePath = scriptPath_;
 		char *path = const_cast<char*>(prePath.c_str());
 		char *argvPath = const_cast<char*>(scriptPath_.c_str());
 		std::cerr << "path = " << path << std::endl;
