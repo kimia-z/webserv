@@ -45,7 +45,7 @@ Cgi::~Cgi() {
 			pipeOut_[1] = -1;
 		}
 	} catch (const std::exception& e) {
-		std::cerr << "DEBUG: Error in CGI destructor: " << e.what() << std::endl;
+		// std::cerr << "DEBUG: Error in CGI destructor: " << e.what() << std::endl;
 	}
 }
 
@@ -186,18 +186,18 @@ void	Cgi::startCgi(std::function<void(int, uint32_t)> addtoEpoll) {
 }
 
 std::string Cgi::runCgi() {
-	std::cout << "DEBUG: runCgi called for script: " << scriptPath_ << std::endl;
+	// std::cout << "DEBUG: runCgi called for script: " << scriptPath_ << std::endl;
 	
 	// for POST, write body to CGI input
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		std::string body = request_.getBody();
-		std::cout << "DEBUG: Writing POST data to CGI input, size: " << body.length() << " bytes" << std::endl;
+		// std::cout << "DEBUG: Writing POST data to CGI input, size: " << body.length() << " bytes" << std::endl;
 		ssize_t written = write(pipeIn_[1], body.c_str(), body.length());
 		if (written == -1) {
 			close(pipeIn_[1]);
 			throw CgiException("Cgi: Failed to write POST data to CGI input");
 		}
-		std::cout << "DEBUG: Written " << written << " bytes to CGI input" << std::endl;
+		// std::cout << "DEBUG: Written " << written << " bytes to CGI input" << std::endl;
 	}
 	close(pipeIn_[1]);
 
@@ -205,34 +205,34 @@ std::string Cgi::runCgi() {
 	std::string	output;
 	char buffer[4096];
 	ssize_t n;
-	std::cout << "DEBUG: Reading CGI output" << std::endl;
+	// std::cout << "DEBUG: Reading CGI output" << std::endl;
 	
 	// Read all available data from CGI output
 	while ((n = read(pipeOut_[0], buffer, sizeof(buffer))) > 0) {
 		output.append(buffer, n);
-		std::cout << "DEBUG: Read " << n << " bytes from CGI, total: " << output.length() << std::endl;
+		// std::cout << "DEBUG: Read " << n << " bytes from CGI, total: " << output.length() << std::endl;
 	}
 	close(pipeOut_[0]);
 
-	std::cout << "DEBUG: Waiting for CGI process to finish" << std::endl;
+	// std::cout << "DEBUG: Waiting for CGI process to finish" << std::endl;
 	int status;
 	waitpid(cgiPid_, &status, 0);
 	cgiPid_ = -1;
-	std::cout << "DEBUG: CGI process finished with status: " << status << std::endl;
+	// std::cout << "DEBUG: CGI process finished with status: " << status << std::endl;
 	
 	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-		std::cerr << "DEBUG: CGI process failed with exit code: " << WEXITSTATUS(status) << std::endl;
+		// std::cerr << "DEBUG: CGI process failed with exit code: " << WEXITSTATUS(status) << std::endl;
 		cgiStatusCode_ = WEXITSTATUS(status);
 		throw CgiException("Cgi: Script execution failed");
 	}
 
 	if (output.empty()) {
-		std::cerr << "DEBUG: CGI produced empty output" << std::endl;
+		// std::cerr << "DEBUG: CGI produced empty output" << std::endl;
 		cgiStatusCode_ = 500;
 		throw CgiException("Cgi: Empty output_");
 	}
 
-	std::cout << "DEBUG: CGI script completed successfully. Output preview: " << output.substr(0, 100) << "..." << std::endl;
+	// std::cout << "DEBUG: CGI script completed successfully. Output preview: " << output.substr(0, 100) << "..." << std::endl;
 	cgiStatusCode_ = 200;
 	return (output);
 }

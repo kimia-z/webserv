@@ -29,21 +29,21 @@ bool Request::processRequestData() {
 		size_t header_end_pos = findCRLFCRLF(_rawBuffer);
 		if (header_end_pos == std::string::npos) {
 			// Headers are not yet complete, need more data
-			std::cout << "DEBUG: Headers not complete, need more data. Buffer size: " << _rawBuffer.length() << std::endl;
+			// std::cout << "DEBUG: Headers not complete, need more data. Buffer size: " << _rawBuffer.length() << std::endl;
 			return false;
 		}
 		_bodyStartPos = header_end_pos + 4; // Position after "\r\n\r\n"
 		_isHeadersComplete = true;
-		std::cout << "DEBUG: Headers complete, parsing start line and headers" << std::endl;
+		// std::cout << "DEBUG: Headers complete, parsing start line and headers" << std::endl;
 		try {
 			parseStartLineAndHeaders();
 			// Check body size limit immediately after parsing headers
 			auto clIt = _headers.find("Content-Length");
 			if (clIt != _headers.end() && _maxBodySize > 0) {
 				long contentLength = std::atol(clIt->second.c_str());
-				std::cout << "DEBUG: Checking body size: " << contentLength << " vs limit: " << _maxBodySize << std::endl;
+				// std::cout << "DEBUG: Checking body size: " << contentLength << " vs limit: " << _maxBodySize << std::endl;
 				if (contentLength > _maxBodySize) {
-					std::cout << "DEBUG: Request body size exceeds limit: " << contentLength << " > " << _maxBodySize << std::endl;
+					// std::cout << "DEBUG: Request body size exceeds limit: " << contentLength << " > " << _maxBodySize << std::endl;
 					throw HttpException(413, "Payload Too Large");
 				}
 			}
@@ -55,8 +55,8 @@ bool Request::processRequestData() {
 	}
 	// Step 2: check/parse body
 	if (_isHeadersComplete) {
-		std::cout << "DEBUG: Headers complete, parsing body. Buffer size: " << _rawBuffer.length() 
-				  << ", Body start pos: " << _bodyStartPos << std::endl;
+		// std::cout << "DEBUG: Headers complete, parsing body. Buffer size: " << _rawBuffer.length() 
+		//		  << ", Body start pos: " << _bodyStartPos << std::endl;
 		auto clIt = _headers.find("Content-Length");
 		auto teIt = _headers.find("Transfer-Encoding");
 		if (teIt != _headers.end() && teIt->second == "chunked") {
@@ -70,17 +70,17 @@ bool Request::processRequestData() {
 		} else if (clIt != _headers.end()) {
 			try {
 				_contentLength = std::atol(clIt->second.c_str());
-				std::cout << "DEBUG: Content-Length: " << _contentLength << ", Current body size: " 
-						  << (_rawBuffer.length() - _bodyStartPos) << std::endl;
+				// std::cout << "DEBUG: Content-Length: " << _contentLength << ", Current body size: " 
+				//		  << (_rawBuffer.length() - _bodyStartPos) << std::endl;
 				if (_contentLength < 0) {
 					throw HttpException(400, "Bad Request: Negative Content-Length");
 				}
 				if (static_cast<long>(_rawBuffer.length() - _bodyStartPos) >= _contentLength) {
-					std::cout << "DEBUG: Body complete, parsing content" << std::endl;
+					// std::cout << "DEBUG: Body complete, parsing content" << std::endl;
 					_isRequestComplete = true;
 					parseBodyContent();
 				} else {
-					std::cout << "DEBUG: Body not complete, need more data" << std::endl;
+					// std::cout << "DEBUG: Body not complete, need more data" << std::endl;
 				}
 			} catch (const HttpException& e) {
 				std::cerr << "Content-Length error: " << e.what() << std::endl;

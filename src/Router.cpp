@@ -145,23 +145,23 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	// POST
 	if (request.getMethod() == "POST") {
-		std::cout << "DEBUG: Router processing POST request to path: " << request.getPath() << std::endl;
+		// std::cout << "DEBUG: Router processing POST request to path: " << request.getPath() << std::endl;
 		if (!selectedLocation->getUploadPath().empty()) {
 			std::string uploadPath = selectedLocation->getUploadPath();
-			std::cout << "DEBUG: Upload path configured: " << uploadPath << std::endl;
+			// std::cout << "DEBUG: Upload path configured: " << uploadPath << std::endl;
 			
 			if (!isDirectory(uploadPath) || !hasWriteAccess(uploadPath)) {
-				std::cout << "DEBUG: Upload path not accessible: " << uploadPath << std::endl;
+				// std::cout << "DEBUG: Upload path not accessible: " << uploadPath << std::endl;
 				params.errorCode = 500;
 				return params;
 			}
-			std::cout << "DEBUG: Upload path accessible: " << uploadPath << std::endl;
+			// std::cout << "DEBUG: Upload path accessible: " << uploadPath << std::endl;
 		
 							// Check if this is a CGI script for uploads
 		std::string cgiPath = selectedLocation->getRoot() + "/" + relativePath;
-		std::cout << "DEBUG: Checking CGI path: " << cgiPath << std::endl;
+		// std::cout << "DEBUG: Checking CGI path: " << cgiPath << std::endl;
 		if (cgiPath.find(".py") != std::string::npos || cgiPath.find(".php") != std::string::npos) {
-			std::cout << "DEBUG: Detected CGI script, setting isCGI=true" << std::endl;
+			// std::cout << "DEBUG: Detected CGI script, setting isCGI=true" << std::endl;
 			params.isCGI = true;
 			params.cgiScriptPath = cgiPath;
 			params.cgiTargetFile = fileSystemPath;

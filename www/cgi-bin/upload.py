@@ -21,13 +21,11 @@ if not os.path.isabs(UPLOAD_DIR):
 	# Create absolute path
 	UPLOAD_DIR = os.path.join(www_dir, UPLOAD_DIR)
 
-# Debug output removed for production
-
 # pull the limit data from env
 try:
 	MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", "1048576"))
 except ValueError:
-	MAX_FILE_SIZE = 1048576  # or set the default of 1 MB
+	MAX_FILE_SIZE = 1048576  # or set the default of 10 MB
 
 # making sure the upload exists
 try:

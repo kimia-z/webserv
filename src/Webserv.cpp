@@ -5,7 +5,7 @@ extern volatile sig_atomic_t g_running;
 
 Webserv::Webserv(const Server42& config)
 	: allServersConfig_(config),
-	  epollFd_(-1)
+	epollFd_(-1)
 {
 	epollFd_ = epoll_create1(0);
 	if (epollFd_ == -1) {
@@ -55,10 +55,10 @@ void Webserv::runEventLoop()
 		// Check for client timeouts before waiting for events
 		checkClientTimeouts();
 		
-		std::cout << "DEBUG: Starting event loop iteration, active clients: " << clientRequests_.size() 
-				  << ", CGI processes: " << clientCgiMap_.size() << std::endl;
+		// std::cout << "DEBUG: Starting event loop iteration, active clients: " << clientRequests_.size() 
+		//		<< ", CGI processes: " << clientCgiMap_.size() << std::endl;
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), 5000); // 5 second timeout
-		std::cout << "DEBUG: epoll_wait returned " << numEvents << " events" << std::endl;
+		// std::cout << "DEBUG: epoll_wait returned " << numEvents << " events" << std::endl;
 		if (numEvents == -1) {
 			if (errno == EINTR) { // Check if the error was due to an interrupted system call (SIGINT)
 				std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
@@ -110,59 +110,59 @@ void Webserv::addFdToEpoll(int fd, uint32_t events)
 
 void Webserv::removeFdFromEpoll(int fd)
 {
-	std::cout << "DEBUG: removeFdFromEpoll called for FD " << fd << ", epollFd_ = " << epollFd_ << std::endl;
+	// std::cout << "DEBUG: removeFdFromEpoll called for FD " << fd << ", epollFd_ = " << epollFd_ << std::endl;
 	if (epollFd_ < 0) {
-		std::cerr << "DEBUG: Invalid epollFd_ = " << epollFd_ << std::endl;
+		// std::cerr << "DEBUG: Invalid epollFd_ = " << epollFd_ << std::endl;
 		return;
 	}
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 	} else {
-		std::cout << "DEBUG: Successfully removed FD " << fd << " from epoll" << std::endl;
+		// std::cout << "DEBUG: Successfully removed FD " << fd << " from epoll" << std::endl;
 	}
 }
 
 void Webserv::closeClientConnection(int clientFd)
 {
-	std::cout << "DEBUG: Starting cleanup for FD " << clientFd << std::endl;
+	// std::cout << "DEBUG: Starting cleanup for FD " << clientFd << std::endl;
 	
 	// Clean up CGI process first if exists
-	std::cout << "DEBUG: Checking for CGI process..." << std::endl;
+	// std::cout << "DEBUG: Checking for CGI process..." << std::endl;
 	if (clientCgiMap_.find(clientFd) != clientCgiMap_.end()) {
-		std::cout << "DEBUG: Cleaning up CGI process for FD " << clientFd << std::endl;
+		// std::cout << "DEBUG: Cleaning up CGI process for FD " << clientFd << std::endl;
 		try {
 			clientCgiMap_.erase(clientFd);
-			std::cout << "DEBUG: CGI cleanup completed" << std::endl;
+			// std::cout << "DEBUG: CGI cleanup completed" << std::endl;
 		} catch (const std::exception& e) {
-			std::cerr << "DEBUG: Error during CGI cleanup: " << e.what() << std::endl;
+			// std::cerr << "DEBUG: Error during CGI cleanup: " << e.what() << std::endl;
 		}
 	} else {
-		std::cout << "DEBUG: No CGI process found for FD " << clientFd << std::endl;
+		// std::cout << "DEBUG: No CGI process found for FD " << clientFd << std::endl;
 	}
 
 	// Remove from epoll monitoring
-	std::cout << "DEBUG: Removing FD from epoll..." << std::endl;
+	// std::cout << "DEBUG: Removing FD from epoll..." << std::endl;
 	try {
 		removeFdFromEpoll(clientFd);
-		std::cout << "DEBUG: FD removed from epoll" << std::endl;
+		// std::cout << "DEBUG: FD removed from epoll" << std::endl;
 	} catch (const std::exception& e) {
-		std::cerr << "DEBUG: Error removing FD from epoll: " << e.what() << std::endl;
+		// std::cerr << "DEBUG: Error removing FD from epoll: " << e.what() << std::endl;
 	}
 	
 	// Close the actual socket FD
-	std::cout << "DEBUG: Closing socket FD..." << std::endl;
+	// std::cout << "DEBUG: Closing socket FD..." << std::endl;
 	if (clientFd > 0) {
 		close(clientFd);
-		std::cout << "DEBUG: Socket closed" << std::endl;
+		// std::cout << "DEBUG: Socket closed" << std::endl;
 	}
 
 	// Remove client data from maps
-	std::cout << "DEBUG: Removing client data from maps..." << std::endl;
+	// std::cout << "DEBUG: Removing client data from maps..." << std::endl;
 	clientRequests_.erase(clientFd);	// Remove client's request state
 	clientResponses_.erase(clientFd);	// Remove client's response state
 	// Note: clientTimeouts_ is erased in the timeout loop, not here
 	clientToServerMap_.erase(clientFd);	// Remove mapping to server config
-	std::cout << "DEBUG: Client data removed from maps" << std::endl;
+	// std::cout << "DEBUG: Client data removed from maps" << std::endl;
 
 	std::cout << YELLOW << "Closed connection for FD: " << clientFd << RESET << std::endl;
 }
@@ -194,11 +194,11 @@ void Webserv::handleClientRead(int clientFd)
 	char buffer[BUFFER_SIZE];
 	memset(buffer, 0, sizeof(buffer));
 
-	std::cout << "DEBUG: handleClientRead called for FD " << clientFd << std::endl;
+	// std::cout << "DEBUG: handleClientRead called for FD " << clientFd << std::endl;
 	
 	// Check if client already has a response pending
 	if (clientResponses_.find(clientFd) != clientResponses_.end()) {
-		std::cout << "DEBUG: Client FD " << clientFd << " already has response pending, ignoring read" << std::endl;
+		// std::cout << "DEBUG: Client FD " << clientFd << " already has response pending, ignoring read" << std::endl;
 		return;
 	}
 	
@@ -211,13 +211,13 @@ void Webserv::handleClientRead(int clientFd)
 	
 	// Check if request is already complete
 	if (request_it->second.isRequestComplete()) {
-		std::cout << "DEBUG: Client FD " << clientFd << " request already complete, ignoring read" << std::endl;
+		// std::cout << "DEBUG: Client FD " << clientFd << " request already complete, ignoring read" << std::endl;
 		return;
 	}
 	
-	std::cout << "DEBUG: Client FD " << clientFd << " proceeding with read - no response pending, request not complete" << std::endl;
+	// std::cout << "DEBUG: Client FD " << clientFd << " proceeding with read - no response pending, request not complete" << std::endl;
 	ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer), 0);
-	std::cout << "DEBUG: Received " << bytesReceived << " bytes from client FD " << clientFd << std::endl;
+	// std::cout << "DEBUG: Received " << bytesReceived << " bytes from client FD " << clientFd << std::endl;
 	if (bytesReceived == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
 			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
@@ -231,13 +231,13 @@ void Webserv::handleClientRead(int clientFd)
 	} else { // Data received
 		updateClientTimeout(clientFd); // Update timeout on activity
 		request_it->second.appendRawData(buffer, bytesReceived);
-		std::cout << "DEBUG: Appended data to request buffer. Total buffer size: " << request_it->second.getRawBuffer().length() 
-				  << " bytes, Body size: " << request_it->second.getBody().length() << " bytes" << std::endl;
+		// std::cout << "DEBUG: Appended data to request buffer. Total buffer size: " << request_it->second.getRawBuffer().length() 
+		//		<< " bytes, Body size: " << request_it->second.getBody().length() << " bytes" << std::endl;
 
 		try{
 			while (request_it->second.processRequestData())
 			{
-				std::cout << "DEBUG: Processing request data for FD " << clientFd << std::endl;
+				// std::cout << "DEBUG: Processing request data for FD " << clientFd << std::endl;
 				const SingleServer* clientServer = clientToServerMap_[clientFd];
 				if (!clientServer) {
 					std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
@@ -247,8 +247,8 @@ void Webserv::handleClientRead(int clientFd)
 				
 				Router router(allServersConfig_);
 				ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
-				std::cout << "DEBUG: Request method: " << request_it->second.getMethod() << ", Path: " << request_it->second.getPath() << std::endl;
-				std::cout << "DEBUG: Router returned - isCGI: " << action.isCGI << ", isUpload: " << action.isUpload << ", cgiScriptPath: " << action.cgiScriptPath << std::endl;
+				// std::cout << "DEBUG: Request method: " << request_it->second.getMethod() << ", Path: " << request_it->second.getPath() << std::endl;
+				// std::cout << "DEBUG: Router returned - isCGI: " << action.isCGI << ", isUpload: " << action.isUpload << ", cgiScriptPath: " << action.cgiScriptPath << std::endl;
 
 				std::string responseContent = "";
 				int finalStatusCode = 0;
@@ -265,10 +265,10 @@ void Webserv::handleClientRead(int clientFd)
 				}
 
 				else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
-					std::cout << "DEBUG: Entering CGI handling for FD " << clientFd << std::endl;
+					// std::cout << "DEBUG: Entering CGI handling for FD " << clientFd << std::endl;
 					std::shared_ptr<Cgi>	cgi = clientCgiMap_[clientFd];
 					if (!cgi) {
-						std::cout << "DEBUG: Creating new CGI object with script: " << action.cgiScriptPath << std::endl;
+						// std::cout << "DEBUG: Creating new CGI object with script: " << action.cgiScriptPath << std::endl;
 						clientCgiMap_[clientFd] = std::make_shared<Cgi>(request_it->second, action.cgiScriptPath, 
 							clientServer->getServName(), clientServer->getServPortInt());
 						cgi = clientCgiMap_[clientFd];
@@ -276,15 +276,15 @@ void Webserv::handleClientRead(int clientFd)
 					
 					// Set upload directory and max file size for CGI
 					if (!action.uploadTargetDir.empty()) {
-						std::cout << "DEBUG: Setting upload directory to: " << action.uploadTargetDir << std::endl;
+						// std::cout << "DEBUG: Setting upload directory to: " << action.uploadTargetDir << std::endl;
 						cgi->setUploadDir(action.uploadTargetDir);
 					}
-					std::cout << "DEBUG: Setting max file size to: " << clientServer->getMaxBodySize() << std::endl;
+					// std::cout << "DEBUG: Setting max file size to: " << clientServer->getMaxBodySize() << std::endl;
 					cgi->setMaxFileSize(clientServer->getMaxBodySize());
 					
-					std::cout << "DEBUG: Starting CGI process..." << std::endl;
+					// std::cout << "DEBUG: Starting CGI process..." << std::endl;
 					cgi->startCgi([this](int fd, uint32_t events) {
-						std::cout << "DEBUG: Adding FD " << fd << " to epoll with events " << events << std::endl;
+						// std::cout << "DEBUG: Adding FD " << fd << " to epoll with events " << events << std::endl;
 						addFdToEpoll(fd, events);
 					});
 					std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
@@ -293,10 +293,10 @@ void Webserv::handleClientRead(int clientFd)
 					// TODO: Make this fully non-blocking in the main event loop
 					try {
 						cgi->setScriptPath(action.cgiScriptPath);
-						std::cout << "DEBUG: About to call runCgi()..." << std::endl;
+						// std::cout << "DEBUG: About to call runCgi()..." << std::endl;
 						responseContent = cgi->runCgi();
 						finalStatusCode = cgi->getCgiStatusCode();
-						std::cout << "DEBUG: CGI completed successfully. Status: " << finalStatusCode << ", Output length: " << responseContent.length() << std::endl;
+						// std::cout << "DEBUG: CGI completed successfully. Status: " << finalStatusCode << ", Output length: " << responseContent.length() << std::endl;
 					}
 					catch (const Cgi::CgiException& e) {
 						std::cerr << RED << "CGI Exception: " << e.what() << RESET << std::endl;
@@ -398,11 +398,11 @@ void Webserv::handleClientRead(int clientFd)
 				std::string errorPagePath = "error/413.html";
 				if (fileExists(errorPagePath)) {
 					std::string errorPageContent = readFileContent(errorPagePath);
-					std::cout << "DEBUG: 413 error page content length: " << errorPageContent.length() << std::endl;
+					// std::cout << "DEBUG: 413 error page content length: " << errorPageContent.length() << std::endl;
 					errorResponse.buildErrorResponse(413, errorPageContent);
-					std::cout << "DEBUG: 413 error response built, status: " << errorResponse.getStatusCode() << std::endl;
+					// std::cout << "DEBUG: 413 error response built, status: " << errorResponse.getStatusCode() << std::endl;
 				} else {
-					std::cout << "DEBUG: 413 error page not found, using default" << std::endl;
+					// std::cout << "DEBUG: 413 error page not found, using default" << std::endl;
 					errorResponse.setStatusCode(413);
 					errorResponse.setBody("<h1>413 Payload Too Large</h1><p>The request body exceeds the maximum allowed size.</p>");
 				}
@@ -413,32 +413,32 @@ void Webserv::handleClientRead(int clientFd)
 			
 			// Mark request as complete to prevent further data reading
 			request_it->second.markComplete();
-			std::cout << "DEBUG: Marked request as complete for FD " << clientFd << std::endl;
+			// std::cout << "DEBUG: Marked request as complete for FD " << clientFd << std::endl;
 
 			// Serialize the error response and add it to the clientResponses_ map
-            std::string errorResponseString = errorResponse.toString();
-            clientResponses_[clientFd] = errorResponseString;
-            std::cout << "DEBUG: 413 error response stored, length: " << clientResponses_[clientFd].length() << std::endl;
-            std::cout << "DEBUG: 413 error response content:\n" << clientResponses_[clientFd] << std::endl;
+				std::string errorResponseString = errorResponse.toString();
+				clientResponses_[clientFd] = errorResponseString;
+				// std::cout << "DEBUG: 413 error response stored, length: " << clientResponses_[clientFd].length() << std::endl;
+				// std::cout << "DEBUG: 413 error response content:\n" << clientResponses_[clientFd] << std::endl;
 
-            // Change epoll event to EPOLLOUT to start sending the error response
-            epoll_event event_mod;
-            event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-            event_mod.data.fd = clientFd;
-            std::cout << "DEBUG: Switching FD " << clientFd << " to EPOLLOUT mode (removing EPOLLIN)" << std::endl;
-            if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-                std::cerr << RED << "Failed to switch FD " << clientFd << " to EPOLLOUT: " << strerror(errno) << RESET << std::endl;
-                closeClientConnection(clientFd);
+				// Change epoll event to EPOLLOUT to start sending the error response
+				epoll_event event_mod;
+				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+				event_mod.data.fd = clientFd;
+				// std::cout << "DEBUG: Switching FD " << clientFd << " to EPOLLOUT mode (removing EPOLLIN)" << std::endl;
+				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+					std::cerr << RED << "Failed to switch FD " << clientFd << " to EPOLLOUT: " << strerror(errno) << RESET << std::endl;
+					closeClientConnection(clientFd);
 			
 			} else {
-				std::cout << "DEBUG: Successfully switched FD " << clientFd << " to EPOLLOUT mode" << std::endl;
+				// std::cout << "DEBUG: Successfully switched FD " << clientFd << " to EPOLLOUT mode" << std::endl;
 				// Debug: Check if response exists
 				std::map<int, std::string>::iterator debug_it = clientResponses_.find(clientFd);
 				if (debug_it != clientResponses_.end()) {
-					std::cout << "DEBUG: Response found for FD " << clientFd << ", length: " << debug_it->second.length() << std::endl;
-					std::cout << "DEBUG: Response preview: " << debug_it->second.substr(0, 100) << "..." << std::endl;
+					// std::cout << "DEBUG: Response found for FD " << clientFd << ", length: " << debug_it->second.length() << std::endl;
+					// std::cout << "DEBUG: Response preview: " << debug_it->second.substr(0, 100) << "..." << std::endl;
 				} else {
-					std::cout << "DEBUG: No response found for FD " << clientFd << std::endl;
+					// std::cout << "DEBUG: No response found for FD " << clientFd << std::endl;
 				}
 				// Send the response immediately
 				handleClientWrite(clientFd);
@@ -451,19 +451,19 @@ void Webserv::handleClientRead(int clientFd)
 // Handles sending data to a client socket
 void Webserv::handleClientWrite(int clientFd)
 {
-	std::cout << "DEBUG: handleClientWrite called for FD " << clientFd << std::endl;
+	// std::cout << "DEBUG: handleClientWrite called for FD " << clientFd << std::endl;
 	std::map<int, std::string>::iterator response_it = clientResponses_.find(clientFd);
 	if (response_it == clientResponses_.end()) {
-		std::cout << "DEBUG: No response found for FD " << clientFd << " in handleClientWrite" << std::endl;
+		// std::cout << "DEBUG: No response found for FD " << clientFd << " in handleClientWrite" << std::endl;
 		closeClientConnection(clientFd);
 		return;
 	}
 	if (response_it->second.empty()) {
-		std::cout << "DEBUG: Response is empty for FD " << clientFd << " in handleClientWrite" << std::endl;
+		// std::cout << "DEBUG: Response is empty for FD " << clientFd << " in handleClientWrite" << std::endl;
 		closeClientConnection(clientFd);
 		return;
 	}
-	std::cout << "DEBUG: Response found for FD " << clientFd << ", length: " << response_it->second.length() << std::endl;
+	// std::cout << "DEBUG: Response found for FD " << clientFd << ", length: " << response_it->second.length() << std::endl;
 
 	ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
 	if (bytesSent == -1) {
@@ -515,113 +515,113 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 {
 	std::stringstream html_listing;
 	html_listing << "<!DOCTYPE html>\r\n"
-				 << "<html lang=\"en\">\r\n"
-				 << "<head>\r\n"
-				 << "    <meta charset=\"UTF-8\">\r\n"
-				 << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
-				 << "    <title>Directory Listing</title>\r\n"
-				 << "    <style>\r\n"
-				 << "        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');\r\n"
-				 << "        \r\n"
-				 << "        :root {\r\n"
-				 << "            --primary-color: #2c3e50;\r\n"
-				 << "            --secondary-color: #3498db;\r\n"
-				 << "            --accent-color: #e74c3c;\r\n"
-				 << "            --text-color: #f4f4f4;\r\n"
-				 << "            --bg-color: #ecf0f1;\r\n"
-				 << "            --card-bg: #ffffff;\r\n"
-				 << "            --shadow: 0 8px 16px rgba(0, 0, 0, 0.1);\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        body {\r\n"
-				 << "            font-family: 'Poppins', sans-serif;\r\n"
-				 << "            background-color: var(--bg-color);\r\n"
-				 << "            margin: 0;\r\n"
-				 << "            padding: 2rem;\r\n"
-				 << "            color: var(--primary-color);\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        .container {\r\n"
-				 << "            background-color: var(--card-bg);\r\n"
-				 << "            padding: 2rem 3rem;\r\n"
-				 << "            border-radius: 12px;\r\n"
-				 << "            box-shadow: var(--shadow);\r\n"
-				 << "            max-width: 800px;\r\n"
-				 << "            margin: 2rem auto;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        h1 {\r\n"
-				 << "            font-size: 2.5rem;\r\n"
-				 << "            font-weight: 700;\r\n"
-				 << "            color: var(--primary-color);\r\n"
-				 << "            border-bottom: 2px solid #ddd;\r\n"
-				 << "            padding-bottom: 1rem;\r\n"
-				 << "            margin-top: 0;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        ul {\r\n"
-				 << "            list-style: none;\r\n"
-				 << "            padding: 0;\r\n"
-				 << "            margin: 0;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        li {\r\n"
-				 << "            display: flex;\r\n"
-				 << "            align-items: center;\r\n"
-				 << "            padding: 0.8rem 0;\r\n"
-				 << "            border-bottom: 1px solid #eee;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        li:last-child {\r\n"
-				 << "            border-bottom: none;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        a {\r\n"
-				 << "            display: flex;\r\n"
-				 << "            align-items: center;\r\n"
-				 << "            text-decoration: none;\r\n"
-				 << "            color: var(--secondary-color);\r\n"
-				 << "            font-weight: 600;\r\n"
-				 << "            font-size: 1rem;\r\n"
-				 << "            transition: color 0.3s ease;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        a:hover {\r\n"
-				 << "            color: var(--accent-color);\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        .icon {\r\n"
-				 << "            font-size: 1.2rem;\r\n"
-				 << "            margin-right: 0.8rem;\r\n"
-				 << "            color: #7f8c8d;\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        .icon-dir::before {\r\n"
-				 << "            content: \"📁\";\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        .icon-file::before {\r\n"
-				 << "            content: \"📄\";\r\n"
-				 << "        }\r\n"
-				 << "\r\n"
-				 << "        .footer {\r\n"
-				 << "            margin-top: 2rem;\r\n"
-				 << "            text-align: center;\r\n"
-				 << "            font-size: 0.8rem;\r\n"
-				 << "            color: #7f8c8d;\r\n"
-				 << "        }\r\n"
-				 << "    </style>\r\n"
-				 << "</head>\r\n"
-				 << "<body>\r\n"
-				 << "    <div class=\"container\">\r\n"
-				 << "        <h1>Directory Listing for " << directoryPath << "</h1>\r\n"
-				 << "        <ul>\r\n"
-				 << "            <li>\r\n"
-				 << "                <a href=\"../\">\r\n"
-				 << "                    <span class=\"icon icon-dir\"></span>\r\n"
-				 << "                    .. (Parent Directory)\r\n"
-				 << "                </a>\r\n"
-				 << "            </li>\r\n";
+				<< "<html lang=\"en\">\r\n"
+				<< "<head>\r\n"
+				<< "	<meta charset=\"UTF-8\">\r\n"
+				<< "	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
+				<< "	<title>Directory Listing</title>\r\n"
+				<< "	<style>\r\n"
+				<< "		@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');\r\n"
+				<< "		\r\n"
+				<< "		:root {\r\n"
+				<< "				--primary-color: #2c3e50;\r\n"
+				<< "				--secondary-color: #3498db;\r\n"
+				<< "				--accent-color: #e74c3c;\r\n"
+				<< "				--text-color: #f4f4f4;\r\n"
+				<< "				--bg-color: #ecf0f1;\r\n"
+				<< "				--card-bg: #ffffff;\r\n"
+				<< "				--shadow: 0 8px 16px rgba(0, 0, 0, 0.1);\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		body {\r\n"
+				<< "				font-family: 'Poppins', sans-serif;\r\n"
+				<< "				background-color: var(--bg-color);\r\n"
+				<< "				margin: 0;\r\n"
+				<< "				padding: 2rem;\r\n"
+				<< "				color: var(--primary-color);\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		.container {\r\n"
+				<< "				background-color: var(--card-bg);\r\n"
+				<< "				padding: 2rem 3rem;\r\n"
+				<< "				border-radius: 12px;\r\n"
+				<< "				box-shadow: var(--shadow);\r\n"
+				<< "				max-width: 800px;\r\n"
+				<< "				margin: 2rem auto;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		h1 {\r\n"
+				<< "				font-size: 2.5rem;\r\n"
+				<< "				font-weight: 700;\r\n"
+				<< "				color: var(--primary-color);\r\n"
+				<< "				border-bottom: 2px solid #ddd;\r\n"
+				<< "				padding-bottom: 1rem;\r\n"
+				<< "				margin-top: 0;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		ul {\r\n"
+				<< "				list-style: none;\r\n"
+				<< "				padding: 0;\r\n"
+				<< "				margin: 0;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		li {\r\n"
+				<< "				display: flex;\r\n"
+				<< "				align-items: center;\r\n"
+				<< "				padding: 0.8rem 0;\r\n"
+				<< "				border-bottom: 1px solid #eee;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		li:last-child {\r\n"
+				<< "				border-bottom: none;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		a {\r\n"
+				<< "				display: flex;\r\n"
+				<< "				align-items: center;\r\n"
+				<< "				text-decoration: none;\r\n"
+				<< "				color: var(--secondary-color);\r\n"
+				<< "				font-weight: 600;\r\n"
+				<< "				font-size: 1rem;\r\n"
+				<< "				transition: color 0.3s ease;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		a:hover {\r\n"
+				<< "				color: var(--accent-color);\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		.icon {\r\n"
+				<< "				font-size: 1.2rem;\r\n"
+				<< "				margin-right: 0.8rem;\r\n"
+				<< "				color: #7f8c8d;\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		.icon-dir::before {\r\n"
+				<< "				content: \"📁\";\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		.icon-file::before {\r\n"
+				<< "				content: \"📄\";\r\n"
+				<< "		}\r\n"
+				<< "\r\n"
+				<< "		.footer {\r\n"
+				<< "				margin-top: 2rem;\r\n"
+				<< "				text-align: center;\r\n"
+				<< "				font-size: 0.8rem;\r\n"
+				<< "				color: #7f8c8d;\r\n"
+				<< "		}\r\n"
+				<< "	</style>\r\n"
+				<< "</head>\r\n"
+				<< "<body>\r\n"
+				<< "	<div class=\"container\">\r\n"
+				<< "		<h1>Directory Listing for " << directoryPath << "</h1>\r\n"
+				<< "		<ul>\r\n"
+				<< "				<li>\r\n"
+				<< "					<a href=\"../\">\r\n"
+				<< "						<span class=\"icon icon-dir\"></span>\r\n"
+				<< "						.. (Parent Directory)\r\n"
+				<< "					</a>\r\n"
+				<< "				</li>\r\n";
 
 	DIR *dir = opendir(directoryPath.c_str());
 	if (dir == NULL) {
@@ -639,31 +639,31 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 			
 			struct stat entry_stat;
 			if (stat(fullEntryPath.c_str(), &entry_stat) == 0 && S_ISDIR(entry_stat.st_mode)) {
-				html_listing << "            <li>\r\n"
-							 << "                <a href=\"" << name << "/\">\r\n"
-							 << "                    <span class=\"icon icon-dir\"></span>\r\n"
-							 << "                    " << name << "/\r\n"
-							 << "                </a>\r\n"
-							 << "            </li>\r\n";
+				html_listing << "				<li>\r\n"
+							<< "					<a href=\"" << name << "/\">\r\n"
+							<< "						<span class=\"icon icon-dir\"></span>\r\n"
+							<< "						" << name << "/\r\n"
+							<< "					</a>\r\n"
+							<< "				</li>\r\n";
 			} else {
-				html_listing << "            <li>\r\n"
-							 << "                <a href=\"" << name << "\">\r\n"
-							 << "                    <span class=\"icon icon-file\"></span>\r\n"
-							 << "                    " << name << "\r\n"
-							 << "                </a>\r\n"
-							 << "            </li>\r\n";
+				html_listing << "				<li>\r\n"
+							<< "					<a href=\"" << name << "\">\r\n"
+							<< "						<span class=\"icon icon-file\"></span>\r\n"
+							<< "						" << name << "\r\n"
+							<< "					</a>\r\n"
+							<< "				</li>\r\n";
 			}
 		}
 		closedir(dir);
 	}
 
-	html_listing << "        </ul>\r\n"
-				 << "    </div>\r\n"
-				 << "    <div class=\"footer\">\r\n"
-				 << "        Generated by `webserv`.\r\n"
-				 << "    </div>\r\n"
-				 << "</body>\r\n"
-				 << "</html>\r\n";
+	html_listing << "		</ul>\r\n"
+				<< "	</div>\r\n"
+				<< "	<div class=\"footer\">\r\n"
+				<< "		Generated by `webserv`.\r\n"
+				<< "	</div>\r\n"
+				<< "</body>\r\n"
+				<< "</html>\r\n";
 	return html_listing.str();
 }
 
@@ -694,7 +694,7 @@ void Webserv::updateClientTimeout(int clientFd)
 
 void Webserv::sendTimeoutResponse(int clientFd)
 {
-	std::cout << "DEBUG: Sending timeout response for FD " << clientFd << std::endl;
+	// std::cout << "DEBUG: Sending timeout response for FD " << clientFd << std::endl;
 	
 	// Try to read custom 408 error page
 	std::string errorPagePath = "error/408.html";
@@ -702,14 +702,14 @@ void Webserv::sendTimeoutResponse(int clientFd)
 	
 	if (fileExists(errorPagePath)) {
 		errorPageContent = readFileContent(errorPagePath);
-		std::cout << "DEBUG: Using custom 408 error page, length: " << errorPageContent.length() << std::endl;
+		// std::cout << "DEBUG: Using custom 408 error page, length: " << errorPageContent.length() << std::endl;
 	} else {
 		// Fallback to default response
 		errorPageContent = "<html><head><title>408 Request Timeout</title></head>";
 		errorPageContent += "<body><h1>408 Request Timeout</h1>";
 		errorPageContent += "<p>Your request took too long to complete.</p>";
 		errorPageContent += "<p><a href=\"/\">Return to homepage</a></p></body></html>";
-		std::cout << "DEBUG: Using default 408 error page" << std::endl;
+		// std::cout << "DEBUG: Using default 408 error page" << std::endl;
 	}
 	
 	// Create HTTP response
@@ -723,9 +723,9 @@ void Webserv::sendTimeoutResponse(int clientFd)
 	// Send the response
 	ssize_t bytesSent = send(clientFd, response.c_str(), response.length(), 0);
 	if (bytesSent == -1) {
-		std::cerr << "DEBUG: Failed to send timeout response: " << strerror(errno) << std::endl;
+		// std::cerr << "DEBUG: Failed to send timeout response: " << strerror(errno) << std::endl;
 	} else {
-		std::cout << "DEBUG: Timeout response sent (" << bytesSent << " bytes)" << std::endl;
+		// std::cout << "DEBUG: Timeout response sent (" << bytesSent << " bytes)" << std::endl;
 	}
 }
 

@@ -39,11 +39,11 @@ Server42::~Server42() {
 
 // Update getter implementation
 const std::vector<std::shared_ptr<SingleServer>>& Server42::getServers() const {
-    return servers_;
+	return servers_;
 }
 
 //setters:
 
 void Server42::addServer(const std::shared_ptr<SingleServer> newServer) {
-    servers_.push_back(newServer);
+	servers_.push_back(newServer);
 }

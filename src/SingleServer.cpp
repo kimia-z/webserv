@@ -1,13 +1,13 @@
 /* ************************************************************************** */
-/*                                                                            */
-/*                                                        ::::::::            */
-/*   SingleServer.cpp                                     :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kziari <kziari@student.42.fr>                +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/13 13:30:17 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/05/16 13:10:55 by mstencel      ########   odam.nl         */
-/*                                                                            */
+/*																			*/
+/*														::::::::			*/
+/*   SingleServer.cpp									 :+:	:+:			*/
+/*													 +:+					*/
+/*   By: kziari <kziari@student.42.fr>				+#+					 */
+/*												   +#+					  */
+/*   Created: 2025/05/13 13:30:17 by mstencel	  #+#	#+#				 */
+/*   Updated: 2025/05/16 13:10:55 by mstencel	  ########   odam.nl		 */
+/*																			*/
 /* ************************************************************************** */
 
 #include "../incl/SingleServer.hpp"
@@ -103,34 +103,34 @@ addrinfo *SingleServer::getResults() const {
 	return res_.get(); }
 
 // setters
-void    SingleServer::setServName(const std::string& newServName) {
+void	SingleServer::setServName(const std::string& newServName) {
 	serverName_ = newServName; }
 
-void    SingleServer::setLocations(const std::shared_ptr<Location>& newLocation) {
+void	SingleServer::setLocations(const std::shared_ptr<Location>& newLocation) {
 	locations_.push_back(newLocation); }
 
-void    SingleServer::setServRoot(const std::string& newServRoot) {
+void	SingleServer::setServRoot(const std::string& newServRoot) {
 	serverRoot_ = newServRoot; }
 
-void    SingleServer::setServIP(const std::string& newServIP) {
+void	SingleServer::setServIP(const std::string& newServIP) {
 	serverIP_ = newServIP; }
 
-void    SingleServer::setServPortString(const std::string& newServPortStr) {
+void	SingleServer::setServPortString(const std::string& newServPortStr) {
 	serverPortString_ = newServPortStr; }
 
-void    SingleServer::setServPortInt(const int& newServPortInt) {
+void	SingleServer::setServPortInt(const int& newServPortInt) {
 	serverPortInt_ = newServPortInt; }
 
-void    SingleServer::setServFd(const int& newServFd) {
+void	SingleServer::setServFd(const int& newServFd) {
 	serverFd_ = newServFd; }
 
-void    SingleServer::setMaxBodySize(const int& newMaxBodySize) {
+void	SingleServer::setMaxBodySize(const int& newMaxBodySize) {
 	maxBodySize_ = newMaxBodySize; }
 
-void    SingleServer::setErrorPages(const int& errorNb, const std::string& newErrorPage) {
+void	SingleServer::setErrorPages(const int& errorNb, const std::string& newErrorPage) {
 	errorPages_[errorNb] = newErrorPage; }
 
-void    SingleServer::setResults(addrinfo* newResult) { 
+void	SingleServer::setResults(addrinfo* newResult) { 
 	res_ = std::shared_ptr<addrinfo>(newResult, freeaddrinfo); }
 
 
