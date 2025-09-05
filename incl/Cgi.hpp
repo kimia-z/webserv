@@ -11,12 +11,16 @@
 class Cgi {
 
 	public:
-		Cgi(const Request& request, const std::string& scriptPath);
+		Cgi(const Request& request, const std::string& scriptPath, const std::string& serverName = "", int serverPort = 0);
 		~Cgi();
 
 		std::string										runCgi(); //starts CGI, returns the body
 		void											startCgi(std::function<void(int, uint32_t)> addtoEpoll); // starts the CGI process, creates pipes
 		std::unordered_map<std::string, std::string>	buildEnv(); // creates the env for the cgi
+		bool											isCgiComplete() const;
+		std::string										getCgiOutput() const;
+		void											setUploadDir(const std::string& uploadDir);
+		void											setMaxFileSize(size_t maxSize);
 
 		void											setScriptPath(const std::string& scriptPath);
 		void											setCgiStatusCode(int statusCode);
@@ -39,6 +43,15 @@ class Cgi {
 		int				cgiStatusCode_; // status code of the cgi script
 		int				pipeIn_[2]; // pipe for input to CGI
 		int				pipeOut_[2]; // pipe for output from CGI
+		pid_t			cgiPid_; // PID of the CGI process
+		bool			cgiComplete_; // whether CGI has finished
+		std::string		cgiOutput_; // accumulated output from CGI
+		std::string		uploadDir_; // upload directory for CGI
+		size_t			maxFileSize_; // maximum file size for uploads
+		bool			inputWritten_; // whether input has been written to CGI
+		bool			outputRead_; // whether output has been read from CGI
+		std::string		serverName_; // server name from config
+		int				serverPort_; // server port from config
 };
 
 #endif

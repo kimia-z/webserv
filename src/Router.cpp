@@ -114,15 +114,18 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		return params;
 	}
 	
-	// Max body limit
-	if (request.getBody().length() > (size_t)selectedServer->getMaxBodySize() && selectedServer->getMaxBodySize() != -1)
-	{
-		params.errorCode = 413;
-		return params;
-	}
+	// Max body limit - now checked earlier in request processing
+	// if (request.getBody().length() > (size_t)selectedServer->getMaxBodySize() && selectedServer->getMaxBodySize() != -1)
+	// {
+	// 	params.errorCode = 413;
+	// 	return params;
+	// }
 
 	std::string fileSystemPath = selectedLocation->getRoot();
 	std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
+	if (!relativePath.empty() && relativePath[0] == '/') {
+		relativePath = relativePath.substr(1);
+	}
 	if (!fileSystemPath.empty() && fileSystemPath.back() != '/' && !relativePath.empty() && relativePath[0] != '/')
 	{
 		fileSystemPath += "/";
@@ -142,17 +145,37 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	// POST
 	if (request.getMethod() == "POST") {
+		std::cout << "DEBUG: Router processing POST request to path: " << request.getPath() << std::endl;
 		if (!selectedLocation->getUploadPath().empty()) {
 			std::string uploadPath = selectedLocation->getUploadPath();
+			std::cout << "DEBUG: Upload path configured: " << uploadPath << std::endl;
+			
 			if (!isDirectory(uploadPath) || !hasWriteAccess(uploadPath)) {
+				std::cout << "DEBUG: Upload path not accessible: " << uploadPath << std::endl;
 				params.errorCode = 500;
 				return params;
 			}
+			std::cout << "DEBUG: Upload path accessible: " << uploadPath << std::endl;
 		
+							// Check if this is a CGI script for uploads
+		std::string cgiPath = selectedLocation->getRoot() + "/" + relativePath;
+		std::cout << "DEBUG: Checking CGI path: " << cgiPath << std::endl;
+		if (cgiPath.find(".py") != std::string::npos || cgiPath.find(".php") != std::string::npos) {
+			std::cout << "DEBUG: Detected CGI script, setting isCGI=true" << std::endl;
+			params.isCGI = true;
+			params.cgiScriptPath = cgiPath;
+			params.cgiTargetFile = fileSystemPath;
+			params.uploadTargetDir = uploadPath;
+			return params;
+		}
+			
 			params.isUpload = true;
 			params.uploadTargetDir = uploadPath; // uploadPath = "/upload"
 			// request.getPath() = "/upload/images/cat.jpg"
 			std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
+	if (!relativePath.empty() && relativePath[0] == '/') {
+		relativePath = relativePath.substr(1);
+	}
 			params.uploadFilename = relativePath; // uploadFilename = "images/cat.jpg
 			return params;
 		}
@@ -223,7 +246,7 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 		return params;
 	}
 	//CGI
-	std::string	cgiPath = selectedLocation->getRoot() + request.getPath();
+	std::string cgiPath = selectedLocation->getRoot() + "/" + relativePath;
 	std::cout << "cgiPath: " << cgiPath << std::endl;
 	if (request.getMethod() == "POST" || request.getMethod() == "GET") {
 		// if (!isExecutable(cgiPath)) {

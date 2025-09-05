@@ -2,3 +2,4 @@ webserv
 obj
 .vscode
 .DS_Store
+*.txt

@@ -31,7 +31,7 @@
 #define GREEN   "\033[32m"
 #define YELLOW  "\033[33m"
 #define MAX_EVENTS 64
-#define BUFFER_SIZE 30000
+#define BUFFER_SIZE 65536
 
 class	Location;
 class	Request;

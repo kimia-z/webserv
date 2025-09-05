@@ -18,6 +18,7 @@ private:
 	std::map<int, std::shared_ptr<Cgi>>	clientCgiMap_;		// Maps client FD to its Cgi object (for handling CGI requests)
 	std::map<int, Request>				clientRequests_;	// Maps client FD to its Request object (for accumulating incoming data)
 	std::map<int, std::string>			clientResponses_;	// Maps client FD to its pending raw HTTP response string (for sending)
+	std::map<int, time_t>				clientTimeouts_;	// Maps client FD to its last activity timestamp
 
 	// Epoll Managment
 	void		addFdToEpoll(int fd, uint32_t events);
@@ -33,6 +34,11 @@ private:
 	std::string	readFileContent(const std::string& path) const;
 	std::string	generateDirectoryListing(const std::string& directoryPath) const;
 	bool		fileExists(const std::string& path) const;
+	
+	// Timeout Management
+	void		checkClientTimeouts();
+	void		updateClientTimeout(int clientFd);
+	void		sendTimeoutResponse(int clientFd);
 
 public:
 	Webserv(const Server42& config); 

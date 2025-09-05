@@ -15,6 +15,7 @@ class Request
 private:
 	std::string										_method;
 	std::string										_path;
+	std::string										_queryString;
 	std::unordered_map<std::string, std::string>	_queryParams;
 	std::string										_version;
 	std::unordered_map<std::string, std::string>	_headers;
@@ -26,6 +27,7 @@ private:
 	bool		_isChunked;
 	size_t		_bodyStartPos;
 	bool		_isRequestComplete;
+	long		_maxBodySize;
 
 
 	// Parser
@@ -45,7 +47,6 @@ private:
 	bool		isValidVersion(const std::string &version) const;
 	bool		isValidKey(const std::string &key) const;
 	bool		isValidValue(const std::string &value) const;
-	bool		isRequestComplete() const;
 
 public:
 	Request();
@@ -57,15 +58,20 @@ public:
 	bool		processRequestData(); 
 	void		clearParsedRequest(); 
 	void		reset();
+	void		setMaxBodySize(long maxBodySize);
+	void		markComplete();
 
 	//Getters
 	const std::string									&getMethod() const;
 	const std::string									&getPath() const;
+	const std::string									&getQueryString() const;
 	const std::string									&getVersion() const;
 	const std::unordered_map<std::string, std::string>	&getHeaders() const;
 	const std::string									&getBody() const;
 	const std::unordered_map<std::string, std::string>	&getQueryParams() const;
 	const std::string									&getRawBuffer() const;
+	bool												isBodySizeValid(long maxBodySize) const;
+	bool												isRequestComplete() const;
 
 	//Print for debugging
 	void print() const;

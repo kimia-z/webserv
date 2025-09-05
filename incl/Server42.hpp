@@ -31,7 +31,7 @@ class Server42 {
 		~Server42();
 
 		// getters:
-		const std::vector<std::shared_ptr<SingleServer>>&	getServers() const;
+		const std::vector<std::shared_ptr<SingleServer> >&	getServers() const;
 		
 		
 		//setters:
@@ -40,7 +40,7 @@ class Server42 {
 		
 	
 	private:
-		std::vector<std::shared_ptr<SingleServer>>	servers_;
+		std::vector<std::shared_ptr<SingleServer> >	servers_;
 };
 
 #endif

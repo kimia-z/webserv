@@ -58,6 +58,8 @@ clean:
 fclean: clean
 	@$(RM) $(NAME)
 	@echo "$(NAME) $(RED)removed$(RESET)"
+	@$(RM) www/form_table.txt
+	@echo "form_table $(RED)removed$(RESET)"
 
 re: fclean all
 

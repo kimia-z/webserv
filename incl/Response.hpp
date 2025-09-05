@@ -18,7 +18,6 @@ private:
 
 	std::string	getDefaultStatusMessage(int code) const;
 	void		addMandatoryHeaders();
-	void		buildErrorResponse(int statusCode, const std::string& customErrorPageContent);
 	void		buildRedirectResponse(int statusCode, const std::string& locationUrl);
 	void		buildStaticFileResponse(int statusCode, const std::string& fileContent, const std::string& contentType);
 	void		buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType = "text/html");
@@ -34,6 +33,7 @@ public:
 	void		setHeader(const std::string &key, const std::string &value);
 	void		setBody(const std::string &body);
 	void		setProtocolVersion(const std::string &version);
+	void		buildErrorResponse(int statusCode, const std::string& customErrorPageContent);
 
 	// Getters
 	int			getStatusCode() const;

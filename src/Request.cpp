@@ -1,10 +1,11 @@
 #include "../incl/Request.hpp"
 
 Request::Request() : _isHeadersComplete(false), _contentLength(-1),
-					_isChunked(false), _bodyStartPos(0), _isRequestComplete(false)
+					_isChunked(false), _bodyStartPos(0), _isRequestComplete(false), _maxBodySize(0)
 {
 	_method.clear();
 	_path.clear();
+	_queryString.clear();
 	_queryParams.clear();
 	_version.clear();
 	_headers.clear();
@@ -28,12 +29,24 @@ bool Request::processRequestData() {
 		size_t header_end_pos = findCRLFCRLF(_rawBuffer);
 		if (header_end_pos == std::string::npos) {
 			// Headers are not yet complete, need more data
+			std::cout << "DEBUG: Headers not complete, need more data. Buffer size: " << _rawBuffer.length() << std::endl;
 			return false;
 		}
 		_bodyStartPos = header_end_pos + 4; // Position after "\r\n\r\n"
 		_isHeadersComplete = true;
+		std::cout << "DEBUG: Headers complete, parsing start line and headers" << std::endl;
 		try {
 			parseStartLineAndHeaders();
+			// Check body size limit immediately after parsing headers
+			auto clIt = _headers.find("Content-Length");
+			if (clIt != _headers.end() && _maxBodySize > 0) {
+				long contentLength = std::atol(clIt->second.c_str());
+				std::cout << "DEBUG: Checking body size: " << contentLength << " vs limit: " << _maxBodySize << std::endl;
+				if (contentLength > _maxBodySize) {
+					std::cout << "DEBUG: Request body size exceeds limit: " << contentLength << " > " << _maxBodySize << std::endl;
+					throw HttpException(413, "Payload Too Large");
+				}
+			}
 		} catch (const HttpException& e) {
 			std::cerr << "Header parsing error: " << e.what() << std::endl;
 			_isRequestComplete = true;
@@ -42,6 +55,8 @@ bool Request::processRequestData() {
 	}
 	// Step 2: check/parse body
 	if (_isHeadersComplete) {
+		std::cout << "DEBUG: Headers complete, parsing body. Buffer size: " << _rawBuffer.length() 
+				  << ", Body start pos: " << _bodyStartPos << std::endl;
 		auto clIt = _headers.find("Content-Length");
 		auto teIt = _headers.find("Transfer-Encoding");
 		if (teIt != _headers.end() && teIt->second == "chunked") {
@@ -55,12 +70,17 @@ bool Request::processRequestData() {
 		} else if (clIt != _headers.end()) {
 			try {
 				_contentLength = std::atol(clIt->second.c_str());
+				std::cout << "DEBUG: Content-Length: " << _contentLength << ", Current body size: " 
+						  << (_rawBuffer.length() - _bodyStartPos) << std::endl;
 				if (_contentLength < 0) {
 					throw HttpException(400, "Bad Request: Negative Content-Length");
 				}
 				if (static_cast<long>(_rawBuffer.length() - _bodyStartPos) >= _contentLength) {
+					std::cout << "DEBUG: Body complete, parsing content" << std::endl;
 					_isRequestComplete = true;
 					parseBodyContent();
+				} else {
+					std::cout << "DEBUG: Body not complete, need more data" << std::endl;
 				}
 			} catch (const HttpException& e) {
 				std::cerr << "Content-Length error: " << e.what() << std::endl;
@@ -205,6 +225,7 @@ void Request::clearParsedRequest() {
 void Request::reset() {
 	_method.clear();
 	_path.clear();
+	_queryString.clear();
 	_queryParams.clear();
 	_version.clear();
 	_headers.clear();
@@ -214,6 +235,14 @@ void Request::reset() {
 	_isChunked = false;
 	_bodyStartPos = 0;
 	_isRequestComplete = false;
+}
+
+void Request::setMaxBodySize(long maxBodySize) {
+	_maxBodySize = maxBodySize;
+}
+
+void Request::markComplete() {
+	_isRequestComplete = true;
 }
 
 size_t Request::findCRLFCRLF(const std::string& buffer) const {
@@ -230,10 +259,11 @@ bool Request::parseStartLine(std::string line)
 	size_t qMarkPos = fullPath.find('?');
 	if(qMarkPos != std::string::npos){
 		_path = fullPath.substr(0, qMarkPos);
-		std::string queryString = fullPath.substr(qMarkPos + 1);
-		parseQueryParams(queryString);
+		_queryString = fullPath.substr(qMarkPos + 1);
+		parseQueryParams(_queryString);
 	} else{
 		_path = fullPath;
+		_queryString.clear();
 	}
 	if(!isValidPath(_path)) return false;
 	return true;
@@ -323,6 +353,7 @@ bool Request::isRequestComplete() const {return _isRequestComplete;}
 // Getters:
 const std::string &Request::getMethod() const { return _method; }
 const std::string &Request::getPath() const { return _path; }
+const std::string &Request::getQueryString() const { return _queryString; }
 const std::string &Request::getVersion() const { return _version; }
 const std::unordered_map<std::string, std::string> &Request::getHeaders() const { return _headers; }
 const std::string &Request::getBody() const { return _body; }
@@ -340,4 +371,23 @@ void Request::print() const
 		std::cout << i.first << ": " << i.second << std::endl;
 	}
 	std::cout << "Body: " << getBody() << std::endl;
+}
+
+bool Request::isBodySizeValid(long maxBodySize) const {
+	if (maxBodySize == -1) {
+		return true; // No limit set
+	}
+	
+	auto clIt = _headers.find("Content-Length");
+	if (clIt != _headers.end()) {
+		try {
+			long contentLength = std::atol(clIt->second.c_str());
+			return contentLength <= maxBodySize;
+		} catch (...) {
+			return false; // Invalid Content-Length
+		}
+	}
+	
+	// No Content-Length header, check if it's a method that should have one
+	return (_method != "POST" && _method != "PUT");
 }

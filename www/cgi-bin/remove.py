@@ -3,7 +3,8 @@ import cgi
 import html
 import os
 
-FILE_PATH = "/tmp/form_data.txt"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+FILE_PATH = os.path.join(current_dir, "../form_table.txt")
 
 print("Content-Type: text/html\n")
 
@@ -12,7 +13,7 @@ input_value = form.getvalue("contact", "").strip()
 
 def remove_entry(contact):
 	if not os.path.exists(FILE_PATH):
-		return False, "The data file does not exist"
+		return False, "data file does not exist"
 
 	removed = False
 	with open(FILE_PATH, "r", encoding="utf-8") as file:
@@ -20,9 +21,12 @@ def remove_entry(contact):
 
 	with open(FILE_PATH, "w", encoding="utf-8") as file:
 		for line in lines:
-			if contact in line:
-				removed = True
-				continue  #skipping this line
+			components = line.strip().split(' | ')
+			if len(components) == 3:  # Ensure we have all three fields
+				name, phone, email = components
+				if contact == phone or contact == email:
+					removed = True
+					continue # skipping this line
 			file.write(line)
 
 	# if the file is empty after removal, it will be deleted
@@ -36,15 +40,23 @@ escaped_contact = html.escape(input_value)
 if escaped_contact:
 	success, message = remove_entry(escaped_contact)
 else:
-	success = False
 	message = "no contact submitted"
+	print(f"""
+	<!DOCTYPE html>
+	<html lang="pl">
+	<head><meta charset="UTF-8"><title>contact details removal</title></head>
+	<body>
+	<p>{html.escape(message)}</p>
+	<a href="/index.html">homepage</a>
+	</body>
+	</html>
+	""")
 
 print(f"""
 <!DOCTYPE html>
 <html lang="pl">
 <head><meta charset="UTF-8"><title>contact details removal</title></head>
 <body>
-<h2>you successfully deleted your contact details</h2>
 <p>{html.escape(message)}</p>
 <a href="/index.html">homepage</a>
 </body>
