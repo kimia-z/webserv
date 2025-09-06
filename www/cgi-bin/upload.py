@@ -77,16 +77,105 @@ try:
 	if filename:
 		if len(file_data) > MAX_FILE_SIZE:
 			print(f"""
-			<html>
-			<head><meta charset="UTF-8"><title>Error</title></head>
-			<body>
-			<h2>File too big</h2>
-			<p>Max size is {MAX_FILE_SIZE} bytes.</p>
-			<br>
-			<a href="/upload.html">upload page</a>
-			</body>
-			</html>
-			""")
+		<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>File Too Large - Webserv</title>
+			<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+			<style>
+				@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+				
+				:root {{
+					--primary-color: #2c3e50;
+					--secondary-color: #3498db;
+					--accent-color: #e74c3c;
+					--text-color: #f4f4f4;
+					--bg-color: #ecf0f1;
+					--card-bg: #ffffff;
+					--shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+				}}
+
+				body {{
+					font-family: 'Poppins', sans-serif;
+					background-color: var(--bg-color);
+					margin: 0;
+					padding: 0;
+					color: var(--primary-color);
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					min-height: 100vh;
+				}}
+
+				.container {{
+					background-color: var(--card-bg);
+					padding: 3rem 4rem;
+					border-radius: 16px;
+					box-shadow: var(--shadow);
+					width: 100%;
+					max-width: 500px;
+					transform: translateY(0);
+					transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
+					text-align: center;
+				}}
+				
+				.container:hover {{
+					transform: translateY(-8px);
+					box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+				}}
+
+				h1 {{
+					font-size: 3rem;
+					font-weight: 700;
+					color: var(--accent-color);
+					margin: 0 0 0.5rem;
+					letter-spacing: -2px;
+				}}
+
+				h2 {{
+					font-size: 1.8rem;
+					color: var(--primary-color);
+					margin: 0 0 2rem;
+					font-weight: 600;
+				}}
+
+				p {{
+					font-size: 1.1rem;
+					line-height: 1.8;
+					margin: 0 0 2.5rem;
+				}}
+
+				.back-link {{
+					text-align: center;
+					margin-top: 2rem;
+				}}
+
+				.back-link a {{
+					color: var(--secondary-color);
+					text-decoration: none;
+					font-weight: 600;
+					transition: color 0.3s ease;
+				}}
+
+				.back-link a:hover {{
+					color: var(--accent-color);
+				}}
+			</style>
+		</head>
+		<body>
+			<div class="container">
+				<h1>📏</h1>
+				<h2>File Too Large</h2>
+				<p>Maximum file size is {MAX_FILE_SIZE // 1024 // 1024}MB ({MAX_FILE_SIZE} bytes).</p>
+				<div class="back-link">
+					<a href="/upload.html">← Try Again</a>
+				</div>
+			</div>
+		</body>
+		</html>
+		""")
 		else:
 			# save the file
 			saved_file_name = filename
@@ -105,39 +194,316 @@ try:
 			final_filename = os.path.basename(saved_file_path)
 
 			print(f"""
-			<html>
-			<head><meta charset="UTF-8"><title>Success</title></head>
+			<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<title>Upload Success - Webserv</title>
+				<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+				<style>
+					@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+					
+					:root {{
+						--primary-color: #2c3e50;
+						--secondary-color: #3498db;
+						--accent-color: #e74c3c;
+						--text-color: #f4f4f4;
+						--bg-color: #ecf0f1;
+						--card-bg: #ffffff;
+						--shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+					}}
+
+					body {{
+						font-family: 'Poppins', sans-serif;
+						background-color: var(--bg-color);
+						margin: 0;
+						padding: 0;
+						color: var(--primary-color);
+						display: flex;
+						justify-content: center;
+						align-items: center;
+						min-height: 100vh;
+					}}
+
+					.container {{
+						background-color: var(--card-bg);
+						padding: 3rem 4rem;
+						border-radius: 16px;
+						box-shadow: var(--shadow);
+						width: 100%;
+						max-width: 500px;
+						transform: translateY(0);
+						transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
+						text-align: center;
+					}}
+					
+					.container:hover {{
+						transform: translateY(-8px);
+						box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+					}}
+
+					h1 {{
+						font-size: 3rem;
+						font-weight: 700;
+						color: var(--secondary-color);
+						margin: 0 0 0.5rem;
+						letter-spacing: -2px;
+					}}
+
+					h2 {{
+						font-size: 1.8rem;
+						color: var(--primary-color);
+						margin: 0 0 2rem;
+						font-weight: 600;
+					}}
+
+					p {{
+						font-size: 1.1rem;
+						line-height: 1.8;
+						margin: 0 0 1rem;
+					}}
+
+					.file-info {{
+						background-color: var(--bg-color);
+						padding: 1rem;
+						border-radius: 8px;
+						margin: 1rem 0;
+						font-family: monospace;
+					}}
+
+					.back-link {{
+						text-align: center;
+						margin-top: 2rem;
+					}}
+
+					.back-link a {{
+						color: var(--secondary-color);
+						text-decoration: none;
+						font-weight: 600;
+						transition: color 0.3s ease;
+					}}
+
+					.back-link a:hover {{
+						color: var(--accent-color);
+					}}
+				</style>
+			</head>
 			<body>
-			<h2>File has been saved successfully!</h2>
-			<p>File name: {html.escape(final_filename)}</p>
-			<p>Size: {len(file_data)} bytes</p>
-			<br>
-			<a href="/index.html">homepage</a>
+				<div class="container">
+					<h1>✅</h1>
+					<h2>File Uploaded Successfully!</h2>
+					<div class="file-info">
+						<p><strong>File name:</strong> {html.escape(final_filename)}</p>
+						<p><strong>Size:</strong> {len(file_data)} bytes ({(len(file_data) / 1024):.1f} KB)</p>
+					</div>
+					<div class="back-link">
+						<a href="/index.html">← Back to Homepage</a>
+					</div>
+				</div>
 			</body>
 			</html>
 			""")
 	else:
 		print("""
-		<html>
-		<head><meta charset="UTF-8"><title>Error</title></head>
+		<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>No File Selected - Webserv</title>
+			<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+			<style>
+				@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+				
+				:root {{
+					--primary-color: #2c3e50;
+					--secondary-color: #3498db;
+					--accent-color: #e74c3c;
+					--text-color: #f4f4f4;
+					--bg-color: #ecf0f1;
+					--card-bg: #ffffff;
+					--shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+				}}
+
+				body {{
+					font-family: 'Poppins', sans-serif;
+					background-color: var(--bg-color);
+					margin: 0;
+					padding: 0;
+					color: var(--primary-color);
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					min-height: 100vh;
+				}}
+
+				.container {{
+					background-color: var(--card-bg);
+					padding: 3rem 4rem;
+					border-radius: 16px;
+					box-shadow: var(--shadow);
+					width: 100%;
+					max-width: 500px;
+					transform: translateY(0);
+					transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
+					text-align: center;
+				}}
+				
+				.container:hover {{
+					transform: translateY(-8px);
+					box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+				}}
+
+				h1 {{
+					font-size: 3rem;
+					font-weight: 700;
+					color: var(--accent-color);
+					margin: 0 0 0.5rem;
+					letter-spacing: -2px;
+				}}
+
+				h2 {{
+					font-size: 1.8rem;
+					color: var(--primary-color);
+					margin: 0 0 2rem;
+					font-weight: 600;
+				}}
+
+				p {{
+					font-size: 1.1rem;
+					line-height: 1.8;
+					margin: 0 0 2.5rem;
+				}}
+
+				.back-link {{
+					text-align: center;
+					margin-top: 2rem;
+				}}
+
+				.back-link a {{
+					color: var(--secondary-color);
+					text-decoration: none;
+					font-weight: 600;
+					transition: color 0.3s ease;
+				}}
+
+				.back-link a:hover {{
+					color: var(--accent-color);
+				}}
+			</style>
+		</head>
 		<body>
-		<h2>Error: No file attached</h2>
-		<p>Please select a file to upload.</p>
-		<br>
-		<a href="/upload.html">upload page</a>
+			<div class="container">
+				<h1>📁</h1>
+				<h2>No File Selected</h2>
+				<p>Please select a file to upload before submitting the form.</p>
+				<div class="back-link">
+					<a href="/upload.html">← Try Again</a>
+				</div>
+			</div>
 		</body>
 		</html>
 		""")
 		
 except Exception as e:
 	print(f"""
-	<html>
-	<head><meta charset="UTF-8"><title>Error</title></head>
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Upload Error - Webserv</title>
+		<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+		<style>
+			@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+			
+			:root {{
+				--primary-color: #2c3e50;
+				--secondary-color: #3498db;
+				--accent-color: #e74c3c;
+				--text-color: #f4f4f4;
+				--bg-color: #ecf0f1;
+				--card-bg: #ffffff;
+				--shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+			}}
+
+			body {{
+				font-family: 'Poppins', sans-serif;
+				background-color: var(--bg-color);
+				margin: 0;
+				padding: 0;
+				color: var(--primary-color);
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
+			}}
+
+			.container {{
+				background-color: var(--card-bg);
+				padding: 3rem 4rem;
+				border-radius: 16px;
+				box-shadow: var(--shadow);
+				width: 100%;
+				max-width: 500px;
+				transform: translateY(0);
+				transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
+				text-align: center;
+			}}
+			
+			.container:hover {{
+				transform: translateY(-8px);
+				box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+			}}
+
+			h1 {{
+				font-size: 3rem;
+				font-weight: 700;
+				color: var(--accent-color);
+				margin: 0 0 0.5rem;
+				letter-spacing: -2px;
+			}}
+
+			h2 {{
+				font-size: 1.8rem;
+				color: var(--primary-color);
+				margin: 0 0 2rem;
+				font-weight: 600;
+			}}
+
+			p {{
+				font-size: 1.1rem;
+				line-height: 1.8;
+				margin: 0 0 2.5rem;
+			}}
+
+			.back-link {{
+				text-align: center;
+				margin-top: 2rem;
+			}}
+
+			.back-link a {{
+				color: var(--secondary-color);
+				text-decoration: none;
+				font-weight: 600;
+				transition: color 0.3s ease;
+			}}
+
+			.back-link a:hover {{
+				color: var(--accent-color);
+			}}
+		</style>
+	</head>
 	<body>
-	<h2>Error: Failed to parse form data</h2>
-	<p>Error: {html.escape(str(e))}</p>
-	<br>
-	<a href="/upload.html">upload page</a>
+		<div class="container">
+			<h1>⚠️</h1>
+			<h2>Upload Failed</h2>
+			<p>Error: {html.escape(str(e))}</p>
+			<div class="back-link">
+				<a href="/upload.html">← Try Again</a>
+			</div>
+		</div>
 	</body>
 	</html>
 	""")

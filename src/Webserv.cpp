@@ -700,7 +700,6 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 	
 	// change: EPOLLHUP on output pipe -> only when CGI process finished
 	if (events & EPOLLHUP && pipeFd == cgi->getOutputPipe()) {
-		std::cout << "DEBUG: EPOLLHUP received on CGI output pipe for client FD " << clientFd << std::endl;
 		// Read any remaining output
 		cgi->readFromCgiOutput();
 		// Mark output as complete
@@ -713,7 +712,6 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 		removeFdFromEpoll(pipeFd);
 		
 		// change: create response right after CGI finishes
-		std::cout << "DEBUG: Creating CGI response for client FD " << clientFd << std::endl;
 		createCgiResponse(clientFd, cgi);
 		return;
 	}
@@ -733,12 +731,9 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 // change: CGI response creation
 void Webserv::createCgiResponse(int clientFd, std::shared_ptr<Cgi> cgi)
 {
-	std::cout << "DEBUG: createCgiResponse called for client FD " << clientFd << std::endl;
 	// CGI is completely done, create response
 	std::string responseContent = cgi->getCgiOutput();
 	int finalStatusCode = cgi->getCgiStatusCode();
-	
-	std::cout << "DEBUG: CGI output length: " << responseContent.length() << ", status: " << finalStatusCode << std::endl;
 	
 	if (responseContent.empty()) {
 		finalStatusCode = 500;

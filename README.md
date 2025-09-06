@@ -6,14 +6,15 @@ A high-performance, non-blocking HTTP server written in C++ that implements the 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Features](#features)
-4. [Project Structure](#project-structure)
-5. [Configuration](#configuration)
-6. [HTTP Methods](#http-methods)
-7. [CGI Implementation](#cgi-implementation)
-8. [Error Handling](#error-handling)
-9. [Timeout Management](#timeout-management)
-10. [Building and Running](#building-and-running)
-11. [Testing Guide](#testing-guide)
+4. [Styling and User Interface](#styling-and-user-interface)
+5. [Project Structure](#project-structure)
+6. [Configuration](#configuration)
+7. [HTTP Methods](#http-methods)
+8. [CGI Implementation](#cgi-implementation)
+9. [Error Handling](#error-handling)
+10. [Timeout Management](#timeout-management)
+11. [Building and Running](#building-and-running)
+12. [Testing Guide](#testing-guide)
 
 ## Overview
 
@@ -84,6 +85,205 @@ WebServ is a complete HTTP server implementation that handles multiple concurren
 - **Custom Error Pages**: HTML error pages for different status codes
 - **Graceful Degradation**: Fallback responses when custom pages unavailable
 - **Proper HTTP Responses**: Correct status codes and headers
+
+## Styling and User Interface
+
+### Design System
+The webserv project features a modern, cohesive design system that provides a professional user experience across all pages and CGI responses.
+
+#### Color Palette
+```css
+:root {
+    --primary-color: #2c3e50;    /* Dark blue-gray for text and headers */
+    --secondary-color: #3498db;   /* Bright blue for links and accents */
+    --accent-color: #e74c3c;      /* Red for errors and warnings */
+    --text-color: #f4f4f4;        /* Light gray for text on dark backgrounds */
+    --bg-color: #ecf0f1;          /* Light gray background */
+    --card-bg: #ffffff;           /* White for content cards */
+    --shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+```
+
+#### Typography
+- **Font Family**: Poppins (Google Fonts) - Modern, clean sans-serif
+- **Font Weights**: 400 (regular), 600 (semi-bold), 700 (bold)
+- **Font Sizes**: 
+  - Headers: 3rem (48px) for main titles, 1.8rem (28.8px) for section headers
+  - Body text: 1.1rem (17.6px) with 1.8 line height
+  - Monospace: Used for file information and code snippets
+
+#### Layout Components
+
+##### Container System
+```css
+.container {
+    background-color: var(--card-bg);
+    padding: 3rem 4rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 500px;
+    transform: translateY(0);
+    transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
+    text-align: center;
+}
+
+.container:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+```
+
+##### Form Elements
+```css
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+}
+```
+
+### Page Types and Styling
+
+#### 1. Static HTML Pages
+- **index.html**: Homepage with hero section, feature cards, and navigation
+- **form.html**: Contact form with client-side validation
+- **upload.html**: File upload form with drag-and-drop styling
+- **errase_contact.html**: Contact deletion form with warning styling
+
+#### 2. CGI Response Pages
+All CGI scripts generate HTML responses that match the main design system:
+
+##### Success Pages
+- **Icon**: ✅ (green checkmark)
+- **Color**: `var(--secondary-color)` (blue)
+- **Layout**: Centered container with success message and file information
+- **Navigation**: "Back to Homepage" link
+
+##### Error Pages
+- **Icon**: ❌ (red X) or ⚠️ (warning triangle)
+- **Color**: `var(--accent-color)` (red)
+- **Layout**: Centered container with error message
+- **Navigation**: "Try Again" or "Go back to form" link
+
+##### Information Pages
+- **Icon**: 📁 (folder), 📏 (ruler), etc.
+- **Color**: Context-appropriate (blue for info, red for errors)
+- **Layout**: Consistent container with relevant information
+
+### Responsive Design
+- **Mobile-First**: Design works on all screen sizes
+- **Flexible Layout**: Containers adapt to different viewport widths
+- **Touch-Friendly**: Buttons and form elements are appropriately sized
+- **Readable Text**: Proper font sizes and line heights for readability
+
+### Interactive Elements
+
+#### Hover Effects
+- **Cards**: Lift up with enhanced shadow on hover
+- **Links**: Color transition on hover
+- **Buttons**: Subtle background color changes
+
+#### Form Validation
+- **Client-Side**: HTML5 pattern validation with immediate feedback
+- **Visual Feedback**: Focus states and validation styling
+- **Error Messages**: Clear, helpful error messages
+
+#### Loading States
+- **File Upload**: Progress indication during upload
+- **CGI Processing**: Loading states for form submissions
+
+### File Structure
+```
+www/
+├── index.html              # Main homepage with full styling
+├── form.html               # Contact form with validation
+├── upload.html             # File upload form
+├── errase_contact.html     # Contact deletion form
+├── cgi-bin/
+│   ├── form.py            # Form handler with styled responses
+│   ├── upload.py          # Upload handler with styled responses
+│   └── remove.py          # Removal handler with styled responses
+└── images/
+    └── favicon.ico        # Site favicon
+```
+
+### Styling Implementation
+
+#### CSS Architecture
+- **Internal Styles**: Each HTML page includes its own `<style>` block
+- **CSS Variables**: Consistent color and spacing system
+- **Modular Design**: Reusable components across pages
+- **No External Dependencies**: Self-contained styling (except Google Fonts)
+
+#### Browser Compatibility
+- **Modern Browsers**: Chrome, Firefox, Safari, Edge
+- **CSS Features**: Flexbox, CSS Grid, CSS Variables
+- **Fallbacks**: Graceful degradation for older browsers
+
+#### Performance Considerations
+- **Minimal CSS**: Only necessary styles included
+- **Efficient Selectors**: Optimized CSS selectors
+- **Font Loading**: Google Fonts loaded asynchronously
+- **No JavaScript**: Pure CSS animations and interactions
+
+### Customization
+
+#### Color Scheme
+To change the color scheme, modify the CSS variables in each file:
+```css
+:root {
+    --primary-color: #your-color;    /* Main text color */
+    --secondary-color: #your-color;  /* Link and accent color */
+    --accent-color: #your-color;     /* Error and warning color */
+    --bg-color: #your-color;         /* Background color */
+    --card-bg: #your-color;          /* Card background color */
+}
+```
+
+#### Typography
+To change fonts, update the Google Fonts import and font-family declarations:
+```css
+@import url('https://fonts.googleapis.com/css2?family=YourFont:wght@400;600;700&display=swap');
+
+body {
+    font-family: 'YourFont', sans-serif;
+}
+```
+
+#### Layout
+To modify the layout, adjust the container styles and form elements:
+```css
+.container {
+    max-width: 600px;  /* Change maximum width */
+    padding: 2rem 3rem; /* Adjust padding */
+    border-radius: 20px; /* Change border radius */
+}
+```
+
+This styling system ensures a professional, modern appearance across all pages and provides a consistent user experience throughout the webserv application.
 
 ## Project Structure
 
