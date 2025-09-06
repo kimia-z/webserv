@@ -44,6 +44,7 @@ private:
 	// CGI Helper
 	void		checkCgiTimeouts();
 	void		checkCompletedCgis();
+	void		createCgiResponse(int clientFd, std::shared_ptr<Cgi> cgi);
 
 public:
 	Webserv(const Server42& config); 

@@ -314,6 +314,11 @@ bool Cgi::readFromCgiOutput() {
 		close(pipeOut_[0]);
 		pipeOut_[0] = -1;
 		outputRead_ = true;
+		// change: Mark CGI as complete when EOF is reached (based on webserv_chriss pattern)
+		if (!cgiComplete_) {
+			cgiComplete_ = true;
+			cgiPid_ = -1;
+		}
 		return true;
 	} else {
 		// Error or would block

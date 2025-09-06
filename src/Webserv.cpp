@@ -691,10 +691,16 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 	// change: output pipe (EPOLLIN event) -> keep in epoll until EPOLLHUP
 	if (events & EPOLLIN && pipeFd == cgi->getOutputPipe()) {
 		cgi->readFromCgiOutput();
+		// change: Check if CGI finished during reading (based on webserv_chriss pattern)
+		if (cgi->isCgiComplete() && cgi->isOutputComplete() && cgi->isInputComplete()) {
+			createCgiResponse(clientFd, cgi);
+			return;
+		}
 	}
 	
 	// change: EPOLLHUP on output pipe -> only when CGI process finished
 	if (events & EPOLLHUP && pipeFd == cgi->getOutputPipe()) {
+		std::cout << "DEBUG: EPOLLHUP received on CGI output pipe for client FD " << clientFd << std::endl;
 		// Read any remaining output
 		cgi->readFromCgiOutput();
 		// Mark output as complete
@@ -705,68 +711,83 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 		}
 		// Remove from epoll
 		removeFdFromEpoll(pipeFd);
+		
+		// change: Immediately create response when CGI finishes (based on external repo analysis)
+		std::cout << "DEBUG: Creating CGI response for client FD " << clientFd << std::endl;
+		createCgiResponse(clientFd, cgi);
+		return;
 	}
 	
-	// Check if CGI is complete and create response
+	// change: Check if CGI is complete and create response (for cases where process finishes without EPOLLHUP)
 	if (cgi->isCgiComplete() && cgi->isOutputComplete() && cgi->isInputComplete()) {
-		// CGI is completely done, create response
-		std::string responseContent = cgi->getCgiOutput();
-		int finalStatusCode = cgi->getCgiStatusCode();
-		
-		if (responseContent.empty()) {
-			finalStatusCode = 500;
-			responseContent = "<h1>500 Internal Server Error</h1><p>CGI produced empty output</p>";
-		}
-		
-		// Create HTTP response
-		Response response;
-		response.setStatusCode(finalStatusCode);
-		
-		// Parse CGI output to extract headers and body
-		size_t headerEnd = responseContent.find("\n\n");
-		if (headerEnd != std::string::npos) {
-			// Extract headers
-			std::string headers = responseContent.substr(0, headerEnd);
-			std::string body = responseContent.substr(headerEnd + 2);
-			
-			// Parse headers line by line
-			std::istringstream headerStream(headers);
-			std::string line;
-			while (std::getline(headerStream, line)) {
-				size_t colonPos = line.find(":");
-				if (colonPos != std::string::npos) {
-					std::string headerName = line.substr(0, colonPos);
-					std::string headerValue = line.substr(colonPos + 1);
-					// Trim whitespace
-					headerValue.erase(0, headerValue.find_first_not_of(" \t"));
-					headerValue.erase(headerValue.find_last_not_of(" \t\r\n") + 1);
-					response.setHeader(headerName, headerValue);
-				}
-			}
-			response.setBody(body);
-		} else {
-			// No headers found, use entire content as body
-			response.setBody(responseContent);
-		}
-		
-		clientResponses_[clientFd] = response.toString();
-		
-		// Switch to EPOLLOUT to send the response
-		epoll_event event_mod;
-		event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-		event_mod.data.fd = clientFd;
-		if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-			closeClientConnection(clientFd);
-		}
-		
-		// Clean up CGI
-		clientCgiMap_.erase(clientFd);
+		createCgiResponse(clientFd, cgi);
+		return;
 	}
 	
 	// Handle other errors
 	if (events & (EPOLLERR | EPOLLRDHUP)) {
 		removeFdFromEpoll(pipeFd);
 	}
+}
+
+// change: Extract CGI response creation into separate function for better organization
+void Webserv::createCgiResponse(int clientFd, std::shared_ptr<Cgi> cgi)
+{
+	std::cout << "DEBUG: createCgiResponse called for client FD " << clientFd << std::endl;
+	// CGI is completely done, create response
+	std::string responseContent = cgi->getCgiOutput();
+	int finalStatusCode = cgi->getCgiStatusCode();
+	
+	std::cout << "DEBUG: CGI output length: " << responseContent.length() << ", status: " << finalStatusCode << std::endl;
+	
+	if (responseContent.empty()) {
+		finalStatusCode = 500;
+		responseContent = "<h1>500 Internal Server Error</h1><p>CGI produced empty output</p>";
+	}
+	
+	// Create HTTP response
+	Response response;
+	response.setStatusCode(finalStatusCode);
+	
+	// Parse CGI output to extract headers and body
+	size_t headerEnd = responseContent.find("\n\n");
+	if (headerEnd != std::string::npos) {
+		// Extract headers
+		std::string headers = responseContent.substr(0, headerEnd);
+		std::string body = responseContent.substr(headerEnd + 2);
+		
+		// Parse headers line by line
+		std::istringstream headerStream(headers);
+		std::string line;
+		while (std::getline(headerStream, line)) {
+			size_t colonPos = line.find(":");
+			if (colonPos != std::string::npos) {
+				std::string headerName = line.substr(0, colonPos);
+				std::string headerValue = line.substr(colonPos + 1);
+				// Trim whitespace
+				headerValue.erase(0, headerValue.find_first_not_of(" \t"));
+				headerValue.erase(headerValue.find_last_not_of(" \t\r\n") + 1);
+				response.setHeader(headerName, headerValue);
+			}
+		}
+		response.setBody(body);
+	} else {
+		// No headers found, use entire content as body
+		response.setBody(responseContent);
+	}
+	
+	clientResponses_[clientFd] = response.toString();
+	
+	// Switch to EPOLLOUT to send the response
+	epoll_event event_mod;
+	event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+	event_mod.data.fd = clientFd;
+	if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+		closeClientConnection(clientFd);
+	}
+	
+	// Clean up CGI
+	clientCgiMap_.erase(clientFd);
 }
 
 
