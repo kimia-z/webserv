@@ -30,6 +30,7 @@ class Cgi {
 		int												getOutputPipe() const;
 		void											markOutputComplete();
 		void											forceComplete();
+		time_t											getStartTime() const;
 		void											setUploadDir(const std::string& uploadDir);
 		void											setMaxFileSize(size_t maxSize);
 
@@ -61,8 +62,14 @@ class Cgi {
 		size_t			maxFileSize_; // maximum file size for uploads
 		bool			inputWritten_; // whether input has been written to CGI
 		bool			outputRead_; // whether output has been read from CGI
+		time_t			startTime_; // when CGI process started
 		std::string		serverName_; // server name from config
 		int				serverPort_; // server port from config
+
+		// Helper methods for CGI process management
+		void			createPipes(); // Creates pipes for communication with CGI process
+		void			forkCgiProcess(); // Forks the process and executes the CGI script
+		void			setupCgiPipes(std::function<void(int, uint32_t)> addtoEpoll); // Sets up epoll for non-blocking I/O
 };
 
 #endif

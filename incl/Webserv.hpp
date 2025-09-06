@@ -42,7 +42,8 @@ private:
 	void		sendTimeoutResponse(int clientFd);
 	
 	// CGI Helper
-	bool		isCgiPipe(int fd) const;
+	void		checkCgiTimeouts();
+	void		checkCompletedCgis();
 
 public:
 	Webserv(const Server42& config); 

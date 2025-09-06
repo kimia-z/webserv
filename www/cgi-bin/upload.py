@@ -83,7 +83,7 @@ try:
 			<h2>File too big</h2>
 			<p>Max size is {MAX_FILE_SIZE} bytes.</p>
 			<br>
-			<a href="/upload.html">← Back to Upload Page</a>
+			<a href="/upload.html">upload page</a>
 			</body>
 			</html>
 			""")
@@ -111,9 +111,8 @@ try:
 			<h2>File has been saved successfully!</h2>
 			<p>File name: {html.escape(final_filename)}</p>
 			<p>Size: {len(file_data)} bytes</p>
-			<p>Saved to: {html.escape(UPLOAD_DIR)}</p>
 			<br>
-			<a href="/index.html">← Back to Main Page</a>
+			<a href="/index.html">homepage</a>
 			</body>
 			</html>
 			""")
@@ -125,7 +124,7 @@ try:
 		<h2>Error: No file attached</h2>
 		<p>Please select a file to upload.</p>
 		<br>
-		<a href="/upload.html">← Back to Upload Page</a>
+		<a href="/upload.html">upload page</a>
 		</body>
 		</html>
 		""")
@@ -138,7 +137,7 @@ except Exception as e:
 	<h2>Error: Failed to parse form data</h2>
 	<p>Error: {html.escape(str(e))}</p>
 	<br>
-	<a href="/upload.html">← Back to Upload Page</a>
+	<a href="/upload.html">upload page</a>
 	</body>
 	</html>
 	""")

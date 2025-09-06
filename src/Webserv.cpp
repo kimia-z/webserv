@@ -52,16 +52,17 @@ void Webserv::start()
 void Webserv::runEventLoop()
 {
 	while (g_running == 0) {
-		// Check for client timeouts before waiting for events
 		checkClientTimeouts();
-		
-		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), 5000); // 5 second timeout
+		checkCgiTimeouts(); // change: CGI timeout (to prevent hanging processes)
+		if (!clientCgiMap_.empty()) {
+			checkCompletedCgis(); // change: periodic cleanup of completed CGI processes
+		}
+		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), 5000);
 		if (numEvents == -1) {
-			if (errno == EINTR) { // Check if the error was due to an interrupted system call (SIGINT)
+			if (errno == EINTR) {
 				std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
 				continue;
 			} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				// Timeout occurred, continue to check timeouts
 				continue;
 			} else {
 				std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
@@ -71,36 +72,28 @@ void Webserv::runEventLoop()
 		for (int i = 0; i < numEvents; ++i) {
 			int currentFd = events_[i].data.fd;
 			uint32_t currentEvents = events_[i].events;
-
-			// If it's a listening socket (new connection)
 			if (listenerMap_.count(currentFd)) {
 				handleNewConnection(currentFd);
-			}
-			// If it's a CGI pipe (check if it's in our CGI map)
-			else if (clientCgiMap_.count(currentFd) || isCgiPipe(currentFd)) {
-				// std::cout << "DEBUG: Handling CGI event for FD " << currentFd << " with events " << currentEvents << std::endl;
-				handleCgiEvent(currentFd, currentEvents);
-			}
-			// If it's a client socket (data to read or write)
-			else {
-				// std::cout << "DEBUG: Handling client socket event for FD " << currentFd << " with events " << currentEvents << std::endl;
-				// Handle errors for client sockets
-				if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
-					// Don't close client connection if there's an active CGI process
-					if (clientCgiMap_.find(currentFd) != clientCgiMap_.end()) {
-						// CGI is still processing, don't close the connection yet
-						// The CGI will handle the response when it completes
+			} else { // Handle as client or CGI pipe
+				bool isCgiPipe = false;
+				for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
+					if (it->second && (it->second->getInputPipe() == currentFd || it->second->getOutputPipe() == currentFd)) {
+						handleCgiEvent(currentFd, currentEvents); // change: CGI pipe detection (to prevent race conditions)
+						isCgiPipe = true;
+						break;
+					}
+				}
+				if (!isCgiPipe) { // If not a CGI pipe, handle as client socket
+					if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+						if (clientCgiMap_.find(currentFd) != clientCgiMap_.end()) {
+							continue; // change: error handling (also includes now CGI to prevent client closure before CGI is done)
+						}
+						std::cerr << RED << "Epoll error, hangup or remote shutdown on FD " << currentFd << RESET << std::endl;
+						closeClientConnection(currentFd);
 						continue;
 					}
-					std::cerr << RED << "Epoll error, hangup or remote shutdown on FD " << currentFd << RESET << std::endl;
-					closeClientConnection(currentFd);
-					continue;
-				}
-				if (currentEvents & EPOLLIN) {
-					handleClientRead(currentFd);
-				}
-				if (currentEvents & EPOLLOUT) {
-					handleClientWrite(currentFd);
+					if (currentEvents & EPOLLIN) { handleClientRead(currentFd); }
+					if (currentEvents & EPOLLOUT) { handleClientWrite(currentFd); }
 				}
 			}
 		}
@@ -205,8 +198,7 @@ void Webserv::handleClientRead(int clientFd)
 		
 		// Check if this is a CGI request that's still processing
 		if (clientCgiMap_.find(clientFd) != clientCgiMap_.end()) {
-			// CGI is still processing, don't close the connection
-			// Just return and wait for CGI to complete
+			// change: wait for CGI to finish before closing client connection (return and wait for CGI to complete)
 			return;
 		}
 		
@@ -273,6 +265,7 @@ void Webserv::handleClientRead(int clientFd)
 			}
 
 			else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
+				// change: CGI is asynchronous = create CGI object and start process TODO
 				std::shared_ptr<Cgi>	cgi = clientCgiMap_[clientFd];
 				if (!cgi) {
 					clientCgiMap_[clientFd] = std::make_shared<Cgi>(request_it->second, action.cgiScriptPath, 
@@ -293,11 +286,10 @@ void Webserv::handleClientRead(int clientFd)
 				});
 				std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
 				
-				// Mark request as complete - CGI will be handled asynchronously
+				// change: request can be marked as complete - CGI will be handled asynchronously
 				request_it->second.markComplete();
 				
-				// IMPORTANT: Don't close the client connection - keep it open for CGI response
-				// The client socket will be switched to write mode in handleCgiEvent when CGI completes
+				// change: client connection stays open for CGI response (client socket will be switched to write mode in handleCgiEvent when CGI finishes)
 				return;
 			}
 
@@ -343,21 +335,6 @@ void Webserv::handleClientRead(int clientFd)
 		} catch (const HttpException& e) {
 			std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
 			Response errorResponse;
-			
-			// // Use custom error page for 413 errors
-			// if (e.getCode() == 413) {
-			// 	std::string errorPagePath = "error/413.html";
-			// 	if (fileExists(errorPagePath)) {
-			// 		std::string errorPageContent = readFileContent(errorPagePath);
-			// 		errorResponse.buildErrorResponse(413, errorPageContent);
-			// 	} else {
-			// 		errorResponse.setStatusCode(413);
-			// 		errorResponse.setBody("<h1>413 Payload Too Large</h1><p>The request body exceeds the maximum allowed size.</p>");
-			// 	}
-			// } else {
-			// 	errorResponse.setStatusCode(e.getCode());
-			// 	errorResponse.setBody(e.getMessage());
-			// }
 			
 			// Mark request as complete to prevent further data reading
 			request_it->second.markComplete();
@@ -409,14 +386,6 @@ void Webserv::handleClientWrite(int clientFd)
 			// All data sent.
 			closeClientConnection(clientFd);
 			// clientResponses_.erase(clientFd);
-
-			// // Switch back to EPOLLIN
-			// epoll_event event_mod;
-			// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-			// event_mod.data.fd = clientFd;
-			// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-			// 	closeClientConnection(clientFd);
-			// }
 		}
 	}
 }
@@ -609,9 +578,9 @@ void Webserv::checkClientTimeouts()
 			int clientFd = it->first;
 			it = clientTimeouts_.erase(it); // Erase first
 			
-			// Send timeout response before closing
-			sendTimeoutResponse(clientFd);
-			closeClientConnection(clientFd);
+		// change: send timeout response before closing connection
+		sendTimeoutResponse(clientFd);
+		closeClientConnection(clientFd);
 		} else {
 			++it;
 		}
@@ -654,70 +623,91 @@ void Webserv::sendTimeoutResponse(int clientFd)
 	}
 }
 
+// change: Added CGI timeout management to prevent hanging processes
+void Webserv::checkCgiTimeouts()
+{
+	time_t currentTime = time(NULL);
+	const int CGI_TIMEOUT_SECONDS = 30; // 30 seconds for CGI processes
+	
+	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
+		if (it->second && currentTime - it->second->getStartTime() > CGI_TIMEOUT_SECONDS) {
+			std::cout << YELLOW << "CGI process for client FD " << it->first << " timed out after " << CGI_TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
+			int clientFd = it->first;
+			it = clientCgiMap_.erase(it);
+			
+			// Send timeout response
+			sendTimeoutResponse(clientFd);
+			closeClientConnection(clientFd);
+		} else {
+			++it;
+		}
+	}
+}
+
+// change: periodic cleanup of completed CGI processes
+void Webserv::checkCompletedCgis()
+{
+	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
+		if (it->second && it->second->isCgiComplete()) {
+			// CGI is complete, clean up
+			it = clientCgiMap_.erase(it);
+		} else {
+			++it;
+		}
+	}
+}
+
 void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 {
-	// std::cout << "DEBUG: handleCgiEvent called for pipeFd=" << pipeFd << ", events=" << events << std::endl;
-	
 	// Find the client FD associated with this CGI pipe
 	int clientFd = -1;
 	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
-		if (it->second->getInputPipe() == pipeFd || it->second->getOutputPipe() == pipeFd) {
+		if (it->second && (it->second->getInputPipe() == pipeFd || it->second->getOutputPipe() == pipeFd)) {
 			clientFd = it->first;
 			break;
 		}
 	}
 	
-	// std::cout << "DEBUG: Found clientFd=" << clientFd << " for pipeFd=" << pipeFd << std::endl;
-	
 	if (clientFd == -1) {
 		// CGI pipe not found in our map, remove from epoll
-		// std::cout << "DEBUG: CGI pipe not found in map, removing from epoll" << std::endl;
 		removeFdFromEpoll(pipeFd);
 		return;
 	}
 	
 	std::shared_ptr<Cgi> cgi = clientCgiMap_[clientFd];
 	if (!cgi) {
-		// std::cout << "DEBUG: CGI object is null, removing from epoll" << std::endl;
 		removeFdFromEpoll(pipeFd);
 		return;
 	}
 	
-	// std::cout << "DEBUG: CGI input pipe=" << cgi->getInputPipe() << ", output pipe=" << cgi->getOutputPipe() << std::endl;
-	
-	// Handle input pipe (EPOLLOUT event)
+	// change: input pipe (EPOLLOUT event) -> only remove from epoll when input is complete
 	if (events & EPOLLOUT && pipeFd == cgi->getInputPipe()) {
-		// std::cout << "DEBUG: Handling EPOLLOUT for input pipe" << std::endl;
 		if (cgi->writeToCgiInput()) {
-			// std::cout << "DEBUG: Input writing complete, removing from epoll" << std::endl;
 			// Input writing complete, remove from epoll
 			removeFdFromEpoll(pipeFd);
-		} else {
-			// std::cout << "DEBUG: Input writing not complete, will retry" << std::endl;
 		}
 	}
 	
-	// Handle output pipe (EPOLLIN event)
+	// change: output pipe (EPOLLIN event) -> keep in epoll until EPOLLHUP
 	if (events & EPOLLIN && pipeFd == cgi->getOutputPipe()) {
-		// std::cout << "DEBUG: Handling EPOLLIN for output pipe" << std::endl;
-		if (cgi->readFromCgiOutput()) {
-			// std::cout << "DEBUG: Output reading complete, removing from epoll" << std::endl;
-			// Output reading complete, remove from epoll
-			removeFdFromEpoll(pipeFd);
-		} else {
-			// std::cout << "DEBUG: Output reading not complete, will retry" << std::endl;
-		}
-	}
-	
-	// Always check if CGI process has finished
-	cgi->checkCgiProcess();
-	
-	// Try to read any remaining output if not complete
-	if (!cgi->isOutputComplete()) {
 		cgi->readFromCgiOutput();
 	}
 	
-	// Check if we have complete output
+	// change: EPOLLHUP on output pipe -> only when CGI process finished
+	if (events & EPOLLHUP && pipeFd == cgi->getOutputPipe()) {
+		// Read any remaining output
+		cgi->readFromCgiOutput();
+		// Mark output as complete
+		cgi->markOutputComplete();
+		// Force completion if process hasn't been detected as finished yet
+		if (!cgi->isCgiComplete()) {
+			cgi->forceComplete();
+		}
+		// Remove from epoll
+		removeFdFromEpoll(pipeFd);
+	}
+	
+	// Check if CGI is complete and create response
 	if (cgi->isCgiComplete() && cgi->isOutputComplete() && cgi->isInputComplete()) {
 		// CGI is completely done, create response
 		std::string responseContent = cgi->getCgiOutput();
@@ -773,49 +763,10 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 		clientCgiMap_.erase(clientFd);
 	}
 	
-	// Handle errors and hangups
-	if (events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
-		// std::cout << "DEBUG: Pipe error/hangup detected for pipeFd=" << pipeFd << std::endl;
-		// Pipe error or closed, clean up
+	// Handle other errors
+	if (events & (EPOLLERR | EPOLLRDHUP)) {
 		removeFdFromEpoll(pipeFd);
-		
-		// Try to read any remaining output before giving up
-		if (!cgi->isOutputComplete()) {
-			// std::cout << "DEBUG: Reading remaining output after pipe hangup" << std::endl;
-			cgi->readFromCgiOutput();
-		}
-		
-		// Check if CGI process has finished
-		cgi->checkCgiProcess();
-		
-		// If this is an output pipe hangup, it usually means the CGI process finished
-		// Mark output as complete if we haven't already
-		if (pipeFd == cgi->getOutputPipe()) {
-			// std::cout << "DEBUG: Output pipe hung up, marking output as complete" << std::endl;
-			cgi->markOutputComplete();
-			// Force process to be considered complete when output pipe closes
-			// This handles race conditions where waitpid() hasn't detected the process yet
-			if (!cgi->isCgiComplete()) {
-				// std::cout << "DEBUG: Forcing CGI process to complete due to output pipe closure" << std::endl;
-				cgi->forceComplete();
-			}
-		}
-		
-		// The response creation will be handled by the main completion check above
-		// No need to duplicate the response creation logic here
 	}
 }
 
-bool Webserv::isCgiPipe(int fd) const
-{
-	// Check if this FD is a CGI pipe by looking through all CGI objects
-	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
-		if (it->second->getInputPipe() == fd || it->second->getOutputPipe() == fd) {
-			// std::cout << "DEBUG: isCgiPipe found FD " << fd << " as CGI pipe" << std::endl;
-			return true;
-		}
-	}
-	// std::cout << "DEBUG: isCgiPipe did not find FD " << fd << " as CGI pipe" << std::endl;
-	return false;
-}
 
