@@ -712,13 +712,13 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 		// Remove from epoll
 		removeFdFromEpoll(pipeFd);
 		
-		// change: Immediately create response when CGI finishes (based on external repo analysis)
+		// change: create response right after CGI finishes
 		std::cout << "DEBUG: Creating CGI response for client FD " << clientFd << std::endl;
 		createCgiResponse(clientFd, cgi);
 		return;
 	}
 	
-	// change: Check if CGI is complete and create response (for cases where process finishes without EPOLLHUP)
+	// change: check if CGI is complete and create response (for cases where process finishes without EPOLLHUP)
 	if (cgi->isCgiComplete() && cgi->isOutputComplete() && cgi->isInputComplete()) {
 		createCgiResponse(clientFd, cgi);
 		return;
@@ -730,7 +730,7 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 	}
 }
 
-// change: Extract CGI response creation into separate function for better organization
+// change: CGI response creation
 void Webserv::createCgiResponse(int clientFd, std::shared_ptr<Cgi> cgi)
 {
 	std::cout << "DEBUG: createCgiResponse called for client FD " << clientFd << std::endl;
