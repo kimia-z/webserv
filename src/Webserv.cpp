@@ -691,7 +691,7 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 	// change: output pipe (EPOLLIN event) -> keep in epoll until EPOLLHUP
 	if (events & EPOLLIN && pipeFd == cgi->getOutputPipe()) {
 		cgi->readFromCgiOutput();
-		// change: Check if CGI finished during reading (based on webserv_chriss pattern)
+		// change: Check if CGI finished during reading (based on external repo analysis)
 		if (cgi->isCgiComplete() && cgi->isOutputComplete() && cgi->isInputComplete()) {
 			createCgiResponse(clientFd, cgi);
 			return;
