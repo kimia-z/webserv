@@ -29,6 +29,7 @@ private:
 	void		handleNewConnection(int listenerFd);
 	void		handleClientRead(int clientFd);
 	void		handleClientWrite(int clientFd);
+	void		handleCgiEvent(int pipeFd, uint32_t events);
 
 	// File System Operations
 	std::string	readFileContent(const std::string& path) const;
@@ -39,6 +40,9 @@ private:
 	void		checkClientTimeouts();
 	void		updateClientTimeout(int clientFd);
 	void		sendTimeoutResponse(int clientFd);
+	
+	// CGI Helper
+	bool		isCgiPipe(int fd) const;
 
 public:
 	Webserv(const Server42& config); 

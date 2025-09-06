@@ -45,7 +45,6 @@ Cgi::~Cgi() {
 			pipeOut_[1] = -1;
 		}
 	} catch (const std::exception& e) {
-		// std::cerr << "DEBUG: Error in CGI destructor: " << e.what() << std::endl;
 	}
 }
 
@@ -135,15 +134,21 @@ std::unordered_map<std::string, std::string> Cgi::buildEnv() {
 }
 
 void	Cgi::startCgi(std::function<void(int, uint32_t)> addtoEpoll) {
+	// std::cout << "DEBUG: startCgi called for script: " << scriptPath_ << std::endl;
+	
 	if (pipe(pipeIn_) == -1 || pipe(pipeOut_) == -1) {
 		throw CgiException("Cgi: Pipe creation failed");
 	}
+	
+	// std::cout << "DEBUG: Created pipes - input: [" << pipeIn_[0] << "," << pipeIn_[1] << "], output: [" << pipeOut_[0] << "," << pipeOut_[1] << "]" << std::endl;
 	
 	// Start the CGI process
 	cgiPid_ = fork();
 	if (cgiPid_ < 0) {
 		throw CgiException("Cgi: Fork failed");
 	}
+	
+	// std::cout << "DEBUG: Forked process with PID: " << cgiPid_ << std::endl;
 
 	// child
 	if (cgiPid_ == 0) {
@@ -178,62 +183,213 @@ void	Cgi::startCgi(std::function<void(int, uint32_t)> addtoEpoll) {
 	close(pipeIn_[0]);
 	close(pipeOut_[1]);
 	
+	// std::cout << "DEBUG: Parent process - closed child-side pipes" << std::endl;
+	
 	// Add pipes to epoll for non-blocking I/O
 	addtoEpoll(pipeOut_[0], EPOLLIN | EPOLLRDHUP | EPOLLET);
+	// std::cout << "DEBUG: Added output pipe " << pipeOut_[0] << " to epoll" << std::endl;
+	
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		addtoEpoll(pipeIn_[1], EPOLLOUT | EPOLLRDHUP | EPOLLET);
+		// std::cout << "DEBUG: Added input pipe " << pipeIn_[1] << " to epoll for POST data" << std::endl;
+	} else {
+		// For GET requests or empty POST, close input pipe immediately
+		close(pipeIn_[1]);
+		pipeIn_[1] = -1;
+		inputWritten_ = true;
+		// std::cout << "DEBUG: Closed input pipe immediately for GET/empty POST" << std::endl;
 	}
 }
 
 std::string Cgi::runCgi() {
-	// std::cout << "DEBUG: runCgi called for script: " << scriptPath_ << std::endl;
-	
 	// for POST, write body to CGI input
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		std::string body = request_.getBody();
-		// std::cout << "DEBUG: Writing POST data to CGI input, size: " << body.length() << " bytes" << std::endl;
 		ssize_t written = write(pipeIn_[1], body.c_str(), body.length());
 		if (written == -1) {
 			close(pipeIn_[1]);
 			throw CgiException("Cgi: Failed to write POST data to CGI input");
 		}
-		// std::cout << "DEBUG: Written " << written << " bytes to CGI input" << std::endl;
 	}
 	close(pipeIn_[1]);
 
-	// Read CGI output - this is now blocking but we'll make it non-blocking later
 	std::string	output;
 	char buffer[4096];
 	ssize_t n;
-	// std::cout << "DEBUG: Reading CGI output" << std::endl;
 	
-	// Read all available data from CGI output
 	while ((n = read(pipeOut_[0], buffer, sizeof(buffer))) > 0) {
 		output.append(buffer, n);
-		// std::cout << "DEBUG: Read " << n << " bytes from CGI, total: " << output.length() << std::endl;
 	}
 	close(pipeOut_[0]);
 
-	// std::cout << "DEBUG: Waiting for CGI process to finish" << std::endl;
 	int status;
 	waitpid(cgiPid_, &status, 0);
 	cgiPid_ = -1;
-	// std::cout << "DEBUG: CGI process finished with status: " << status << std::endl;
 	
 	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-		// std::cerr << "DEBUG: CGI process failed with exit code: " << WEXITSTATUS(status) << std::endl;
 		cgiStatusCode_ = WEXITSTATUS(status);
 		throw CgiException("Cgi: Script execution failed");
 	}
 
 	if (output.empty()) {
-		// std::cerr << "DEBUG: CGI produced empty output" << std::endl;
 		cgiStatusCode_ = 500;
 		throw CgiException("Cgi: Empty output_");
 	}
 
-	// std::cout << "DEBUG: CGI script completed successfully. Output preview: " << output.substr(0, 100) << "..." << std::endl;
 	cgiStatusCode_ = 200;
 	return (output);
+}
+
+bool Cgi::writeToCgiInput() {
+	// std::cout << "DEBUG: writeToCgiInput called, inputWritten_=" << inputWritten_ << ", pipeIn_[1]=" << pipeIn_[1] << std::endl;
+	
+	if (inputWritten_ || pipeIn_[1] == -1) {
+		// std::cout << "DEBUG: Input already written or pipe closed, returning true" << std::endl;
+		return true; // Already written or pipe closed
+	}
+	
+	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
+		const std::string& body = request_.getBody();
+		// std::cout << "DEBUG: Writing " << body.length() << " bytes to CGI input" << std::endl;
+		ssize_t written = write(pipeIn_[1], body.c_str(), body.length());
+		
+		if (written == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				// std::cout << "DEBUG: Write would block, returning false" << std::endl;
+				return false; // Would block, try again later
+			} else {
+				// std::cout << "DEBUG: Write error: " << strerror(errno) << std::endl;
+				close(pipeIn_[1]);
+				pipeIn_[1] = -1;
+				return false; // Error occurred
+			}
+		} else if (written == static_cast<ssize_t>(body.length())) {
+			// std::cout << "DEBUG: All input written successfully" << std::endl;
+			// All data written successfully
+			close(pipeIn_[1]);
+			pipeIn_[1] = -1;
+			inputWritten_ = true;
+			return true;
+		} else {
+			// std::cout << "DEBUG: Partial write, closing pipe" << std::endl;
+			// Partial write - for simplicity, we close the pipe
+			close(pipeIn_[1]);
+			pipeIn_[1] = -1;
+			inputWritten_ = true;
+			return true;
+		}
+	} else {
+		// std::cout << "DEBUG: No POST body, closing input pipe" << std::endl;
+		// No input to write
+		close(pipeIn_[1]);
+		pipeIn_[1] = -1;
+		inputWritten_ = true;
+		return true;
+	}
+}
+
+bool Cgi::readFromCgiOutput() {
+	// std::cout << "DEBUG: readFromCgiOutput called, outputRead_=" << outputRead_ << ", pipeOut_[0]=" << pipeOut_[0] << std::endl;
+	
+	if (outputRead_ || pipeOut_[0] == -1) {
+		// std::cout << "DEBUG: Output already read or pipe closed, returning true" << std::endl;
+		return true; // Already read or pipe closed
+	}
+	
+	char buffer[4096];
+	ssize_t n = read(pipeOut_[0], buffer, sizeof(buffer));
+	
+	if (n > 0) {
+		// std::cout << "DEBUG: Read " << n << " bytes from CGI output" << std::endl;
+		cgiOutput_.append(buffer, n);
+		return false; // More data might be available
+	} else if (n == 0) {
+		// std::cout << "DEBUG: EOF reached, all output read" << std::endl;
+		// EOF - no more data
+		close(pipeOut_[0]);
+		pipeOut_[0] = -1;
+		outputRead_ = true;
+		return true;
+	} else {
+		// Error or would block
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			// std::cout << "DEBUG: Read would block, returning false" << std::endl;
+			return false; // Would block, try again later
+		} else {
+			// std::cout << "DEBUG: Read error: " << strerror(errno) << std::endl;
+			// Even on error, if we have some output, consider it complete
+			close(pipeOut_[0]);
+			pipeOut_[0] = -1;
+			outputRead_ = true;
+			return true; // Consider it complete even on error
+		}
+	}
+}
+
+bool Cgi::checkCgiProcess() {
+	// std::cout << "DEBUG: checkCgiProcess called, cgiPid_=" << cgiPid_ << std::endl;
+	
+	if (cgiPid_ <= 0) {
+		// std::cout << "DEBUG: Process already finished or not started" << std::endl;
+		return true; // Process already finished or not started
+	}
+	
+	int status;
+	pid_t result = waitpid(cgiPid_, &status, WNOHANG);
+	
+	if (result == 0) {
+		// std::cout << "DEBUG: Process still running" << std::endl;
+		return false; // Process still running
+	} else if (result == cgiPid_) {
+		// std::cout << "DEBUG: Process finished with status=" << status << std::endl;
+		// Process finished
+		cgiPid_ = -1;
+		cgiComplete_ = true;
+		
+		if (WIFEXITED(status)) {
+			cgiStatusCode_ = WEXITSTATUS(status);
+			// std::cout << "DEBUG: Process exited normally with code=" << cgiStatusCode_ << std::endl;
+			if (cgiStatusCode_ != 0) {
+				return false; // CGI failed
+			}
+		} else {
+			// std::cout << "DEBUG: Process terminated abnormally" << std::endl;
+			cgiStatusCode_ = 500; // Process terminated abnormally
+			return false;
+		}
+		return true;
+	} else {
+		// std::cout << "DEBUG: waitpid error: " << strerror(errno) << std::endl;
+		// Error in waitpid
+		cgiPid_ = -1;
+		cgiComplete_ = true;
+		cgiStatusCode_ = 500;
+		return false;
+	}
+}
+
+bool Cgi::isInputComplete() const {
+	return inputWritten_;
+}
+
+bool Cgi::isOutputComplete() const {
+	return outputRead_;
+}
+
+int Cgi::getInputPipe() const {
+	return pipeIn_[1];
+}
+
+int Cgi::getOutputPipe() const {
+	return pipeOut_[0];
+}
+
+void Cgi::markOutputComplete() {
+	outputRead_ = true;
+}
+
+void Cgi::forceComplete() {
+	cgiComplete_ = true;
+	cgiPid_ = -1;
 }
 

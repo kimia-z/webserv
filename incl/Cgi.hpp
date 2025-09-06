@@ -14,11 +14,22 @@ class Cgi {
 		Cgi(const Request& request, const std::string& scriptPath, const std::string& serverName = "", int serverPort = 0);
 		~Cgi();
 
-		std::string										runCgi(); //starts CGI, returns the body
+		std::string										runCgi(); //starts CGI, returns the body (blocking - for compatibility)
 		void											startCgi(std::function<void(int, uint32_t)> addtoEpoll); // starts the CGI process, creates pipes
 		std::unordered_map<std::string, std::string>	buildEnv(); // creates the env for the cgi
 		bool											isCgiComplete() const;
 		std::string										getCgiOutput() const;
+		
+		// Non-blocking CGI methods
+		bool											writeToCgiInput(); // Non-blocking write to CGI input
+		bool											readFromCgiOutput(); // Non-blocking read from CGI output
+		bool											checkCgiProcess(); // Check if CGI process has finished
+		bool											isInputComplete() const;
+		bool											isOutputComplete() const;
+		int												getInputPipe() const;
+		int												getOutputPipe() const;
+		void											markOutputComplete();
+		void											forceComplete();
 		void											setUploadDir(const std::string& uploadDir);
 		void											setMaxFileSize(size_t maxSize);
 
