@@ -102,7 +102,6 @@ void Webserv::removeFdFromEpoll(int fd)
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
 	}
-	// ?????? it should throw or not?!
 }
 
 void Webserv::closeClientConnection(int clientFd)
@@ -113,6 +112,7 @@ void Webserv::closeClientConnection(int clientFd)
 	clientRequests_.erase(clientFd);	// Remove client's request state
 	clientResponses_.erase(clientFd);	// Remove client's response state
 	clientToServerMap_.erase(clientFd);	// Remove mapping to server config
+	fileTransfers_.erase(clientFd);
 
 	std::cout << YELLOW << "Closed connection for FD: " << clientFd << RESET << std::endl;
 }
@@ -175,6 +175,7 @@ void Webserv::handleClientRead(int clientFd)
 
 				std::string responseContent = "";
 				int finalStatusCode = 0;
+				long long fileSize = -1;
 
 				// Handle immediate errors from Router
 				if (action.errorCode != 0) {
@@ -200,7 +201,6 @@ void Webserv::handleClientRead(int clientFd)
 					std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
 					try {
 						cgi->setScriptPath(action.cgiScriptPath);
-						std::cout << "here?" << std::endl;
 						responseContent = cgi->runCgi();
 						finalStatusCode = cgi->getCgiStatusCode();
 					}
@@ -226,11 +226,16 @@ void Webserv::handleClientRead(int clientFd)
 						responseContent = generateDirectoryListing(action.filePath);
 						finalStatusCode = 200;
 					} else {
-						responseContent = readFileContent(action.filePath);
-						if (responseContent.empty() && fileExists(action.filePath)) {
-							finalStatusCode = 500; // Read error
-							responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
+						fileSize = getFileSize(action.filePath);
+						if (fileSize == -1) {
+							finalStatusCode = 404;
+							responseContent = "<h1>404 Not Found</h1>";
 						} else {
+							Response response_object;
+							response_object.buildFromAction(action, "", 200, fileSize);
+							clientResponses_[clientFd] = response_object.toString();
+
+							setFileTransfer(clientFd, action.filePath, fileSize);
 							finalStatusCode = 200;
 						}
 					}
@@ -243,7 +248,7 @@ void Webserv::handleClientRead(int clientFd)
 
 				// Response Builder
 				Response response_object;
-				response_object.buildFromAction(action, responseContent, finalStatusCode); 
+				response_object.buildFromAction(action, responseContent, finalStatusCode, fileSize);
 				std::string rawResponseString = response_object.toString();
 				clientResponses_[clientFd] = rawResponseString;
 
@@ -260,7 +265,7 @@ void Webserv::handleClientRead(int clientFd)
 			std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
 			Response errorResponse;
 			errorResponse.setStatusCode(e.getCode());
-			errorResponse.setBody(e.getMessage());
+			errorResponse.setBody(e.getMessage(), -1);
 			clientResponses_[clientFd] = errorResponse.toString();
 
 			// Switch to EPOLLOUT to send the error response
@@ -278,39 +283,49 @@ void Webserv::handleClientRead(int clientFd)
 // Handles sending data to a client socket
 void Webserv::handleClientWrite(int clientFd)
 {
-	std::map<int, std::string>::iterator response_it = clientResponses_.find(clientFd);
-	if (response_it == clientResponses_.end() || response_it->second.empty()) {
-		closeClientConnection(clientFd);
-		// No response pending or already sent. Switch back to EPOLLIN.
-		// epoll_event event_mod;
-		// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-		// event_mod.data.fd = clientFd;
-		// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-		// 	closeClientConnection(clientFd);
-		// }
-		return;
+	auto response_it = clientResponses_.find(clientFd);
+	if (response_it != clientResponses_.end() && !response_it->second.empty()) {
+		ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
+		if (bytesSent == -1) {
+			std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+			closeClientConnection(clientFd);
+			return;
+		}
+		response_it->second.erase(0, bytesSent);
+		if (!response_it->second.empty()) {
+			return; // still sending headers
+		}
+		clientResponses_.erase(response_it);
 	}
 
-	ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
-	if (bytesSent == -1) {
-		std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-		closeClientConnection(clientFd);
-	} else {
-		// Data sent.
-		response_it->second.erase(0, bytesSent);
+	auto fileTransferIt = fileTransfers_.find(clientFd);
+	if (fileTransferIt != fileTransfers_.end()) {
+		std::ifstream& fileStream = fileTransferIt->second.first;
+		long long& fileSize = fileTransferIt->second.second;
+		long long bytesSentSoFar = fileStream.tellg();
+		if (bytesSentSoFar == -1) bytesSentSoFar = 0;
 
-		if (response_it->second.empty()) {
-			// All data sent.
+		char buffer[BUFFER_SIZE];
+		long long bytesToRead = BUFFER_SIZE;
+		if (bytesSentSoFar + bytesToRead > fileSize)
+			bytesToRead = fileSize - bytesSentSoFar;
+
+		if (bytesToRead > 0) {
+			fileStream.read(buffer, bytesToRead);
+			ssize_t sent = send(clientFd, buffer, fileStream.gcount(), 0);
+			if (sent == -1) {
+				closeClientConnection(clientFd);
+				return;
+			}
+			if (bytesSentSoFar + sent >= fileSize) {
+				fileStream.close();
+				clearFileTransfer(clientFd);
+				closeClientConnection(clientFd);
+			}
+		} else {
+			fileStream.close();
+			clearFileTransfer(clientFd);
 			closeClientConnection(clientFd);
-			// clientResponses_.erase(clientFd);
-
-			// // Switch back to EPOLLIN
-			// epoll_event event_mod;
-			// event_mod.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-			// event_mod.data.fd = clientFd;
-			// if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-			// 	closeClientConnection(clientFd);
-			// }
 		}
 	}
 }
@@ -335,6 +350,37 @@ bool Webserv::fileExists(const std::string& path) const
 	struct stat buffer;
 	return (stat(path.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode));
 }
+
+long long Webserv::getFileSize(const std::string & filePath) const
+{
+	struct stat s;
+	if (stat(filePath.c_str(), &s) == 0) {
+		return s.st_size;
+	}
+	return -1;
+}
+
+void Webserv::setFileTransfer(int fd, std::string& filePath, long long fileSize) {
+	std::ifstream fileStream(filePath.c_str(), std::ios::in | std::ios::binary);
+	if (fileStream.is_open()){
+		fileTransfers_[fd] = std::make_pair(std::move(fileStream), fileSize);
+	} else {
+		std::cerr << "Error: Failed to open file for transfer: " << filePath << std::endl;
+		throw std::runtime_error("File transfer initialization failed.");
+	}
+}
+
+void Webserv::clearFileTransfer(int fd) {
+	auto it = fileTransfers_.find(fd);
+	if (it != fileTransfers_.end()) {
+		if (it->second.first.is_open()) {
+			it->second.first.close();
+		}
+		fileTransfers_.erase(it);
+	}
+}
+
+
 
 std::string Webserv::generateDirectoryListing(const std::string& directoryPath) const
 {

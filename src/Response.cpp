@@ -80,9 +80,12 @@ void Response::setStatusCode(int code){
 	statusMessage_ = getDefaultStatusMessage(code);
 }
 
-void Response::setBody(const std::string &body){
+void Response::setBody(const std::string &body, long long fileSize){
 	body_ = body;
-	setHeader("Content-Length", std::to_string(body_.length()));
+	if (fileSize != -1)
+		setHeader("Content-Length", std::to_string(fileSize));
+	else
+		setHeader("Content-Length", std::to_string(body_.length()));
 }
 void Response::setProtocolVersion(const std::string &version){
 	protocolVersion_ = version;
@@ -110,7 +113,7 @@ void Response::buildErrorResponse(int statusCode, const std::string& customError
 	setStatusCode(statusCode);
 	setHeader("Content-Type", "text/html");
 	if (!customErrorPageContent.empty()) {
-		setBody(customErrorPageContent);
+		setBody(customErrorPageContent, -1);
 	} else {
 		std::stringstream html_body;
 		html_body << "<!DOCTYPE html>\r\n"
@@ -121,25 +124,25 @@ void Response::buildErrorResponse(int statusCode, const std::string& customError
 				  << "<p>The requested resource could not be found or processed.</p>\r\n"
 				  << "</body>\r\n"
 				  << "</html>\r\n";
-		setBody(html_body.str());
+		setBody(html_body.str(), -1);
 	}
 }
 void Response::buildRedirectResponse(int statusCode, const std::string& locationUrl){
 	setStatusCode(statusCode);
 	setHeader("Location", locationUrl);
-	setBody("");
+	setBody("", -1);
 }
-void Response::buildStaticFileResponse(int statusCode, const std::string& fileContent, const std::string& contentType){
+void Response::buildStaticFileResponse(int statusCode, const std::string& fileContent, const std::string& contentType, long long fileSize){
 	setStatusCode(statusCode);
-	setBody(fileContent);
+	setBody(fileContent, fileSize);
 	setHeader("Content-Type", contentType);
 }
 void Response::buildSimpleTextResponse(int statusCode, const std::string& bodyText, const std::string& contentType){
 	setStatusCode(statusCode);
-	setBody(bodyText);
+	setBody(bodyText, -1);
 	setHeader("Content-Type", contentType);
 }
-void Response::buildFromAction(const ActionParameters& action, const std::string& content, int actionStatusCode){
+void Response::buildFromAction(const ActionParameters& action, const std::string& content, int actionStatusCode, long long fileSize){
 
 	setHeader("Connection", "close");
 	if (action.errorCode != 0) {
@@ -150,10 +153,10 @@ void Response::buildFromAction(const ActionParameters& action, const std::string
 	}
 	else if (action.isStaticFile) {
 		if (action.isAutoindex) {
-			buildStaticFileResponse(actionStatusCode, content, "text/html"); 
+			buildStaticFileResponse(actionStatusCode, content, "text/html", -1);
 		}
 		else {
-			buildStaticFileResponse(actionStatusCode, content, getMimeType(action.filePath));
+			buildStaticFileResponse(actionStatusCode, content, getMimeType(action.filePath), fileSize);
 		}
 	}
 	else {
