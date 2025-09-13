@@ -157,7 +157,7 @@ try:
             <h1>🗑️</h1>
             <h2>File Deleted Successfully!</h2>
             <div class="file-info">
-                <p><strong>Deleted file:</strong> {html.escape(decoded_filename)}</p>
+                <p><strong>Deleted file:</strong> {html.escape(decoded_target)}</p>
                 <p><strong>Location:</strong> {html.escape(UPLOAD_DIR)}</p>
             </div>
             <div class="actions">

@@ -236,7 +236,7 @@ void Webserv::handleClientRead(int clientFd)
 		updateClientTimeout(clientFd); // Update timeout on activity
 		request_it->second.appendRawData(buffer, bytesReceived);
 
-		try{
+		try {
 			// Process request data - if it returns false, we need more data
 			if (!request_it->second.processRequestData()) {
 				// Request not complete yet, need more data
@@ -575,10 +575,10 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 }
 
 void Webserv::cleanupOldRequests(){
-	time_t currentTime = time(NULL);
+	auto currentTime = std::chrono::steady_clock::now();
 	const int CLEANUP_TRESHOLD = 60; // 1 minute
 	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
-		if (currentTime - it->second > CLEANUP_TRESHOLD) {
+		if (currentTime - it->second > std::chrono::seconds(CLEANUP_TRESHOLD)) {
 			int clientFd = it->first;
 
 			try {
@@ -596,18 +596,19 @@ void Webserv::cleanupOldRequests(){
 
 void Webserv::checkClientTimeouts()
 {
-	time_t currentTime = time(NULL);
+	auto now = std::chrono::steady_clock::now();
 	const int TIMEOUT_SECONDS = 300;
+
+	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
 	
-	for (std::map<int, time_t>::iterator it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
-		if (currentTime - it->second > TIMEOUT_SECONDS) {
+		if (elapsed > TIMEOUT_SECONDS) {
 			std::cout << YELLOW << "Client FD " << it->first << " timed out after " << TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
-			int clientFd = it->first;
 			try {
-				sendTimeoutResponse(clientFd);
-				closeClientConnection(clientFd);
+				sendTimeoutResponse(it->first, 408);
+				closeClientConnection(it->first);
 			} catch (const std::exception& e) {
-				std::cerr << "Error handling timeout for FD " << clientFd << ": " << e.what() << std::endl;
+				std::cerr << "Error handling timeout for FD " << it->first << ": " << e.what() << std::endl;
 			}
 			it = clientTimeouts_.erase(it); // Erase first
 		} else {
@@ -618,27 +619,44 @@ void Webserv::checkClientTimeouts()
 
 void Webserv::updateClientTimeout(int clientFd)
 {
-	clientTimeouts_[clientFd] = time(NULL);
+	clientTimeouts_[clientFd] = std::chrono::steady_clock::now();
 }
 
-void Webserv::sendTimeoutResponse(int clientFd)
+void Webserv::sendTimeoutResponse(int clientFd, int errorCode)
 {
 	// Try to read custom 408 error page
-	std::string errorPagePath = "error/408.html";
+	std::string errorPagePath;
+	std::string response;
+	if (errorCode == 408) {
+		std::string errorPagePath = "error/408.html";
+	}
+	else {
+		errorPagePath = "error/504.html";
+	}
 	std::string errorPageContent;
 	
 	if (fileExists(errorPagePath)) {
 		errorPageContent = readFileContent(errorPagePath);
 	} else {
 		// Fallback to default response
-		errorPageContent = "<html><head><title>408 Request Timeout</title></head>";
-		errorPageContent += "<body><h1>408 Request Timeout</h1>";
+		if (errorCode == 408) {
+			errorPageContent = "<html><head><title>408 Request Timeout</title></head>";
+			errorPageContent += "<body><h1>408 Request Timeout</h1>";
+		}
+		else {
+			errorPageContent = "<html><head><title>504 Gateway Timeout</title></head>";
+			errorPageContent += "<body><h1>504 Gateway Timeout</h1>";
+		}
 		errorPageContent += "<p>Your request took too long to complete.</p>";
 		errorPageContent += "<p><a href=\"/\">Return to homepage</a></p></body></html>";
 	}
 	
 	// Create HTTP response
-	std::string response = "HTTP/1.1 408 Request Timeout\r\n";
+	if (errorCode == 408) {
+		response = "HTTP/1.1 408 Request Timeout\r\n";
+	} else {
+		response = "HTTP/1.1 504 Gateway Timeout\r\n";
+	}
 	response += "Content-Type: text/html\r\n";
 	response += "Content-Length: " + std::to_string(errorPageContent.length()) + "\r\n";
 	response += "Connection: close\r\n";
@@ -655,21 +673,20 @@ void Webserv::sendTimeoutResponse(int clientFd)
 // change: Added CGI timeout management to prevent hanging processes
 void Webserv::checkCgiTimeouts()
 {
-	time_t currentTime = time(NULL);
+	auto now = std::chrono::steady_clock::now();
 	const int CGI_TIMEOUT_SECONDS = 30; // 30 seconds for CGI processes
-	
-	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
-		if (it->second && currentTime - it->second->getStartTime() > CGI_TIMEOUT_SECONDS) {
-			std::cout << YELLOW << "CGI process for client FD " << it->first << " timed out after " << CGI_TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
-			int clientFd = it->first;
 
+	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
+		auto client = it->second;
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - std::chrono::steady_clock::time_point(std::chrono::seconds(client->getStartTime()))).count();
+		if (elapsed > CGI_TIMEOUT_SECONDS) {
 			try {
-				sendTimeoutResponse(clientFd);
-				closeClientConnection(clientFd);
+				sendTimeoutResponse(it->first, 504);
+				closeClientConnection(it->first);
 			} catch (const std::exception& e) {
-				std::cerr << "Error handling CGI timeout for FD " << clientFd << ": " << e.what() << std::endl;
+				std::cerr << "Error handling timeout for FD " << it->first << ": " << e.what() << std::endl;
 			}
-			it = clientCgiMap_.erase(it);
+			it = clientCgiMap_.erase(it); // Erase first
 		} else {
 			++it;
 		}

@@ -3,22 +3,23 @@
 
 #include "Webserv42.hpp"
 #include <dirent.h> //for readdir()
+#include <chrono> // for the timeout
 
 class Server42;
 class Router;
 
 class Webserv {
 private:
-	const Server42&						allServersConfig_; 
+	const Server42&											allServersConfig_; 
 
-	int									epollFd_;
-	std::vector<epoll_event>			events_;
-	std::map<int, const SingleServer*>	listenerMap_;		// Maps listener FD to its SingleServer config (for new connections)
-	std::map<int, const SingleServer*>	clientToServerMap_;	// Maps client FD to its associated SingleServer (for routing)
-	std::map<int, std::shared_ptr<Cgi>>	clientCgiMap_;		// Maps client FD to its Cgi object (for handling CGI requests)
-	std::map<int, Request>				clientRequests_;	// Maps client FD to its Request object (for accumulating incoming data)
-	std::map<int, std::string>			clientResponses_;	// Maps client FD to its pending raw HTTP response string (for sending)
-	std::map<int, time_t>				clientTimeouts_;	// Maps client FD to its last activity timestamp
+	int														epollFd_;
+	std::vector<epoll_event>								events_;
+	std::map<int, const SingleServer*>						listenerMap_;		// Maps listener FD to its SingleServer config (for new connections)
+	std::map<int, const SingleServer*>						clientToServerMap_;	// Maps client FD to its associated SingleServer (for routing)
+	std::map<int, std::shared_ptr<Cgi>>						clientCgiMap_;		// Maps client FD to its Cgi object (for handling CGI requests)
+	std::map<int, Request>									clientRequests_;	// Maps client FD to its Request object (for accumulating incoming data)
+	std::map<int, std::string>								clientResponses_;	// Maps client FD to its pending raw HTTP response string (for sending)
+	std::map<int, std::chrono::steady_clock::time_point>	clientTimeouts_;	// Maps client FD to its last activity timestamp
 
 	// Epoll Managment
 	void		addFdToEpoll(int fd, uint32_t events);
@@ -41,8 +42,9 @@ private:
 	// Timeout Management
 	void		checkClientTimeouts();
 	void		updateClientTimeout(int clientFd);
-	void		sendTimeoutResponse(int clientFd);
-	
+	void		sendTimeoutResponse(int clientFd, int errorCode);
+
+
 	// CGI Helper
 	void		checkCgiTimeouts();
 	void		checkCompletedCgis();
