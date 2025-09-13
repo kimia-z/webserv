@@ -109,9 +109,7 @@ std::unordered_map<std::string, std::string> Cgi::buildEnv() {
 	env["GATEWAY_INTERFACE"] = "Cgi/1.1";
 	env["REDIRECT_STATUS"] = "202";
 	env["SERVER_SOFTWARE"] = "Webserv42";
-	
-	// Prevent Python from creating bytecode cache files
-	// env["PYTHONDONTWRITEBYTECODE"] = "1";
+
 	
 	// Add upload-specific environment variables
 	if (!uploadDir_.empty()) {
@@ -135,17 +133,17 @@ std::unordered_map<std::string, std::string> Cgi::buildEnv() {
 		const auto& queryParams = request_.getQueryParams();
 
 		if (queryParams.find("file") != queryParams.end()) {
-			env["DELETE_FILE"] = queryParams.at("file");
+			env["DELETE_TARGET"] = queryParams.at("file");
 		} else if (!request_.getPath().empty()) {
 			// If no 'file' parameter, use the path as the file to delete
-			env["DELETE_FILE"] = request_.getPath();
+			env["DELETE_TARGET"] = request_.getPath();
 		} else { 
 			std::string path = request_.getPath();
 			size_t lastSlash = path.find_last_of('/');
 			if (lastSlash != std::string::npos && lastSlash < path.length() - 1) {
-				env["DELETE_FILE"] = path.substr(lastSlash + 1);
+				env["DELETE_TARGET"] = path.substr(lastSlash + 1);
 			} else {
-				env["DELETE_FILE"] = path; // Fallback to full path
+				env["DELETE_TARGET"] = path; // Fallback to full path
 			}
 		}
 	}
