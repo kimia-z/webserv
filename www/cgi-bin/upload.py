@@ -7,7 +7,7 @@ import io
 print("Content-Type: text/html\n")
 
 # dir where the files will be uploaded to
-UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/tmp/uploads")
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "upload")
 
 # Convert to absolute path if it's relative
 if not os.path.isabs(UPLOAD_DIR):

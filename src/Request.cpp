@@ -36,6 +36,9 @@ bool Request::processRequestData() {
 		try {
 			parseStartLineAndHeaders();
 			// Check body size limit immediately after parsing headers
+			if (_contentLength > _maxBodySize) {
+				throw HttpException(413, "Payload Too Large");
+			}
 			auto clIt = _headers.find("Content-Length");
 			if (clIt != _headers.end() && _maxBodySize > 0) {
 				long contentLength = std::atol(clIt->second.c_str());

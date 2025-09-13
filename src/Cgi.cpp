@@ -111,7 +111,7 @@ std::unordered_map<std::string, std::string> Cgi::buildEnv() {
 	env["SERVER_SOFTWARE"] = "Webserv42";
 	
 	// Prevent Python from creating bytecode cache files
-	env["PYTHONDONTWRITEBYTECODE"] = "1";
+	// env["PYTHONDONTWRITEBYTECODE"] = "1";
 	
 	// Add upload-specific environment variables
 	if (!uploadDir_.empty()) {
@@ -130,6 +130,25 @@ std::unordered_map<std::string, std::string> Cgi::buildEnv() {
 	// Add server name and port
 	env["SERVER_NAME"] = serverName_.empty() ? "localhost" : serverName_;
 	env["SERVER_PORT"] = serverPort_ > 0 ? std::to_string(serverPort_) : "80";
+
+	if (request_.getMethod() == "DELETE") {
+		const auto& queryParams = request_.getQueryParams();
+
+		if (queryParams.find("file") != queryParams.end()) {
+			env["DELETE_FILE"] = queryParams.at("file");
+		} else if (!request_.getPath().empty()) {
+			// If no 'file' parameter, use the path as the file to delete
+			env["DELETE_FILE"] = request_.getPath();
+		} else { 
+			std::string path = request_.getPath();
+			size_t lastSlash = path.find_last_of('/');
+			if (lastSlash != std::string::npos && lastSlash < path.length() - 1) {
+				env["DELETE_FILE"] = path.substr(lastSlash + 1);
+			} else {
+				env["DELETE_FILE"] = path; // Fallback to full path
+			}
+		}
+	}
 	
 	return (env);
 }
@@ -258,43 +277,20 @@ std::string Cgi::runCgi() {
 // change: non-blocking server when writing large POST data to CGI processes
 bool Cgi::writeToCgiInput() {
 	if (inputWritten_ || pipeIn_[1] == -1) {
-		return true; // Already written or pipe closed
+		return (true); // Already written or pipe closed
 	}
-
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		const std::string& body = request_.getBody();
 		ssize_t written = write(pipeIn_[1], body.c_str(), body.length());
-
-		if (written == -1) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				return false; // Would block, try again later
-			} else {
-				// Error occurred, but mark as complete
-				close(pipeIn_[1]);
-				pipeIn_[1] = -1;
-				inputWritten_ = true;
-				return true;
-			}
-		} else if (written == static_cast<ssize_t>(body.length())) {
-			// All data written successfully
-			close(pipeIn_[1]);
-			pipeIn_[1] = -1;
-			inputWritten_ = true;
-			return true;
-		} else {
-			// Partial write - mark as complete
-			close(pipeIn_[1]);
-			pipeIn_[1] = -1;
-			inputWritten_ = true;
-			return true;
-		}
-	} else {
-		// No input to write
+		if (written == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+				return (false); // Would block, try again later
+			} 
 		close(pipeIn_[1]);
 		pipeIn_[1] = -1;
 		inputWritten_ = true;
-		return true;
+		return (true);
 	}
+	return (false);
 }
 
 // change: reading CGI output in chunks without blocking the server

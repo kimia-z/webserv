@@ -335,6 +335,8 @@ void Webserv::handleClientRead(int clientFd)
 		} catch (const HttpException& e) {
 			std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
 			Response errorResponse;
+
+			errorResponse.buildErrorResponse(e.getCode(), "");
 			
 			// Mark request as complete to prevent further data reading
 			request_it->second.markComplete();
@@ -349,13 +351,14 @@ void Webserv::handleClientRead(int clientFd)
 				event_mod.data.fd = clientFd;
 				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 					std::cerr << RED << "Failed to switch FD " << clientFd << " to EPOLLOUT: " << strerror(errno) << RESET << std::endl;
+					request_it->second.clearParsedRequest();
 					closeClientConnection(clientFd);
 			
 			} else {
 				// Send the response immediately
+				request_it->second.clearParsedRequest();
 				handleClientWrite(clientFd);
 			}
-			request_it->second.clearParsedRequest();
 		}
 	}
 }

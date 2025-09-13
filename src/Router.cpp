@@ -176,6 +176,19 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	// DELETE
 	if (request.getMethod() == "DELETE"){
+		std::string cgiPath = selectedLocation->getRoot() + "/" + relativePath;
+		if (cgiPath.find(".py") != std::string::npos) {
+			params.isCGI = true;
+			params.cgiScriptPath = cgiPath; // Path to the CGI script
+			params.cgiTargetFile = fileSystemPath; // Path to the file being processed by CGI
+			if (!selectedLocation->getUploadPath().empty()) {
+				params.uploadTargetDir = selectedLocation->getUploadPath();
+			} else {
+				params.uploadTargetDir = "www/upload";
+			}
+			return params;
+		}
+
 		if (!isFileExists(fileSystemPath) && !isDir) {
 			params.errorCode = 404;
 		} else if (!isDir) {
