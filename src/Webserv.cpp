@@ -128,6 +128,7 @@ void Webserv::handleNewConnection(int listenerFd)
 		}
 		return;
 	}
+	fcntl(clientFd, F_SETFL, O_NONBLOCK); // @todo handle error on this function
 
 	// Map this client to the SingleServer config that accepted it (for routing)
 	clientToServerMap_[clientFd] = listenerMap_[listenerFd];
@@ -161,114 +162,94 @@ void Webserv::handleClientRead(int clientFd)
 	} else { // Data received
 		request_it->second.appendRawData(buffer, bytesReceived);
 
-		try{
-			while (request_it->second.processRequestData())
-			{
-				const SingleServer* clientServer = clientToServerMap_[clientFd];
-				if (!clientServer) {
-					std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
-					closeClientConnection(clientFd);
-					return;
-				}
-				Router router(allServersConfig_);
-				ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
-
-				std::string responseContent = "";
-				int finalStatusCode = 0;
-				long long fileSize = -1;
-
-				// Handle immediate errors from Router
-				if (action.errorCode != 0) {
-					finalStatusCode = action.errorCode;
-					responseContent = action.errorPagePath;
-					if (responseContent.empty()) { // If no custom page, provide a generic one
-						responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
-					} else {
-						responseContent = readFileContent(responseContent);
-					}
-				}
-
-				else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
-					std::shared_ptr<Cgi>	cgi = clientCgiMap_[clientFd];
-					std::cout << "in the cgi" << std::endl;
-					if (!cgi) {
-						clientCgiMap_[clientFd] = std::make_shared<Cgi>(request_it->second, action.cgiScriptPath);
-						cgi = clientCgiMap_[clientFd];
-					}
-					cgi->startCgi([this](int fd, uint32_t events) {
-						addFdToEpoll(fd, events);
-					});
-					std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
-					try {
-						cgi->setScriptPath(action.cgiScriptPath);
-						responseContent = cgi->runCgi();
-						finalStatusCode = cgi->getCgiStatusCode();
-					}
-					catch (const Cgi::CgiException& e) {
-						std::cerr << RED << "CGI Exception: " << e.what() << RESET << std::endl;
-						finalStatusCode = cgi->getCgiStatusCode(); // Internal Server Error
-						responseContent = "<h1>500 Internal Server Error</h1><p>CGI execution failed: " + std::string(e.what()) + "</p>";
-					}
-
-					// do something??
-					// change the state of Epoll
-					// clear request
-					// return
-				}
-
-				// Usual Response
-				else if (action.isRedirect) {
-					finalStatusCode = action.redirectCode;
-					responseContent = action.redirectUrl; 
-				}
-				else if (action.isStaticFile) {
-					if (action.isAutoindex) {
-						responseContent = generateDirectoryListing(action.filePath);
-						finalStatusCode = 200;
-					} else {
-						fileSize = getFileSize(action.filePath);
-						if (fileSize == -1) {
-							finalStatusCode = 404;
-							responseContent = "<h1>404 Not Found</h1>";
-						} else {
-							Response response_object;
-							response_object.buildFromAction(action, "", 200, fileSize);
-							clientResponses_[clientFd] = response_object.toString();
-
-							setFileTransfer(clientFd, action.filePath, fileSize);
-							finalStatusCode = 200;
-						}
-					}
-				}
-				else { // final safety net
-					finalStatusCode = action.errorCode;
-					if (finalStatusCode == 0) finalStatusCode = 500; // Default to 500 if no specific error
-					responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
-				}
-
-				// Response Builder
-				Response response_object;
-				response_object.buildFromAction(action, responseContent, finalStatusCode, fileSize);
-				std::string rawResponseString = response_object.toString();
-				clientResponses_[clientFd] = rawResponseString;
-
-				// Change epoll event to EPOLLOUT to start sending the response
-				epoll_event event_mod;
-				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-				event_mod.data.fd = clientFd;
-				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-					closeClientConnection(clientFd);
-				}
-				request_it->second.clearParsedRequest();
+	try{
+		while (request_it->second.processRequestData())
+		{
+			const SingleServer* clientServer = clientToServerMap_[clientFd];
+			if (!clientServer) {
+				std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
+				closeClientConnection(clientFd);
+				return;
 			}
-		} catch (const HttpException& e) {
-			std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
-			Response errorResponse;
-			errorResponse.setStatusCode(e.getCode());
-			errorResponse.setBody(e.getMessage(), -1);
-			clientResponses_[clientFd] = errorResponse.toString();
+			Router router(allServersConfig_);
+			ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
 
-			// Switch to EPOLLOUT to send the error response
+			std::string responseContent = "";
+			int finalStatusCode = 0;
+			long long fileSize = -1;
+
+			// Handle immediate errors from Router
+			if (action.errorCode != 0) {
+				finalStatusCode = action.errorCode;
+				responseContent = action.errorPagePath;
+				if (responseContent.empty()) { // If no custom page, provide a generic one
+					responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
+				} else {
+					responseContent = readFileContent(responseContent);
+				}
+			}
+
+			else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
+				std::shared_ptr<Cgi>	cgi = clientCgiMap_[clientFd];
+				std::cout << "in the cgi" << std::endl;
+				if (!cgi) {
+					clientCgiMap_[clientFd] = std::make_shared<Cgi>(request_it->second, action.cgiScriptPath);
+					cgi = clientCgiMap_[clientFd];
+				}
+				cgi->startCgi([this](int fd, uint32_t events) {
+					addFdToEpoll(fd, events);
+				});
+				std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
+				try {
+					cgi->setScriptPath(action.cgiScriptPath);
+					responseContent = cgi->runCgi();
+					finalStatusCode = cgi->getCgiStatusCode();
+				}
+				catch (const Cgi::CgiException& e) {
+					std::cerr << RED << "CGI Exception: " << e.what() << RESET << std::endl;
+					finalStatusCode = cgi->getCgiStatusCode(); // Internal Server Error
+					responseContent = "<h1>500 Internal Server Error</h1><p>CGI execution failed: " + std::string(e.what()) + "</p>";
+				}
+
+				// do something??
+				// change the state of Epoll
+				// clear request
+				// return
+			}
+			// Usual Response
+			else if (action.isRedirect) {
+				finalStatusCode = action.redirectCode;
+				responseContent = action.redirectUrl; 
+			}
+			else if (action.isStaticFile) {
+				if (action.isAutoindex) {
+					responseContent = generateDirectoryListing(action.filePath);
+					finalStatusCode = 200;
+				} else {
+					fileSize = getFileSize(action.filePath);
+					if (fileSize == -1) {
+						finalStatusCode = 404;
+						responseContent = "<h1>404 Not Found</h1>";
+					} else {
+						finalStatusCode = 200;
+						responseContent = ""; 
+						setFileTransfer(clientFd, action.filePath, fileSize);
+					}
+				}
+			}
+			else { // final safety net
+				finalStatusCode = action.errorCode;
+				if (finalStatusCode == 0) finalStatusCode = 500; // Default to 500 if no specific error
+				responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
+			}
+
+			// Response Builder
+			Response response_object;
+			response_object.buildFromAction(action, responseContent, finalStatusCode, fileSize);
+			std::string rawResponseString = response_object.toString();
+			clientResponses_[clientFd] = rawResponseString;
+
+			// Change epoll event to EPOLLOUT to start sending the response
 			epoll_event event_mod;
 			event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
 			event_mod.data.fd = clientFd;
@@ -276,6 +257,22 @@ void Webserv::handleClientRead(int clientFd)
 				closeClientConnection(clientFd);
 			}
 			request_it->second.clearParsedRequest();
+		}
+	} catch (const HttpException& e) {
+		std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
+		Response errorResponse;
+		errorResponse.setStatusCode(e.getCode());
+		errorResponse.setBody(e.getMessage(), -1);
+		clientResponses_[clientFd] = errorResponse.toString();
+
+		// Switch to EPOLLOUT to send the error response
+		epoll_event event_mod;
+		event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+		event_mod.data.fd = clientFd;
+		if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+			closeClientConnection(clientFd);
+		}
+		request_it->second.clearParsedRequest();
 		}
 	}
 }
@@ -327,6 +324,8 @@ void Webserv::handleClientWrite(int clientFd)
 			clearFileTransfer(clientFd);
 			closeClientConnection(clientFd);
 		}
+	} else {
+		closeClientConnection(clientFd);
 	}
 }
 

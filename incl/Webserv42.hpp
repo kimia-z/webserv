@@ -24,6 +24,7 @@
 #include "Router.hpp"
 #include "Response.hpp"
 #include "Webserv.hpp"
+#include <fcntl.h>
 
 //headers for the main.cpp
 #include <fstream>	//for ifstream
