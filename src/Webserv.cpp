@@ -81,7 +81,6 @@ void Webserv::runEventLoop()
 			} else { // Handle as client or CGI pipe
 				bool isCgiPipe = false;
 				for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
-					std::cout << "am I here???" << std::endl;
 					if (it->second && (it->second->getInputPipe() == currentFd || it->second->getOutputPipe() == currentFd)) {
 						handleCgiEvent(currentFd, currentEvents); // change: CGI pipe detection (to prevent race conditions)
 						isCgiPipe = true;
@@ -358,12 +357,7 @@ void Webserv::handleClientRead(int clientFd)
 					std::cerr << RED << "Failed to switch FD " << clientFd << " to EPOLLOUT: " << strerror(errno) << RESET << std::endl;
 					request_it->second.clearParsedRequest();
 					closeClientConnection(clientFd);
-			
-			} else {
-				// Send the response immediately
-				request_it->second.clearParsedRequest();
-				handleClientWrite(clientFd);
-			}
+				}
 		}
 	}
 }
@@ -607,7 +601,13 @@ void Webserv::checkClientTimeouts()
 			std::cout << YELLOW << "Client FD " << it->first << " timed out after " << TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
 			try {
 				sendTimeoutResponse(it->first, 408);
-				closeClientConnection(it->first);
+				epoll_event event_mod;
+				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+				event_mod.data.fd = it->first;
+				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, it->first, &event_mod) == -1) {
+					std::cerr << "Error modifying epoll event for FD " << it->first << ": " << strerror(errno) << std::endl;
+					closeClientConnection(it->first); //why does the connection need to be closed here?
+				}
 			} catch (const std::exception& e) {
 				std::cerr << "Error handling timeout for FD " << it->first << ": " << e.what() << std::endl;
 			}
@@ -664,11 +664,13 @@ void Webserv::sendTimeoutResponse(int clientFd, int errorCode)
 	response += "\r\n";
 	response += errorPageContent;
 	
-	// Send the response
-	ssize_t bytesSent = send(clientFd, response.c_str(), response.length(), 0);
-	if (bytesSent == -1) {
-		// Ignore send errors for timeout responses since we're closing the connection
-	}
+	clientResponses_[clientFd] = response;
+
+	// // Send the response
+	// ssize_t bytesSent = send(clientFd, response.c_str(), response.length(), 0);
+	// if (bytesSent == -1) {
+	// 	// Ignore send errors for timeout responses since we're closing the connection
+	// }
 }
 
 // change: Added CGI timeout management to prevent hanging processes
@@ -683,7 +685,14 @@ void Webserv::checkCgiTimeouts()
 		if (elapsed > CGI_TIMEOUT_SECONDS) {
 			try {
 				sendTimeoutResponse(it->first, 504);
-				closeClientConnection(it->first);
+				sendTimeoutResponse(it->first, 408);
+				epoll_event event_mod;
+				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+				event_mod.data.fd = it->first;
+				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, it->first, &event_mod) == -1) {
+					std::cerr << "Error modifying epoll event for FD " << it->first << ": " << strerror(errno) << std::endl;
+					closeClientConnection(it->first);
+				}
 			} catch (const std::exception& e) {
 				std::cerr << "Error handling timeout for FD " << it->first << ": " << e.what() << std::endl;
 			}
@@ -709,8 +718,6 @@ void Webserv::checkCompletedCgis()
 
 void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 {
-
-	std::cout << "Did I get in here?" << std::endl;
 	// Find the client FD associated with this CGI pipe
 	int clientFd = -1;
 	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
