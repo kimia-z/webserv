@@ -81,6 +81,7 @@ void Webserv::runEventLoop()
 			} else { // Handle as client or CGI pipe
 				bool isCgiPipe = false;
 				for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
+					std::cout << "am I here???" << std::endl;
 					if (it->second && (it->second->getInputPipe() == currentFd || it->second->getOutputPipe() == currentFd)) {
 						handleCgiEvent(currentFd, currentEvents); // change: CGI pipe detection (to prevent race conditions)
 						isCgiPipe = true;
@@ -708,6 +709,8 @@ void Webserv::checkCompletedCgis()
 
 void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 {
+
+	std::cout << "Did I get in here?" << std::endl;
 	// Find the client FD associated with this CGI pipe
 	int clientFd = -1;
 	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {

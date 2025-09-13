@@ -3,11 +3,11 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Webserv</title>
+	<title>Delete Uploaded File - Webserv</title>
 	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
 	<style>
 		@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-		
+
 		:root {
 			--primary-color: #2c3e50;
 			--secondary-color: #3498db;
@@ -41,7 +41,7 @@
 			transform: translateY(0);
 			transition: transform 0.5s ease-in-out, box-shadow 0.5s ease;
 		}
-		
+
 		.container:hover {
 			transform: translateY(-8px);
 			box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
@@ -57,13 +57,6 @@
 			animation: bounceIn 1s ease-out;
 		}
 
-		@keyframes bounceIn {
-			0% { opacity: 0; transform: scale(0.3); }
-			50% { opacity: 1; transform: scale(1.05); }
-			70% { transform: scale(0.9); }
-			100% { transform: scale(1); }
-		}
-
 		h2 {
 			font-size: 1.8rem;
 			color: var(--primary-color);
@@ -77,44 +70,39 @@
 			margin: 0 0 2.5rem;
 		}
 
-		.features {
+		form {
 			display: flex;
-			justify-content: space-around;
-			flex-wrap: wrap;
-			gap: 2rem;
+			flex-direction: column;
+			align-items: center;
+			gap: 1.5rem;
 		}
 
-		.feature-card {
-			background-color: var(--bg-color);
-			padding: 1.5rem;
-			border-radius: 12px;
-			flex: 1;
-			min-width: 200px;
-			box-shadow: var(--shadow);
-			transition: transform 0.3s ease, box-shadow 0.3s ease;
+		input[type="text"] {
+			padding: 0.8rem 1rem;
+			border-radius: 8px;
+			border: 1px solid #ccc;
+			width: 80%;
+			font-size: 1rem;
 		}
 
-		.feature-card:hover {
-			transform: scale(1.05);
-			box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+		input[type="submit"] {
+			padding: 0.8rem 2rem;
+			border-radius: 8px;
+			border: none;
+			background-color: var(--accent-color);
+			color: white;
+			font-weight: 600;
+			font-size: 1rem;
+			cursor: pointer;
+			transition: background-color 0.3s ease;
 		}
 
-		.feature-card h3 {
-			color: var(--accent-color);
-			margin: 0 0 0.5rem;
-			font-weight: 700;
-			font-size: 1.2rem;
+		input[type="submit"]:hover {
+			background-color: #c0392b;
 		}
 
-		.feature-card p {
-			font-size: 0.9rem;
-			line-height: 1.4;
-			margin: 0;
-			color: #555;
-		}
-		
 		.footer {
-			margin-top: 4rem;
+			margin-top: 3rem;
 			font-size: 0.9rem;
 			color: #7f8c8d;
 			border-top: 1px solid #ddd;
@@ -124,33 +112,16 @@
 </head>
 <body>
 	<div class="container">
-		<h1>
-			webserv 🚀
-		</h1>
-		<h2>
-			A modern HTTP server by Gosia & Kimia
-		</h2>
-		<p>
-			Welcome to our `webserv` homepage! We've built this server from scratch, handling non-blocking I/O, robust routing, and a variety of HTTP features.
-		</p>
+		<h1>Delete Uploaded File 🗑️</h1>
+		<h2>Enter the exact filename to remove</h2>
+		<p>Please type the exact name of the file from the <code>upload/</code> folder to delete it permanently.</p>
 
-		<div class="features">
-			<div class="feature-card">
-				<h3>Contact form</h3>
-				<p><a href=form.html>Leave your details to get in touch with us</a></p>
-			</div>
-			<div class="feature-card">
-				<h3>Upload form</h3>
-				<p><a href=upload.html>upload a funny photo</a></p>
-			</div>
-			<div class="feature-card">
-				<h3>Delete your data</h3>
-				<p><a href=erase_contact.html>errase your data</a></p>
-			</div>
-			<div class="feature-card">
-				<h3>Delete your photo</h3>
-				<p><a href=delete.html>delete your photo</a></p>
-			</div>
+		<form id="deleteForm" method="POST" action="/cgi-bin/delete.py">
+    	<input type="text" name="DELETE_TARGET" placeholder="Filename (e.g., myphoto.jpg)" required>
+    	<input type="submit" value="Delete File">
+		</form>
+		<div id="deleteResult"></div>
+
 		<div class="footer">
 			Proudly served by our very own `webserv`.
 		</div>

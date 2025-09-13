@@ -153,22 +153,21 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 				return params;
 			}
 		
-							// Check if this is a CGI script for uploads
-		std::string cgiPath = selectedLocation->getRoot() + "/" + relativePath;
-		if (cgiPath.find(".py") != std::string::npos) {
-			params.isCGI = true;
-			params.cgiScriptPath = cgiPath;
-			params.cgiTargetFile = fileSystemPath;
-			params.uploadTargetDir = uploadPath;
-			return params;
+			// Check if this is a CGI script for uploads
+			std::string cgiPath = selectedLocation->getRoot() + "/" + relativePath;
+			if (cgiPath.find(".py") != std::string::npos) {
+				params.isCGI = true;
+				params.cgiScriptPath = cgiPath;
+				params.cgiTargetFile = fileSystemPath;
+				params.uploadTargetDir = uploadPath;
+				return params;
 		}
-			
-			params.isUpload = true;
-			params.uploadTargetDir = uploadPath;
-			std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
-	if (!relativePath.empty() && relativePath[0] == '/') {
-		relativePath = relativePath.substr(1);
-	}
+		params.isUpload = true;
+		params.uploadTargetDir = uploadPath;
+		std::string relativePath = request.getPath().substr(selectedLocation->getPath().length());
+		if (!relativePath.empty() && relativePath[0] == '/') {
+			relativePath = relativePath.substr(1);
+		}
 			params.uploadFilename = relativePath;
 			return params;
 		}
