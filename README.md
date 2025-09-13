@@ -571,8 +571,29 @@ curl -X POST -F "file=@test.txt" \
 
 #### Test File Deletion
 ```bash
-# Delete uploaded file
-curl -X DELETE http://localhost:8087/cgi-bin/remove.py?file=test.txt
+
+#### Test DELETE Through CGI
+```bash
+# First, upload a test file
+echo "Test content" > test_file.txt
+curl -X POST -F "file=@test_file.txt" http://localhost:8087/cgi-bin/upload.py
+
+# Test DELETE through CGI with query string
+curl -X DELETE "http://localhost:8087/cgi-bin/delete.py?file=test_file.txt"
+
+# Test DELETE with URL-encoded filename
+echo "Another test" > "my file.txt"
+curl -X POST -F "file=@my file.txt" http://localhost:8087/cgi-bin/upload.py
+curl -X DELETE "http://localhost:8087/cgi-bin/delete.py?file=my%20file.txt"
+
+# Test DELETE of non-existent file
+curl -X DELETE "http://localhost:8087/cgi-bin/delete.py?file=nonexistent.txt"
+
+# Test DELETE with path traversal attempt (should be blocked)
+curl -X DELETE "http://localhost:8087/cgi-bin/delete.py?file=../../../etc/passwd"
+
+# Test DELETE without filename parameter
+curl -X DELETE "http://localhost:8087/cgi-bin/delete.py"
 ```
 
 ### 4. Error Handling Tests
@@ -585,7 +606,9 @@ curl http://localhost:8087/nonexistent.html
 
 #### Test 405 Method Not Allowed
 ```bash
-curl -X POST http://localhost:8087/index.html
+curl -X POST -H "Content-Length: 0" http://localhost:8087/
+or
+curl -X POST -d "" http://localhost:8087/
 # Should return 405 if POST not allowed for this location
 ```
 
