@@ -54,6 +54,10 @@ void Webserv::runEventLoop()
 	while (g_running == 0) {
 		checkClientTimeouts();
 		checkCgiTimeouts(); // change: CGI timeout (to prevent hanging processes)
+
+		if (clientRequests_.size() > 100) {
+			cleanupOldRequests(); // change: cleanup old requests if too many
+		}
 		if (!clientCgiMap_.empty()) {
 			checkCompletedCgis(); // change: periodic cleanup of completed CGI processes
 		}
@@ -570,6 +574,26 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 	return html_listing.str();
 }
 
+void Webserv::cleanupOldRequests(){
+	time_t currentTime = time(NULL);
+	const int CLEANUP_TRESHOLD = 60; // 1 minute
+	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
+		if (currentTime - it->second > CLEANUP_TRESHOLD) {
+			int clientFd = it->first;
+
+			try {
+				closeClientConnection(clientFd);
+			} catch (const std::exception& e) {
+				std::cerr << "Error cleaning up FD " << clientFd << ": " << e.what() << std::endl;
+			}
+			it = clientTimeouts_.erase(it); // Erase first
+			std::cout << YELLOW << "Cleaning up old request for FD " << clientFd << " after " << CLEANUP_TRESHOLD << " seconds" << RESET << std::endl;
+		} else {
+			++it;
+		}
+	}
+}
+
 void Webserv::checkClientTimeouts()
 {
 	time_t currentTime = time(NULL);
@@ -579,11 +603,13 @@ void Webserv::checkClientTimeouts()
 		if (currentTime - it->second > TIMEOUT_SECONDS) {
 			std::cout << YELLOW << "Client FD " << it->first << " timed out after " << TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
 			int clientFd = it->first;
+			try {
+				sendTimeoutResponse(clientFd);
+				closeClientConnection(clientFd);
+			} catch (const std::exception& e) {
+				std::cerr << "Error handling timeout for FD " << clientFd << ": " << e.what() << std::endl;
+			}
 			it = clientTimeouts_.erase(it); // Erase first
-			
-		// change: send timeout response before closing connection
-		sendTimeoutResponse(clientFd);
-		closeClientConnection(clientFd);
 		} else {
 			++it;
 		}
@@ -636,11 +662,14 @@ void Webserv::checkCgiTimeouts()
 		if (it->second && currentTime - it->second->getStartTime() > CGI_TIMEOUT_SECONDS) {
 			std::cout << YELLOW << "CGI process for client FD " << it->first << " timed out after " << CGI_TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
 			int clientFd = it->first;
+
+			try {
+				sendTimeoutResponse(clientFd);
+				closeClientConnection(clientFd);
+			} catch (const std::exception& e) {
+				std::cerr << "Error handling CGI timeout for FD " << clientFd << ": " << e.what() << std::endl;
+			}
 			it = clientCgiMap_.erase(it);
-			
-			// Send timeout response
-			sendTimeoutResponse(clientFd);
-			closeClientConnection(clientFd);
 		} else {
 			++it;
 		}

@@ -35,7 +35,9 @@ private:
 	std::string	readFileContent(const std::string& path) const;
 	std::string	generateDirectoryListing(const std::string& directoryPath) const;
 	bool		fileExists(const std::string& path) const;
-	
+
+	void		cleanupOldRequests();
+
 	// Timeout Management
 	void		checkClientTimeouts();
 	void		updateClientTimeout(int clientFd);
