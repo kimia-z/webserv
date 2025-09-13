@@ -657,7 +657,6 @@ curl http://localhost:8087/cgi-bin/slow.py
 for i in {1..10}; do
     curl http://localhost:8087/ &
 done
-wait
 ```
 
 #### Test CGI Concurrency
@@ -666,7 +665,6 @@ wait
 for i in {1..5}; do
     curl -X POST -d "test=$i" http://localhost:8087/cgi-bin/form.py &
 done
-wait
 ```
 
 ### 7. Performance Tests
