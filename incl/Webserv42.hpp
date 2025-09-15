@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Webserv42.hpp                                      :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: kziari <kziari@student.42.fr>                +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/05/05 10:30:28 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/08/11 13:24:05 by mstencel      ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Webserv42.hpp                                      :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/05 10:30:28 by mstencel          #+#    #+#             */
+/*   Updated: 2025/09/15 15:49:31 by kziari           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@
 #include <sstream>	//for stringstream
 #include <vector>	//for vector
 #include <csignal>  //for signal
+#include <fcntl.h>
 
 #endif
 

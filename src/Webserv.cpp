@@ -167,6 +167,17 @@ void Webserv::handleNewConnection(int listenerFd)
 		}
 		return;
 	}
+	int flags = fcntl(clientFd, F_GETFL, 0); // get the current settings of the socket/Get file flags
+	if (flags == -1) {
+		std::cerr << RED << "fcntl(F_GETFL) failed for client FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		close(clientFd); // Close just this bad connection
+		return;
+	}
+	if (fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1){
+		std::cerr << RED << "fcntl(F_SETFL, O_NONBLOCK) failed for client FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		close(clientFd); // Close just this bad connection
+		return;
+	}
 
 	// Map this client to the SingleServer config that accepted it (for routing)
 	clientToServerMap_[clientFd] = listenerMap_[listenerFd];
@@ -223,12 +234,10 @@ void Webserv::handleClientRead(int clientFd)
 	}
 	ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (bytesReceived == -1) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
-			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-			closeClientConnection(clientFd);
-		}
+		std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		closeClientConnection(clientFd);
 		return;
-	} else if (bytesReceived == 0) { // Client disconnected
+	} else if (bytesReceived == 0) { // Client disconnected/recieved completed
 		std::cout << "Client (FD: " << clientFd << ") disconnected." << std::endl;
 		closeClientConnection(clientFd);
 		return;
@@ -378,7 +387,7 @@ void Webserv::handleClientWrite(int clientFd)
 	ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
 	if (bytesSent == -1) {
 		std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-		closeClientConnection(clientFd);
+		return ; // return to main loop and try again
 	} else {
 		// Data sent.
 		updateClientTimeout(clientFd); // Update timeout on activity

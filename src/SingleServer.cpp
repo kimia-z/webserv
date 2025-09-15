@@ -181,6 +181,16 @@ void	SingleServer::initSocket()
 	if (iterationPointer == NULL) { // If loop finished without successful bind
 		throw std::runtime_error("Failed to bind server socket to any address.");
 	}
+	int flags = fcntl(serverFd_, F_GETFL, 0);
+	if (flags == -1) {
+		close(serverFd_);
+		throw std::runtime_error("Failed to get socket flags for server FD.");
+	}
+	if (fcntl(serverFd_, F_SETFL, flags | O_NONBLOCK) == -1){
+		close(serverFd_);
+		throw std::runtime_error("Failed to set non-blocking flag for server FD.");
+	}
+
 	if (listen(serverFd_, 10) == -1) {
 		close(serverFd_);
 		throw std::runtime_error("Failed to listen on server socket.");
