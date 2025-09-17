@@ -3,8 +3,8 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Delete Uploaded File - Webserv</title>
-	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+	<title>Delete Uploaded Photo</title>
+	<link rel="icon" type="image/x-icon" href="favicon.png">
 	<style>
 		@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
@@ -108,20 +108,34 @@
 			border-top: 1px solid #ddd;
 			padding-top: 2rem;
 		}
+		.back-link {
+			text-align: center;
+			margin-top: 2rem;
+		}
+		.back-link a {
+			color: var(--secondary-color);
+			text-decoration: none;
+			font-weight: 600;
+			transition: color 0.3s ease;
+		}
+
+		.back-link a:hover {
+			color: var(--accent-color);
+		}
 	</style>
 </head>
 <body>
 	<div class="container">
-		<h1>Delete Uploaded File 🗑️</h1>
+		<h1>Delete Photo 🗑️</h1>
 		<h2>Enter the exact filename to remove</h2>
-		<p>Please type the exact name of the file from the <code>upload/</code> folder to delete it permanently.</p>
-
 		<form id="deleteForm" method="POST" action="/cgi-bin/delete.py">
     	<input type="text" name="DELETE_TARGET" placeholder="Filename (e.g., myphoto.jpg)" required>
     	<input type="submit" value="Delete File">
 		</form>
 		<div id="deleteResult"></div>
-
+		<div class="back-link">
+			<a href="/index.html">← Back to Homepage</a>
+		</div>
 		<div class="footer">
 			Proudly served by our very own `webserv`.
 		</div>

@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Upload File - Webserv</title>
-	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+	<link rel="icon" type="image/x-icon" href="favicon.png">
 	<style>
 		@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 		
@@ -193,16 +193,14 @@
 
 	<script>
 	document.getElementById('uploadForm').addEventListener('submit', function(e) {
-		// Show loading message
 		document.getElementById('loading').style.display = 'block';
 		document.getElementById('error').style.display = 'none';
 		document.getElementById('success').style.display = 'none';
 		document.getElementById('submitBtn').disabled = true;
 		
-		// Check file size before upload
 		const fileInput = document.getElementById('fileInput');
 		const file = fileInput.files[0];
-		if (file && file.size > 10485760) { // 10MB
+		if (file && file.size > 10485760) {
 			e.preventDefault();
 			document.getElementById('loading').style.display = 'none';
 			document.getElementById('error').style.display = 'block';
@@ -211,10 +209,7 @@
 			return;
 		}
 	});
-
-	// Handle form submission response
 	window.addEventListener('load', function() {
-		// Check if we're on an error page
 		if (window.location.pathname.includes('error') || document.title.includes('Error')) {
 			document.getElementById('error').style.display = 'block';
 			document.getElementById('error').textContent = 'Upload failed! Please try again.';

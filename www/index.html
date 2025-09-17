@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Webserv</title>
-	<link rel="icon" type="image/x-icon" href="images/favicon.ico">
+	<link rel="icon" type="image/x-icon" href="favicon.png">
 	<style>
 		@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 		
@@ -78,20 +78,11 @@
 		}
 
 		.features {
-			display: flex;
-			justify-content: space-around;
-			flex-wrap: wrap;
-			gap: 2rem;
-		}
-
-		.feature-card {
-			background-color: var(--bg-color);
-			padding: 1.5rem;
-			border-radius: 12px;
-			flex: 1;
-			min-width: 200px;
-			box-shadow: var(--shadow);
-			transition: transform 0.3s ease, box-shadow 0.3s ease;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 1rem 3rem;
+			max-width: 700px;
+			margin: 0 auto;
 		}
 
 		.feature-card:hover {
@@ -99,26 +90,63 @@
 			box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 		}
 
+		.feature-card {
+			background-color: var(--bg-color);
+			padding: 1.2rem;
+			border-radius: 12px;
+			box-shadow: var(--shadow);
+			transition: transform 0.3s ease, box-shadow 0.3s ease;
+			width: 100%;
+			min-height: 100px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+		}
+
 		.feature-card h3 {
 			color: var(--accent-color);
 			margin: 0 0 0.5rem;
 			font-weight: 700;
-			font-size: 1.2rem;
+			font-size: 1.1rem;
 		}
 
 		.feature-card p {
-			font-size: 0.9rem;
+			font-size: 0.85rem;
 			line-height: 1.4;
 			margin: 0;
 			color: #555;
 		}
-		
+
+		.feature-card:nth-child(5) {
+			grid-column: 1 / -1;
+			justify-self: center;
+			max-width: 300px;
+		}
+
 		.footer {
 			margin-top: 4rem;
 			font-size: 0.9rem;
 			color: #7f8c8d;
 			border-top: 1px solid #ddd;
 			padding-top: 2rem;
+			text-align: center;
+		}
+
+		@media (max-width: 768px) {
+			.features {
+				grid-template-columns: 1fr;
+				gap: 1.5rem;
+			}
+			
+			.feature-card:nth-child(5) {
+				grid-column: 1;
+				max-width: 100%;
+			}
+			
+			.container {
+				padding: 2rem;
+				margin: 1rem;
+			}
 		}
 	</style>
 </head>
@@ -133,22 +161,25 @@
 		<p>
 			Welcome to our `webserv` homepage! We've built this server from scratch, handling non-blocking I/O, robust routing, and a variety of HTTP features.
 		</p>
-
 		<div class="features">
 			<div class="feature-card">
 				<h3>Contact form</h3>
 				<p><a href=form.html>Leave your details to get in touch with us</a></p>
 			</div>
 			<div class="feature-card">
-				<h3>Upload form</h3>
-				<p><a href=upload.html>upload a funny photo</a></p>
+				<h3>View your details</h3>
+				<p><a href=get.html>view your details</a></p>
 			</div>
 			<div class="feature-card">
-				<h3>Delete your data</h3>
-				<p><a href=erase_contact.html>errase your data</a></p>
+				<h3>Delete your details</h3>
+				<p><a href=erase_contact.html>errase your details</a></p>
 			</div>
 			<div class="feature-card">
-				<h3>Delete your photo</h3>
+				<h3>Upload image</h3>
+				<p><a href=upload.html>upload the image</a></p>
+			</div>
+			<div class="feature-card">
+				<h3>Delete your image</h3>
 				<p><a href=delete.html>delete your photo</a></p>
 			</div>
 		<div class="footer">

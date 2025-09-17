@@ -211,6 +211,14 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 
 	//GET
 	if (request.getMethod() == "GET"){
+		//getting the CGI running GET method
+		std::string	cgiPath = selectedLocation->getRoot() + "/" + relativePath;
+		if (cgiPath.find(".py") != std::string::npos) {
+			params.isCGI = true;
+			params.cgiScriptPath = cgiPath; // Path to the CGI script
+			params.cgiTargetFile = fileSystemPath; // Path to the file being processed by CGI
+			return params;
+		}
 		if (isDir){
 			if (request.getPath().back() != '/'){
 				params.errorCode = 301;
