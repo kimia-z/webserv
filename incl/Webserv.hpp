@@ -52,6 +52,7 @@ private:
 	void					handleNewConnection(int listenerFd);
 	void					handleClientWrite(int clientFd);
 	void					handleCgiEvent(int pipeFd, uint32_t events);
+	void					runCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi);
 	void					handleCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi);
 	int						findClientFdForPipe(int pipeFd);
 	std::shared_ptr<Cgi> 	findCgiForClient(int clientFd);

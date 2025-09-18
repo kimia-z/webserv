@@ -152,10 +152,17 @@ void Webserv::removeFdFromEpoll(int fd)
 	std::cout << "DEBUG: listenerMap_.find(fd) == listenerMap_.end(): " << (listenerMap_.find(fd) == listenerMap_.end()) << std::endl;
 
 
-	if (clientRequests_.find(fd) == clientRequests_.end() && listenerMap_.find(fd) == listenerMap_.end()) {
+
+	if (clientRequests_.find(fd) == clientRequests_.end() && listenerMap_.find(fd) == listenerMap_.end() && clientCgiMap_.find(fd) == clientCgiMap_.end()) {
 		std::cout << "DEBUG: FD " << fd << " not found in maps, returning" << std::endl;
 		return;
 	}
+
+	// if (clientCgiMap_.find(fd) != clientCgiMap_.end()) {
+	// 	std::cout << "DEBUG: FD " << fd << " not found in maps, returning" << std::endl;
+	// 	return;
+	// }
+
 	std::cout << "DEBUG: Attempting to remove FD " << fd << " from epoll" << std::endl;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		std::cout << "DEBUG: epoll_ctl failed with errno: " << errno << " (" << strerror(errno) << ")" << std::endl;
@@ -378,7 +385,6 @@ void	Webserv::handleCgiAction(int clientFd, const ActionParameters& action, cons
 	std::cout << "DEBUG: CGI Pipes - Input FD: " << cgi->getInputPipe() << ", Output FD: " << cgi->getOutputPipe() << std::endl;
 	std::cout << "DEBUG: removing client FD " << clientFd << " from epoll monitoring" << std::endl;
 
-	removeFdFromEpoll(clientFd);
 	request_it->second.markComplete();
 }
 
@@ -815,10 +821,10 @@ void	Webserv::handleCgiEvent(int pipeFd, uint32_t events) {
 		return;
 	}
 
-	handleCgiAction(pipeFd, events, clientFd, cgi);
+	runCgiAction(pipeFd, events, clientFd, cgi);
 }
 
-void	Webserv::handleCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi) {
+void	Webserv::runCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi) {
 	// Write to input pipe
 	if (events & EPOLLOUT && pipeFd == cgi->getInputPipe()) {
 		std::cout << "DEBUG: EPOLLOUT on input pipe: " << pipeFd << ", calling writeToCgiInput()" << std::endl;
