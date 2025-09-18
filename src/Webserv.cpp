@@ -49,58 +49,85 @@ void Webserv::start()
 	runEventLoop();
 }
 
-void Webserv::runEventLoop()
-{
+//our main loop, waits for events and calls appropriate handlers
+void	Webserv::runEventLoop() {
 	while (g_running == 0) {
-		checkClientTimeouts();
-		checkCgiTimeouts();
-		// TODO - really necessary?
-		if (clientRequests_.size() > 100) {
-			cleanupOldRequests();
-		}
-		if (!clientCgiMap_.empty()) {
-			checkCompletedCgis();
-		}
+		runMaintenanceTasks();
 		int numEvents = epoll_wait(epollFd_, events_.data(), events_.size(), 5000);
 		if (numEvents == -1) {
-			if (errno == EINTR) {
-				std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
-				continue;
-			} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				continue;
-			} else {
-				std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
-				throw std::runtime_error("epoll_wait failed, critical error.");
+			handleEpollWaitError();
+			continue;
+		}
+		processEpollEvents(numEvents);
+	}
+}
+
+//checks timeouts, cleans up finished cgis
+void	Webserv::runMaintenanceTasks() {
+	checkClientTimeouts();
+	checkCgiTimeouts();
+	if (!clientCgiMap_.empty()) {
+		checkCompletedCgis();
+	}
+}
+
+//handles errors from epoll_wait & throws an exception with the real error
+void	Webserv::handleEpollWaitError() {
+	if (errno == EINTR) {
+		std::cerr << "epoll_wait was interrupted by a signal." << std::endl;
+		return;
+	} else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+		return;
+	} else {
+		std::cerr << RED << "epoll_wait() failed: " << strerror(errno) << RESET << std::endl;
+		throw std::runtime_error("epoll_wait failed, critical error.");
+	}
+}
+
+//runs through all the events and checks if they are listener, cgi pipe or client socket and calls the appropriate handler
+void	Webserv::processEpollEvents(int numEvents) {
+	for (int i = 0; i < numEvents; i++) {
+		int	currentFd = events_[i].data.fd;
+		uint32_t currentEvents = events_[i].events;
+
+		std::cout << "DEBUG: Handling event for FD " << currentFd << std::endl;
+		std::cout << "DEBUG: Event on FD " << currentFd << " with events " << currentEvents << std::endl;
+
+		if (listenerMap_.count(currentFd)) {
+			std::cout << "DEBUG: New connection on listener FD " << currentFd << std::endl;
+			handleNewConnection(currentFd);
+		} else {
+			bool isCgiPipe = false;
+			for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
+				if (it->second && (it->second->getInputPipe() == currentFd || it->second->getOutputPipe() == currentFd)) {
+					std::cout << "DEBUG: CGI pipe event on FD " << currentFd << std::endl;
+					handleCgiEvent(currentFd, currentEvents);
+					isCgiPipe = true;
+					break;
+				}
+			}
+			if (!isCgiPipe) {
+				handleClientSocketEvent(currentFd, currentEvents);
 			}
 		}
-		for (int i = 0; i < numEvents; ++i) {
-			int currentFd = events_[i].data.fd;
-			uint32_t currentEvents = events_[i].events;
-			if (listenerMap_.count(currentFd)) {
-				handleNewConnection(currentFd);
-			} else {
-				bool isCgiPipe = false;
-				for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
-					if (it->second && (it->second->getInputPipe() == currentFd || it->second->getOutputPipe() == currentFd)) {
-						handleCgiEvent(currentFd, currentEvents);
-						isCgiPipe = true;
-						break;
-					}
-				}
-				if (!isCgiPipe) {
-					if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
-						if (clientCgiMap_.find(currentFd) != clientCgiMap_.end()) {
-							continue;
-						}
-						std::cerr << RED << "Epoll error, hangup or remote shutdown on FD " << currentFd << RESET << std::endl;
-						closeClientConnection(currentFd);
-						continue;
-					}
-					if (currentEvents & EPOLLIN) { handleClientRead(currentFd); }
-					if (currentEvents & EPOLLOUT) { handleClientWrite(currentFd); }
-				}
-			}
+	}
+}
+
+//handles events on client sockets, checks connection errors, read and write events, closes connections on errors or when done
+void	Webserv::handleClientSocketEvent(int currentFd, uint32_t currentEvents) {
+	std::cout << "DEBUG: Client socket event on FD " << currentFd << std::endl;
+	if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+		if (clientCgiMap_.find(currentFd) != clientCgiMap_.end()) {
+			return; //ignore if cgi pipe
 		}
+		std::cerr << RED << "Epoll error, hangup or remote shutdown on FD " << currentFd << RESET << std::endl;
+		closeClientConnection(currentFd);
+	}
+	if (currentEvents & EPOLLIN) {
+		handleClientRead(currentFd);
+	}
+	if (currentEvents & EPOLLOUT) {
+		handleClientWrite(currentFd);
 	}
 }
 
@@ -119,13 +146,26 @@ void Webserv::removeFdFromEpoll(int fd)
 	if (epollFd_ < 0 || fd < 0) {
 		return;
 	}
+
+	std::cout << "DEBUG: removeFdFromEpoll called for FD " << fd << std::endl;
+	std::cout << "DEBUG: clientRequests_.find(fd) == clientRequests_.end(): " << (clientRequests_.find(fd) == clientRequests_.end()) << std::endl;
+	std::cout << "DEBUG: listenerMap_.find(fd) == listenerMap_.end(): " << (listenerMap_.find(fd) == listenerMap_.end()) << std::endl;
+
+
 	if (clientRequests_.find(fd) == clientRequests_.end() && listenerMap_.find(fd) == listenerMap_.end()) {
+		std::cout << "DEBUG: FD " << fd << " not found in maps, returning" << std::endl;
 		return;
 	}
+	std::cout << "DEBUG: Attempting to remove FD " << fd << " from epoll" << std::endl;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
+		std::cout << "DEBUG: epoll_ctl failed with errno: " << errno << " (" << strerror(errno) << ")" << std::endl;
 		if (errno != EBADF) {
 			std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
+		} else {
+			std::cout << "DEBUG: Ignoring EBADF error for FD " << fd << std::endl;
 		}
+	} else {
+		std::cout << "DEBUG: Successfully removed FD " << fd << " from epoll" << std::endl;
 	}
 }
 
@@ -145,7 +185,7 @@ void Webserv::closeClientConnection(int clientFd)
 		removeFdFromEpoll(clientFd);
 	} catch (const std::exception& e) {
 	}
-	
+		
 	if (clientFd > 0) {
 		close(clientFd);
 	}
@@ -177,164 +217,258 @@ void Webserv::handleNewConnection(int listenerFd)
 	std::cout << GREEN << "Accepted new client (FD: " << clientFd << ") on listener " << listenerFd << RESET << std::endl;
 }
 
-void Webserv::handleClientRead(int clientFd)
-{
-	char buffer[BUFFER_SIZE];
-	memset(buffer, 0, sizeof(buffer));
-
-	if (clientResponses_.find(clientFd) != clientResponses_.end()) {
+// Handles reading data from a client socket
+void	Webserv::handleClientRead(int clientFd) {
+	if (isCgiAlreadyRunning(clientFd)) {
+		std::cout << "DEBUG: CGI already running for client FD " << clientFd << ", ignoring EPOLLIN" << std::endl;
 		return;
 	}
-	
+	if (isResponsePending(clientFd)) {
+		std::cout << "DEBUG: Response already pending for client FD " << clientFd << ", ignoring EPOLLIN" << std::endl;
+		return;
+	}
+	if (isRequestComplete(clientFd)) {
+		std::cout << "DEBUG: Request already complete for client FD " << clientFd << ", ignoring EPOLLIN" << std::endl;
+		handleCompleteRequest(clientFd);
+		return;
+	}
+
+	ssize_t bytesReceived = receiveClientData(clientFd);
+	if (bytesReceived <= 0) {
+		return; // Error or disconnect handled in receiveClientData
+	}
+
+	processRequestData(clientFd, bytesReceived);
+}
+
+//checks if a cgi is already running for this client, if so ignores EPOLLIN events
+bool	Webserv::isCgiAlreadyRunning(int clientFd) {
+	if (clientCgiMap_.find(clientFd) != clientCgiMap_.end()) {
+		std::cout << "DEBUG: CGI already running for client FD " << clientFd << ", ignoring EPOLLIN" << std::endl;
+		return (true);
+	}
+	return (false);
+}
+
+//checks if the request is already complete, if so ignores EPOLLIN events
+bool	Webserv::isResponsePending(int clientFd) {
+	if (clientResponses_.find(clientFd) != clientResponses_.end()) {
+		std::cout << "DEBUG: Response already pending for client FD " << clientFd << ", ignoring EPOLLIN" << std::endl;
+		return (true);
+	}
+	return (false);
+}
+
+//checks if the request is already complete, if so ignores EPOLLIN events
+bool	Webserv::isRequestComplete(int clientFd) {
 	std::map<int, Request>::iterator request_it = clientRequests_.find(clientFd);
 	if (request_it == clientRequests_.end()) {
 		std::cerr << RED << "Error: No Request object found for FD " << clientFd << " during read. Closing connection." << RESET << std::endl;
 		closeClientConnection(clientFd);
-		return;
+		return (true);
 	}
-	
-	if (request_it->second.isRequestComplete()) {
-		if (clientCgiMap_.find(clientFd) != clientCgiMap_.end()) {
-			return;
-		}
-		if (clientResponses_.find(clientFd) != clientResponses_.end()) {
-			epoll_event event_mod;
-			event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-			event_mod.data.fd = clientFd;
-			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-				closeClientConnection(clientFd);
-			}
-		} else {
-			closeClientConnection(clientFd);
-		}
-		return;
+	return (false);
+}
+
+//checks for cgi, turns to write mode (EPOLLOUT) or closes the connection if no cgi and no response is pending
+void	Webserv::handleCompleteRequest(int clientFd) {
+	if (clientCgiMap_.find(clientFd) != clientCgiMap_.end()) {
+		return; //ignore if cgi already running
 	}
+	if (clientResponses_.find(clientFd) != clientResponses_.end()) {
+		switchToWriteMode(clientFd);
+	} else {
+		closeClientConnection(clientFd);
+	}
+}
+
+//switches EPOLLIN to EPOLLOUT, prepares to send the response, closes the connection on switch error
+void	Webserv::switchToWriteMode(int clientFd) {
+	epoll_event event_mod;
+	event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+	event_mod.data.fd = clientFd;
+	if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
+		closeClientConnection(clientFd);
+	}
+}
+
+//reads data using recv, handles errors and disconnections
+ssize_t	Webserv::receiveClientData(int clientFd) {
+	char	buffer[BUFFER_SIZE];
+	memset(buffer, 0, sizeof(buffer));
+
 	ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (bytesReceived == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
 			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
 			closeClientConnection(clientFd);
 		}
-		return;
+		return (-1);
 	} else if (bytesReceived == 0) { // Client disconnected
 		std::cout << "Client (FD: " << clientFd << ") disconnected." << std::endl;
 		closeClientConnection(clientFd);
+		return (0);
+	}
+	return (bytesReceived);
+}
+
+//updates timeout, appends data to the request, processes it, handles complete requests and exceptions
+void	Webserv::processRequestData(int clientFd, ssize_t bytesReceived) {
+	std::map<int, Request>::iterator request_it = clientRequests_.find(clientFd);
+	updateClientTimeout(clientFd);
+	char buffer[BUFFER_SIZE];
+	request_it->second.appendRawData(buffer, bytesReceived);
+	try {
+		if (!request_it->second.processRequestData()) {
+			// Request not complete yet, need more data
+			return;
+		}
+		processCompleteRequest(clientFd, request_it->second);
+	} catch (const HttpException& e) {
+		handleHttpException(clientFd, e);
+	}
+}
+
+//processes a complete request, routes it and calls the appropriate handler based on the action parameters
+void	Webserv::processCompleteRequest(int clientFd, Request& request) {
+	const	SingleServer* clientServer = clientToServerMap_[clientFd];
+	if (!clientServer) {
+		std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
+		closeClientConnection(clientFd);
 		return;
-	} else { // Data received
-		updateClientTimeout(clientFd);
-		request_it->second.appendRawData(buffer, bytesReceived);
+	}
+	Router	router(allServersConfig_);
+	ActionParameters action = router.routeRequest(request, clientServer->getServPortInt());
+	if (action.errorCode != 0) {
+		handleErrorAction(clientFd, action);
+	} else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
+		handleCgiAction(clientFd, action, clientServer);
+	} else if (action.isRedirect) {
+		handleRedirectAction(clientFd, action);
+	} else if (action.isStaticFile) {
+		handleStaticFileAction(clientFd, action);
+	} else {
+		handleUnhandledAction(clientFd);
+	}
+}
 
-		try {
-			if (!request_it->second.processRequestData()) {
-				// Request not complete yet, need more data
-				return;
-			}
-			
-			// Request is complete, process it
-			const SingleServer* clientServer = clientToServerMap_[clientFd];
-			if (!clientServer) {
-				std::cerr << RED << "Error: No server config found for client FD " << clientFd << ". Closing." << RESET << std::endl;
-				closeClientConnection(clientFd);
-				return;
-			}
-			
-			Router router(allServersConfig_);
-			ActionParameters action = router.routeRequest(request_it->second, clientServer->getServPortInt());
+//creates and starts a cgi process, removes the client socket from epoll monitoring
+void	Webserv::handleCgiAction(int clientFd, const ActionParameters& action, const SingleServer* clientServer) {
+	std::map<int, Request>::iterator request_it = clientRequests_.find(clientFd);
+	if (request_it == clientRequests_.end()) {
+		std::cerr << RED << "Error: No Request object found for FD " << clientFd << " during CGI handling. Closing connection." << RESET << std::endl;
+		closeClientConnection(clientFd);
+		return;
+	}
+	std::shared_ptr<Cgi> cgi = clientCgiMap_[clientFd];
+	if (!cgi) {
+		clientCgiMap_[clientFd] = std::make_shared<Cgi>(request_it->second, action.cgiScriptPath, 
+			clientServer->getServName(), clientServer->getServPortInt());
+		cgi = clientCgiMap_[clientFd];
+	}
+	if (!action.uploadTargetDir.empty()) {
+		cgi->setUploadDir(action.uploadTargetDir);
+	}
+	cgi->setMaxFileSize(clientServer->getMaxBodySize());
+	cgi->setScriptPath(action.cgiScriptPath);
+	cgi->startCgi([this](int fd, uint32_t events) {
+		addFdToEpoll(fd, events);
+	});
+	std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
+	std::cout << "DEBUG: CGI Pipes - Input FD: " << cgi->getInputPipe() << ", Output FD: " << cgi->getOutputPipe() << std::endl;
+	std::cout << "DEBUG: removing client FD " << clientFd << " from epoll monitoring" << std::endl;
 
-			std::string responseContent = "";
-			int finalStatusCode = 0;
+	removeFdFromEpoll(clientFd);
+	request_it->second.markComplete();
+}
 
-			if (action.errorCode != 0) {
-				finalStatusCode = action.errorCode;
-				responseContent = action.errorPagePath;
-				if (responseContent.empty()) {
-					responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
-				} else {
-					responseContent = readFileContent(responseContent);
-				}
-			}
+//builds and queues an error response based on the action parameters
+void	Webserv::handleHttpException(int clientFd, const HttpException& e) {
+	std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
 
-			else if (action.isCGI || action.isUpload || action.isDeleteOperation) {
-				std::shared_ptr<Cgi>	cgi = clientCgiMap_[clientFd];
-				if (!cgi) {
-					clientCgiMap_[clientFd] = std::make_shared<Cgi>(request_it->second, action.cgiScriptPath, 
-						clientServer->getServName(), clientServer->getServPortInt());
-					cgi = clientCgiMap_[clientFd];
-				}
-				if (!action.uploadTargetDir.empty()) {
-					cgi->setUploadDir(action.uploadTargetDir);
-				}
-				cgi->setMaxFileSize(clientServer->getMaxBodySize());
-				cgi->setScriptPath(action.cgiScriptPath);
-				cgi->startCgi([this](int fd, uint32_t events) {
-					addFdToEpoll(fd, events);
-				});
-				std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
-				request_it->second.markComplete();
-				return;
-			}
-			else if (action.isRedirect) {
-				finalStatusCode = action.redirectCode;
-				responseContent = action.redirectUrl; 
-			}
-			else if (action.isStaticFile) {
-				if (action.isAutoindex) {
-					responseContent = generateDirectoryListing(action.filePath);
-					finalStatusCode = 200;
-				} else {
-					responseContent = readFileContent(action.filePath);
-					if (responseContent.empty() && fileExists(action.filePath)) {
-						finalStatusCode = 500;
-						responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
-					} else {
-						finalStatusCode = 200;
-					}
-				}
-			}
-			else { 
-				finalStatusCode = action.errorCode;
-				if (finalStatusCode == 0) finalStatusCode = 500;
-				responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
-			}
+	std::map<int, Request>::iterator request_it = clientRequests_.find(clientFd);
+	if (request_it == clientRequests_.end()) {
+		std::cerr << RED << "Error: No Request object found for FD " << clientFd << " during HTTP exception handling. Closing connection." << RESET << std::endl;
+		closeClientConnection(clientFd);
+		return;
+	}
 
-			// Response Builder
-			Response response_object;
-			response_object.buildFromAction(action, responseContent, finalStatusCode); 
-			std::string rawResponseString = response_object.toString();
-			clientResponses_[clientFd] = rawResponseString;
+	Response errorResponse;
+	errorResponse.buildErrorResponse(e.getCode(), "");
 
-			// Change epoll event to EPOLLOUT to start sending the response
-			epoll_event event_mod;
-			event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-			event_mod.data.fd = clientFd;
-			if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-				closeClientConnection(clientFd);
-			}
-			request_it->second.clearParsedRequest();
-		} catch (const HttpException& e) {
-			std::cerr << RED << "HTTP Exception: " << e.what() << RESET << std::endl;
-			Response errorResponse;
+	request_it->second.markComplete();
 
-			errorResponse.buildErrorResponse(e.getCode(), "");
-			
-			// Mark request as complete to prevent further data reading
-			request_it->second.markComplete();
+	std::string errorResponseString = errorResponse.toString();
+	clientResponses_[clientFd] = errorResponseString;
 
-			// Serialize the error response and add it to the clientResponses_ map
-				std::string errorResponseString = errorResponse.toString();
-				clientResponses_[clientFd] = errorResponseString;
+	switchToWriteMode(clientFd);
+	request_it->second.clearParsedRequest();
+}
 
-				// Change epoll event to EPOLLOUT to start sending the error response
-				epoll_event event_mod;
-				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-				event_mod.data.fd = clientFd;
-				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-					std::cerr << RED << "Failed to switch FD " << clientFd << " to EPOLLOUT: " << strerror(errno) << RESET << std::endl;
-					request_it->second.clearParsedRequest();
-					closeClientConnection(clientFd);
-				}
+void	Webserv::handleErrorAction(int clientFd, const ActionParameters& action) {
+	int finalStatusCode = action.errorCode;
+	std::string responseContent = action.errorPagePath;
+	if (responseContent.empty()) {
+		responseContent = "<h1>Error " + std::to_string(finalStatusCode) + "</h1><p>The requested resource could not be processed.</p>";
+	} else {
+		responseContent = readFileContent(responseContent);
+	}
+
+	Response response_object;
+	response_object.buildFromAction(action, responseContent, finalStatusCode); 
+	std::string rawResponseString = response_object.toString();
+	clientResponses_[clientFd] = rawResponseString;
+
+	switchToWriteMode(clientFd);
+}
+
+void	Webserv::handleRedirectAction(int clientFd, const ActionParameters& action) {
+	int finalStatusCode = action.redirectCode;
+	std::string responseContent = action.redirectUrl; 
+
+	Response response_object;
+	response_object.buildFromAction(action, responseContent, finalStatusCode); 
+	std::string rawResponseString = response_object.toString();
+	clientResponses_[clientFd] = rawResponseString;
+
+	switchToWriteMode(clientFd);
+}
+
+void	Webserv::handleStaticFileAction(int clientFd, const ActionParameters& action) {
+	std::string responseContent = "";
+	int finalStatusCode = 200;
+
+	if (action.isAutoindex) {
+		responseContent = generateDirectoryListing(action.filePath);
+		finalStatusCode = 200;
+	} else {
+		responseContent = readFileContent(action.filePath);
+		if (responseContent.empty() && fileExists(action.filePath)) {
+			finalStatusCode = 500;
+			responseContent = "<h1>500 Internal Server Error</h1><p>Failed to read static file: " + action.filePath + "</p>";
+		} else {
+			finalStatusCode = 200;
 		}
 	}
+
+	Response response_object;
+	response_object.buildFromAction(action, responseContent, finalStatusCode); 
+	std::string rawResponseString = response_object.toString();
+	clientResponses_[clientFd] = rawResponseString;
+
+	switchToWriteMode(clientFd);
+}
+
+void	Webserv::handleUnhandledAction(int clientFd) {
+	int finalStatusCode = 500;
+	std::string responseContent = "<h1>" + std::to_string(finalStatusCode) + " Internal Server Error</h1><p>Unhandled action type after routing.</p>";
+
+	Response response_object;
+	response_object.buildFromAction(ActionParameters(), responseContent, finalStatusCode); 
+	std::string rawResponseString = response_object.toString();
+	clientResponses_[clientFd] = rawResponseString;
+
+	switchToWriteMode(clientFd);
 }
 
 // Handles sending data to a client socket
@@ -541,63 +675,85 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 	return html_listing.str();
 }
 
-//TODO - really necessary?
-void Webserv::cleanupOldRequests(){
-	auto currentTime = std::chrono::steady_clock::now();
-	const int CLEANUP_TRESHOLD = 60; // 1 minute
-	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
-		if (currentTime - it->second > std::chrono::seconds(CLEANUP_TRESHOLD)) {
-			int clientFd = it->first;
+// //TODO - really necessary?
+// void Webserv::cleanupOldRequests(){
+// 	auto currentTime = std::chrono::steady_clock::now();
+// 	const int CLEANUP_TRESHOLD = 60; // 1 minute
+// 	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
+// 		if (currentTime - it->second > std::chrono::seconds(CLEANUP_TRESHOLD)) {
+// 			int clientFd = it->first;
 
-			try {
-				closeClientConnection(clientFd);
-			} catch (const std::exception& e) {
-				std::cerr << "Error cleaning up FD " << clientFd << ": " << e.what() << std::endl;
-			}
+// 			try {
+// 				closeClientConnection(clientFd);
+// 			} catch (const std::exception& e) {
+// 				std::cerr << "Error cleaning up FD " << clientFd << ": " << e.what() << std::endl;
+// 			}
+// 			it = clientTimeouts_.erase(it);
+// 			std::cout << YELLOW << "Cleaning up old request for FD " << clientFd << " after " << CLEANUP_TRESHOLD << " seconds" << RESET << std::endl;
+// 		} else {
+// 			++it;
+// 		}
+// 	}
+// }
+
+void	Webserv::checkClientTimeouts() {
+	auto now = std::chrono::steady_clock::now();
+	const int TIMEOUT_SECONDS = 300; // 5 minutes
+
+	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
+		if (isTimedOut(it->second, now, TIMEOUT_SECONDS)) {
+			handleTimeout(it->first, TIMEOUT_SECONDS);
 			it = clientTimeouts_.erase(it);
-			std::cout << YELLOW << "Cleaning up old request for FD " << clientFd << " after " << CLEANUP_TRESHOLD << " seconds" << RESET << std::endl;
 		} else {
 			++it;
 		}
 	}
 }
 
-void Webserv::checkClientTimeouts()
-{
+void	Webserv::checkCgiTimeouts() {
 	auto now = std::chrono::steady_clock::now();
-	const int TIMEOUT_SECONDS = 300;
+	const int CGI_TIMEOUT_SECONDS = 30; // 30 seconds
 
-	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
-	
-		if (elapsed > TIMEOUT_SECONDS) {
-			std::cout << YELLOW << "Client FD " << it->first << " timed out after " << TIMEOUT_SECONDS << " seconds" << RESET << std::endl;
-			// extra check to avoid sending timeout response to already closed connections
-			if (clientRequests_.find(it->first) == clientRequests_.end()) {
-				it = clientTimeouts_.erase(it);
-				continue;
-			}
-			try {
-				sendTimeoutResponse(it->first, 408);
-				epoll_event event_mod;
-				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-				event_mod.data.fd = it->first;
-				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, it->first, &event_mod) == -1) {
-					if (errno == EBADF) {
-						std::cout << "FD " << it->first << " is already closed" << std::endl;
-					} else {
-						std::cerr << "Error modifying epoll event for FD " << it->first << ": " << strerror(errno) << std::endl;
-					}
-					closeClientConnection(it->first);
-				}
-			} catch (const std::exception& e) {
-				std::cerr << "Error handling timeout for FD " << it->first << ": " << e.what() << std::endl;
-			}
-			it = clientTimeouts_.erase(it);
+	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
+		auto startTime = std::chrono::steady_clock::time_point(std::chrono::seconds(it->second->getStartTime()));
+		if (isTimedOut(startTime, now, CGI_TIMEOUT_SECONDS)) {
+			handleTimeout(it->first, CGI_TIMEOUT_SECONDS);
+			it = clientCgiMap_.erase(it);
 		} else {
 			++it;
 		}
 	}
+}
+
+bool	Webserv::isTimedOut(const std::chrono::steady_clock::time_point& startTime, const std::chrono::steady_clock::time_point& now, int timeoutSeconds)
+{
+	auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - startTime).count();
+	return (elapsed > timeoutSeconds);
+}
+
+void	Webserv::handleTimeout(int clientFd, int timeoutSeconds) {
+	std::cout << YELLOW << "CGI for client FD " << clientFd << " timed out after " << timeoutSeconds << " seconds" << RESET << std::endl;
+	if (!isClientStillActive(clientFd)) {
+		return;
+	}
+	try {
+		if (timeoutSeconds == 300)
+			sendTimeoutResponse(clientFd, 408);
+		else
+			sendTimeoutResponse(clientFd, 504);
+		switchToWriteMode(clientFd);
+	} catch (const std::exception& e) {
+		std::cerr << "Error handling CGI timeout for FD " << clientFd << ": " << e.what() << std::endl;
+		closeClientConnection(clientFd);
+	}
+}
+
+bool	Webserv::isClientStillActive(int clientFd) {
+	if (clientRequests_.find(clientFd) == clientRequests_.end()) {
+		std::cout << YELLOW << "Client FD " << clientFd << " already disconnected." << RESET << std::endl;
+		return (false);
+	}
+	return (true);
 }
 
 void Webserv::updateClientTimeout(int clientFd)
@@ -608,77 +764,35 @@ void Webserv::updateClientTimeout(int clientFd)
 void Webserv::sendTimeoutResponse(int clientFd, int errorCode)
 {
 	std::string errorPagePath;
-	std::string response;
 	if (errorCode == 408) {
-		std::string errorPagePath = "error/408.html";
+		errorPagePath = "error/408.html";
 	}
 	else {
 		errorPagePath = "error/504.html";
 	}
 	std::string errorPageContent;
-	
+		
 	if (fileExists(errorPagePath)) {
 		errorPageContent = readFileContent(errorPagePath);
 	} else {
-		if (errorCode == 408) {
-			errorPageContent = "<html><head><title>408 Request Timeout</title></head>";
-			errorPageContent += "<body><h1>408 Request Timeout</h1>";
-		}
-		else {
-			errorPageContent = "<html><head><title>504 Gateway Timeout</title></head>";
-			errorPageContent += "<body><h1>504 Gateway Timeout</h1>";
-		}
-		errorPageContent += "<p>Your request took too long to complete.</p>";
-		errorPageContent += "<p><a href=\"/\">Return to homepage</a></p></body></html>";
+		errorPageContent = "<html><head><title>" + std::to_string(errorCode) + " Error</title></head>"
+							"<body><h1>" + std::to_string(errorCode) + " Error</h1>"
+							"<p>Your request took too long to complete.</p>"
+							"<p><a href=\"/\">Return to homepage</a></p></body></html>";
 	}
-	
-	if (errorCode == 408) {
-		response = "HTTP/1.1 408 Request Timeout\r\n";
-	} else {
-		response = "HTTP/1.1 504 Gateway Timeout\r\n";
-	}
-	response += "Content-Type: text/html\r\n";
-	response += "Content-Length: " + std::to_string(errorPageContent.length()) + "\r\n";
-	response += "Connection: close\r\n";
-	response += "\r\n";
-	response += errorPageContent;
-	
-	clientResponses_[clientFd] = response;
-}
+	Response errorResponse;
+	errorResponse.setStatusCode(errorCode);
+	errorResponse.setHeader("Content-Type", "text/html");
+	errorResponse.setHeader("Connection", "close");
+	errorResponse.setBody(errorPageContent);
 
-void Webserv::checkCgiTimeouts()
-{
-	auto now = std::chrono::steady_clock::now();
-	const int CGI_TIMEOUT_SECONDS = 30; // 30 seconds for CGI processes
-
-	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
-		auto client = it->second;
-		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - std::chrono::steady_clock::time_point(std::chrono::seconds(client->getStartTime()))).count();
-		if (elapsed > CGI_TIMEOUT_SECONDS) {
-			try {
-				sendTimeoutResponse(it->first, 504);
-				sendTimeoutResponse(it->first, 408);
-				epoll_event event_mod;
-				event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-				event_mod.data.fd = it->first;
-				if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, it->first, &event_mod) == -1) {
-					std::cerr << "Error modifying epoll event for FD " << it->first << ": " << strerror(errno) << std::endl;
-					closeClientConnection(it->first);
-				}
-			} catch (const std::exception& e) {
-				std::cerr << "Error handling timeout for FD " << it->first << ": " << e.what() << std::endl;
-			}
-			it = clientCgiMap_.erase(it);
-		} else {
-			++it;
-		}
-	}
+	clientResponses_[clientFd] = errorResponse.toString();
 }
 
 void Webserv::checkCompletedCgis()
 {
 	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end();) {
-		if (it->second && it->second->getIsCgiComplete()) {
+		if (it->second && it->second->getIsCgiComplete() && it->second->getIsOutputComplete() && it->second->getIsInputComplete()) {
 			it = clientCgiMap_.erase(it);
 		} else {
 			++it;
@@ -686,37 +800,44 @@ void Webserv::checkCompletedCgis()
 	}
 }
 
-void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
-{
-	int clientFd = -1;
-	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
-		if (it->second && (it->second->getInputPipe() == pipeFd || it->second->getOutputPipe() == pipeFd)) {
-			clientFd = it->first;
-			break;
-		}
-	}
+void	Webserv::handleCgiEvent(int pipeFd, uint32_t events) {
+	std::cout << "DEBUG: handleCgiEvent called for FD " << pipeFd << " with events " << events << std::endl;
+
+	int clientFd = findClientFdForPipe(pipeFd);
 	if (clientFd == -1) {
-		removeFdFromEpoll(pipeFd);
+		std::cout << "DEBUG: No client found for pipe FD " << pipeFd << std::endl;
 		return;
 	}
-	std::shared_ptr<Cgi> cgi = clientCgiMap_[clientFd];
+
+	std::shared_ptr<Cgi> cgi = findCgiForClient(clientFd);
 	if (!cgi) {
-		removeFdFromEpoll(pipeFd);
+		std::cout << "DEBUG: No CGI object found for client FD " << clientFd << std::endl;
 		return;
 	}
+
+	handleCgiAction(pipeFd, events, clientFd, cgi);
+}
+
+void	Webserv::handleCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi) {
+	// Write to input pipe
 	if (events & EPOLLOUT && pipeFd == cgi->getInputPipe()) {
+		std::cout << "DEBUG: EPOLLOUT on input pipe: " << pipeFd << ", calling writeToCgiInput()" << std::endl;
 		if (cgi->writeToCgiInput()) {
+			std::cout << "DEBUG: Input writing complete, removing pipe: " << pipeFd << " from epoll" << std::endl;
 			removeFdFromEpoll(pipeFd);
+		} else {
+			std::cout << "DEBUG: More data to write, keeping pipe " << pipeFd << " in epoll" << std::endl;
 		}
+		return;
 	}
+	// Read from output pipe
 	if (events & EPOLLIN && pipeFd == cgi->getOutputPipe()) {
+		std::cout << "DEBUG: EPOLLIN on output pipe, calling readFromCgiOutput()" << std::endl;
 		cgi->readFromCgiOutput();
-		if (cgi->getIsCgiComplete() && cgi->getIsOutputComplete() && cgi->getIsInputComplete()) {
-			createCgiResponse(clientFd, cgi);
-			return;
-		}
 	}
+	// Handle hang-up on output pipe
 	if (events & EPOLLHUP && pipeFd == cgi->getOutputPipe()) {
+		std::cout << "DEBUG: EPOLLHUP on output pipe " << pipeFd << std::endl;
 		cgi->readFromCgiOutput();
 		cgi->markOutputComplete();
 		if (!cgi->getIsCgiComplete()) {
@@ -726,61 +847,94 @@ void Webserv::handleCgiEvent(int pipeFd, uint32_t events)
 		createCgiResponse(clientFd, cgi);
 		return;
 	}
+	//check if cgi is complete
 	if (cgi->getIsCgiComplete() && cgi->getIsOutputComplete() && cgi->getIsInputComplete()) {
+		std::cout << "DEBUG: CGI complete, creating response" << std::endl;
 		createCgiResponse(clientFd, cgi);
 		return;
 	}
+	//error handling
 	if (events & (EPOLLERR | EPOLLRDHUP)) {
+		std::cout << "DEBUG: EPOLLERR or EPOLLRDHUP on pipe " << pipeFd << std::endl;
 		removeFdFromEpoll(pipeFd);
 	}
 }
 
-void Webserv::createCgiResponse(int clientFd, std::shared_ptr<Cgi> cgi)
-{
-	std::string responseContent = cgi->getCgiOutput();
-	int finalStatusCode = cgi->getCgiStatusCode();
-	
-	if (responseContent.empty()) {
-		finalStatusCode = 500;
-		responseContent = "<h1>500 Internal Server Error</h1><p>CGI produced empty output</p>";
-	}
-	
-	//TODO check error code from CGI
-	Response response;
-	response.setStatusCode(finalStatusCode);
-	
-	size_t headerEnd = responseContent.find("\n\n");
-	if (headerEnd != std::string::npos) {
-		std::string headers = responseContent.substr(0, headerEnd);
-		std::string body = responseContent.substr(headerEnd + 2);
-		
-		std::istringstream headerStream(headers);
-		std::string line;
-		while (std::getline(headerStream, line)) {
-			size_t colonPos = line.find(":");
-			if (colonPos != std::string::npos) {
-				std::string headerName = line.substr(0, colonPos);
-				std::string headerValue = line.substr(colonPos + 1);
-				headerValue.erase(0, headerValue.find_first_not_of(" \t"));
-				headerValue.erase(headerValue.find_last_not_of(" \t\r\n") + 1);
-				response.setHeader(headerName, headerValue);
-			}
+
+int	Webserv::findClientFdForPipe(int pipeFd) {
+	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
+		if (it->second && (it->second->getInputPipe() == pipeFd || it->second->getOutputPipe() == pipeFd)) {
+			std::cout << "DEBUG: Found client FD " << it->first << " for pipe FD " << pipeFd << std::endl;
+			return (it->first);
 		}
-		response.setBody(body);
-	} else {
-		response.setBody(responseContent);
 	}
-	
+	std::cout << "DEBUG: No client found for pipe FD " << pipeFd << std::endl;
+	removeFdFromEpoll(pipeFd);
+	return (-1);
+}
+
+std::shared_ptr<Cgi> Webserv::findCgiForClient(int clientFd) {
+	std::shared_ptr<Cgi> cgi = clientCgiMap_[clientFd];
+	if (!cgi) {
+		std::cout << "DEBUG: No CGI object found for client FD " << clientFd << std::endl;
+		removeFdFromEpoll(clientFd);
+		return (nullptr);
+	}
+	return (cgi);
+}
+
+void	Webserv::createCgiResponse(int clientFd, std::shared_ptr<Cgi> cgi) {
+	std::string	responseContent = cgi->getCgiOutput();
+	int	finalStatusCode = cgi->getCgiStatusCode();
+
+	if (responseContent.empty()) {
+		createCgiErrorResponse(clientFd, 500, "CGI produced empty output");
+		return ;
+	}
+	Response response = parseCgiOutput(responseContent, finalStatusCode);
 	clientResponses_[clientFd] = response.toString();
-	
-	epoll_event event_mod;
-	event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
-	event_mod.data.fd = clientFd;
-	if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
-		closeClientConnection(clientFd);
-	}
-	
+	switchToWriteMode(clientFd);
 	clientCgiMap_.erase(clientFd);
 }
 
+void	Webserv::createCgiErrorResponse(int clientFd, int statusCode, const std::string& message) {
+	std::string responseContent = "<h1>" + std::to_string(statusCode) + " Internal Server Error</h1><p>" + message + "</p>";
+	Response response;
+	response.setStatusCode(statusCode);
+	response.setHeader("Content-Type", "text/html");
+	response.setHeader("Connection", "close");
+	response.setBody(responseContent);
+	clientResponses_[clientFd] = response.toString();
+	switchToWriteMode(clientFd);
+	clientCgiMap_.erase(clientFd);
+}
 
+Response	Webserv::parseCgiOutput(const std::string& output, int statusCode) {
+	Response response;
+	response.setStatusCode(statusCode);
+
+	size_t headerEnd = output.find("\n\n");
+	if (headerEnd != std::string::npos) {
+		parseCgiHeaders(response, output.substr(0, headerEnd));
+		response.setBody(output.substr(headerEnd + 2));
+	} else {
+		response.setBody(output);
+	}
+	return (response);
+}
+
+void	Webserv::parseCgiHeaders(Response& response, const std::string& headers) {
+	std::istringstream headerStream(headers);
+	std::string line;
+	while (std::getline(headerStream, line)) {
+		size_t colonPos = line.find(":");
+		if (colonPos != std::string::npos) {
+			std::string headerName = line.substr(0, colonPos);
+			std::string headerValue = line.substr(colonPos + 1);
+
+			headerValue.erase(0, headerValue.find_first_not_of(" \t"));
+			headerValue.erase(headerValue.find_last_not_of(" \t\r\n") + 1);
+			response.setHeader(headerName, headerValue);
+		}
+	}
+}

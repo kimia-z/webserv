@@ -1,18 +1,34 @@
 #!/usr/bin/env python3
 
-import cgi
 import html
 import os
+import sys
+import urllib.parse
 
 print("Content-Type: text/html\n")
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(os.path.dirname(current_dir), "form_table.txt")
 
-form = cgi.FieldStorage()
-name = html.escape(form.getvalue("name", ""))
-phone = html.escape(form.getvalue("phone", ""))
-email = html.escape(form.getvalue("email", ""))
+
+def parse_form_data():
+    """Parse form data from POST request"""
+    content_length = int(os.environ.get("CONTENT_LENGTH", "0"))
+    
+    if content_length == 0:
+        return "", "", ""
+    
+    post_data = sys.stdin.read(content_length)
+    
+    form_data = urllib.parse.parse_qs(post_data)
+    
+    name = html.escape(form_data.get("name", [""])[0])
+    phone = html.escape(form_data.get("phone", [""])[0])
+    email = html.escape(form_data.get("email", [""])[0])
+    
+    return name, phone, email
+
+name, phone, email = parse_form_data()
 
 
 try:

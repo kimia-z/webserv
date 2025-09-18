@@ -5,71 +5,126 @@ import sys
 import io
 
 print("Content-Type: text/html\n")
+print("<h1>Debug Info</h1>")
+print("<h1>DEBUG INFO</h1>")
+print(f"<p>REQUEST_METHOD: {os.environ.get('REQUEST_METHOD', 'NOT SET')}</p>")
+print(f"<p>CONTENT_TYPE: {os.environ.get('CONTENT_TYPE', 'NOT SET')}</p>")
+print(f"<p>CONTENT_LENGTH: {os.environ.get('CONTENT_LENGTH', 'NOT SET')}</p>")
+print(f"<p>QUERY_STRING: {os.environ.get('QUERY_STRING', 'NOT SET')}</p>")
 
-# dir where the files will be uploaded to
+
+content_length = int(os.environ.get("CONTENT_LENGTH", "0"))
+if content_length > 0:
+	try:
+		post_data = sys.stdin.read(content_length)
+		print(f"<p>Received {len(post_data)} bytes of POST data</p>")
+		print(f"<p>First 200 chars: {html.escape(post_data[:200])}</p>")
+	except Exception as e:
+		print(f"<p>Error reading POST data: {html.escape(str(e))}</p>")
+else:
+	print("<p>No POST data received</p>")
+
+print("<hr>")
+
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "upload")
 
-# Convert to absolute path if it's relative
 if not os.path.isabs(UPLOAD_DIR):
-	# Get the directory where this script is located
 	script_dir = os.path.dirname(os.path.abspath(__file__))
-	# Go up one level to get to www directory
 	www_dir = os.path.dirname(script_dir)
-	# If UPLOAD_DIR starts with 'www/', remove it to avoid duplication
 	if UPLOAD_DIR.startswith('www/'):
-		UPLOAD_DIR = UPLOAD_DIR[4:]  # Remove 'www/' prefix
-	# Create absolute path
+		UPLOAD_DIR = UPLOAD_DIR[4:] 
 	UPLOAD_DIR = os.path.join(www_dir, UPLOAD_DIR)
 
-# pull the limit data from env
 try:
 	MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", "1048576"))
 except ValueError:
-	MAX_FILE_SIZE = 1048576  # or set the default of 10 MB
+	MAX_FILE_SIZE = 1048576
 
-# making sure the upload exists
 try:
 	os.makedirs(UPLOAD_DIR, exist_ok=True)
 except OSError as e:
 	print(f"<h2>Error: Folder {html.escape(UPLOAD_DIR)} cannot be created: {html.escape(str(e))}</h2>")
 	exit()
 
-# Simple multipart form parser
 def parse_multipart_form_data():
 	content_type = os.environ.get("CONTENT_TYPE", "")
 	if not content_type.startswith("multipart/form-data"):
 		raise Exception("Invalid content type")
-	
+		
 	boundary = content_type.split("boundary=")[1]
 	content_length = int(os.environ.get("CONTENT_LENGTH", "0"))
-	
+		
 	if content_length == 0:
 		raise Exception("No content")
-	
+		
 	# Read the raw input as binary
 	raw_data = sys.stdin.buffer.read(content_length)
-	
+		
 	# Find the file part
 	boundary_bytes = ("--" + boundary).encode('utf-8')
 	parts = raw_data.split(boundary_bytes)
+		
 	for part in parts:
-		part_str = part.decode('utf-8', errors='ignore')
-		if "name=\"file\"" in part_str and "filename=" in part_str:
-			# Extract filename
-			filename_line = [line for line in part_str.split("\r\n") if "filename=" in line][0]
-			filename = filename_line.split("filename=")[1].strip('"')
-			
-			# Extract file data (skip headers)
-			file_data_start = part.find(b"\r\n\r\n") + 4
-			file_data = part[file_data_start:]
-			
-			# Remove trailing boundary
-			if file_data.endswith(b"\r\n"):
-				file_data = file_data[:-2]
-			
-			return filename, file_data
-	
+		try:
+			part_str = part.decode('utf-8', errors='ignore')
+			if "name=\"file\"" in part_str and "filename=" in part_str:
+				# Extract filename
+				filename_line = [line for line in part_str.split("\r\n") if "filename=" in line][0]
+				filename = filename_line.split("filename=")[1].strip('"')
+				
+				# Extract file data (skip headers)
+				header_end = part.find(b"\r\n\r\n")
+				if header_end == -1:
+					continue  # Skip this part if no header separator
+				
+				file_data_start = header_end + 4
+				file_data = part[file_data_start:]
+				
+				# Remove trailing boundary
+				if file_data.endswith(b"\r\n"):
+					file_data = file_data[:-2]
+				
+				return filename, file_data
+		except Exception as e:
+			continue  # Skip this part if parsing fails
+		
 	raise Exception("No file found in form data")
+
+# def parse_multipart_form_data():
+# 	content_type = os.environ.get("CONTENT_TYPE", "")
+# 	if not content_type.startswith("multipart/form-data"):
+# 		raise Exception("Invalid content type")
+	
+# 	boundary = content_type.split("boundary=")[1]
+# 	content_length = int(os.environ.get("CONTENT_LENGTH", "0"))
+	
+# 	if content_length == 0:
+# 		raise Exception("No content")
+	
+# 	# Read the raw input as binary
+# 	raw_data = sys.stdin.buffer.read(content_length)
+	
+# 	# Find the file part
+# 	boundary_bytes = ("--" + boundary).encode('utf-8')
+# 	parts = raw_data.split(boundary_bytes)
+# 	for part in parts:
+# 		part_str = part.decode('utf-8', errors='ignore')
+# 		if "name=\"file\"" in part_str and "filename=" in part_str:
+# 			# Extract filename
+# 			filename_line = [line for line in part_str.split("\r\n") if "filename=" in line][0]
+# 			filename = filename_line.split("filename=")[1].strip('"')
+			
+# 			# Extract file data (skip headers)
+# 			file_data_start = part.find(b"\r\n\r\n") + 4
+# 			file_data = part[file_data_start:]
+			
+# 			# Remove trailing boundary
+# 			if file_data.endswith(b"\r\n"):
+# 				file_data = file_data[:-2]
+			
+# 			return filename, file_data
+	
+# 	raise Exception("No file found in form data")
 
 try:
 	filename, file_data = parse_multipart_form_data()

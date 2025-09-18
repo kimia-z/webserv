@@ -207,24 +207,33 @@ void	Cgi::forkCgiProcess() {
 }
 
 void	Cgi::setupCgiPipes(std::function<void(int, uint32_t)> addtoEpoll) {
+	std::cout << "DEBUG: setupCgiPipes called" << std::endl;
+	std::cout << "DEBUG: Method: " << request_.getMethod() << std::endl;
+	std::cout << "DEBUG: Body empty: " << (request_.getBody().empty() ? "YES" : "NO") << std::endl;
+	std::cout << "DEBUG: Body length: " << request_.getBody().length() << std::endl;
+
 	close(pipeIn_[0]);
 	close(pipeOut_[1]);
 
 	// Add output pipe to epoll for reading CGI output
 	addtoEpoll(pipeOut_[0], EPOLLIN | EPOLLRDHUP | EPOLLET);
+	std::cout << "DEBUG: Added output pipe: " << pipeOut_[0] << " to epoll" << std::endl;
 
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		// For POST with body, add input pipe to epoll for writing
 		addtoEpoll(pipeIn_[1], EPOLLOUT | EPOLLRDHUP | EPOLLET);
+		std::cout << "DEBUG: Added input pipe: " << pipeIn_[1] << " to epoll for POST with body" << std::endl;
 	} else {
 		// For GET requests or empty POST, close input pipe immediately
 		close(pipeIn_[1]);
 		pipeIn_[1] = -1;
 		inputWritten_ = true;
+		std::cout << "DEBUG: Closed input pipe for GET/empty POST" << std::endl;
 	}
 }
 
 void	Cgi::startCgi(std::function<void(int, uint32_t)> addtoEpoll) {
+	bodyOffset_ = 0;
 	createPipes();
 	forkCgiProcess();	
 	setupCgiPipes(addtoEpoll);
@@ -267,39 +276,61 @@ std::string	Cgi::runCgi() {
 }
 
 bool Cgi::writeToCgiInput() {
+	std::cout << "DEBUG: writeToCgiInput() called" << std::endl;
+	std::cout << "DEBUG: Method: " << request_.getMethod() << std::endl;
+	std::cout << "DEBUG: Body length: " << request_.getBody().length() << std::endl;
+	std::cout << "DEBUG: BodyOffset: " << bodyOffset_ << std::endl;
+
+	std::cout << "DEBUG: writeToCgiInput() called, bodyOffset_: " << bodyOffset_ << std::endl;
+
 	if (inputWritten_ || pipeIn_[1] == -1) {
+		std::cout << "DEBUG: Input already written or pipe closed" << std::endl;
 		return (true); // Already written or pipe closed
 	}
-	size_t writeSize;
+	// size_t writeSize;
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		const std::string& body = request_.getBody();
+		std::cout << "DEBUG: POST body length: " << body.length() << std::endl;
 
-		if (body.length() < BUFSIZ) {
-			writeSize = body.length();
-		} else {
-			writeSize = BUFSIZ;
+		size_t remainingBytes = body.length() - bodyOffset_;
+		std::cout << "DEBUG: Remaining bytes: " << remainingBytes << std::endl;
+		if (remainingBytes == 0) {
+			std::cout << "DEBUG: All data written, closing pipe" << std::endl;
+			close(pipeIn_[1]);
+			pipeIn_[1] = -1;
+			inputWritten_ = true;
+			return (true);
 		}
-		ssize_t written = write(pipeIn_[1], body.c_str(), writeSize);
+		size_t writeSize = std::min(remainingBytes, static_cast<size_t>(BUFSIZ));
+		std::cout << "DEBUG: Writing " << writeSize << " bytes from offset" << std::endl;
+		ssize_t written = write(pipeIn_[1], body.c_str() + bodyOffset_, writeSize);
+		std::cout << "DEBUG: Written " << written << " bytes" << std::endl;
 		if (written == -1) {
+			std::cout << "DEBUG: Write error: " << strerror(errno) << std::endl;
 			close(pipeIn_[1]);
 			pipeIn_[1] = -1;
 			inputWritten_ = true;
 			return (true); // Error writing, consider input done
 		}
-		else if (written >= 0) {
-			if (written == static_cast<ssize_t>(body.length())) {
-				// All data written
+		else if (written > 0) {
+			bodyOffset_ += written;
+			std::cout << "DEBUG: New bodyOffset: " << bodyOffset_ << std::endl;
+
+			if (bodyOffset_ >= body.length()) {
+				std::cout << "DEBUG: All data written, closing pipe" << std::endl;
 				close(pipeIn_[1]);
 				pipeIn_[1] = -1;
 				inputWritten_ = true;
 				return (true);
 			} else {
 				// Partial write, adjust body and try again later
+				std::cout << "DEBUG: More data to write" << std::endl;
 				return (false); // More data to write
 			}
 		}
 	} else {
 		// For GET requests or empty POST, close input pipe immediately
+		std::cout << "DEBUG: GET or empty POST, closing pipe" << std::endl;
 		close(pipeIn_[1]);
 		pipeIn_[1] = -1;
 		inputWritten_ = true;
