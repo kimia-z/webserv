@@ -828,10 +828,13 @@ void	Webserv::runCgiAction(int pipeFd, uint32_t events, int clientFd, std::share
 	// Write to input pipe
 	if (events & EPOLLOUT && pipeFd == cgi->getInputPipe()) {
 		std::cout << "DEBUG: EPOLLOUT on input pipe: " << pipeFd << ", calling writeToCgiInput()" << std::endl;
-		if (cgi->writeToCgiInput()) {
+		if (cgi->writeToCgiInput()) { //false first time
 			std::cout << "DEBUG: Input writing complete, removing pipe: " << pipeFd << " from epoll" << std::endl;
 			removeFdFromEpoll(pipeFd);
 		} else {
+			if (cgi->cgiPipeReady(pipeFd)) {
+				removeFdFromEpoll(pipeFd);
+			}
 			std::cout << "DEBUG: More data to write, keeping pipe " << pipeFd << " in epoll" << std::endl;
 		}
 		return;
@@ -944,3 +947,5 @@ void	Webserv::parseCgiHeaders(Response& response, const std::string& headers) {
 		}
 	}
 }
+
+

@@ -19,6 +19,19 @@ class Cgi {
 		std::unordered_map<std::string, std::string>	buildEnv(); // creates the env for the cgi
 		
 		bool											writeToCgiInput();
+		bool											isInputAlreadyWritten();
+		bool											handlePostRequest();
+		bool											isAllDataWritten(const std::string& body);
+		bool											writePostData(const std::string& body);
+		bool											updateBodyOffsetAndCheckDone(const std::string& body, ssize_t bytesWritten);
+		bool											closeInputPipe();
+		bool											handleNonPostRequest();
+		bool											isOutputAlreadyRead();
+		bool											cgiPipeReady(int pipeFd);
+
+
+
+
 		bool											readFromCgiOutput();
 		bool											checkCgiProcess(); // Check if CGI process has finished
 		void											markOutputComplete();

@@ -104,7 +104,6 @@ void Request::parseStartLineAndHeaders() {
 	if (!parseStartLine(line)){
 		throw HttpException(400, "Bad Request: Invalid start line");
 	}
-	std::cout << "parsed start line: " << _method << " " << _path << " " << _version << std::endl;
 	// Step 2: Parse headers
 	while(std::getline(stream, line)) {
 		if (line == "\r" || line.empty()) break; // End of headers

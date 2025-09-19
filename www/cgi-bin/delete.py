@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import cgi
+import sys
 import html
 import os
 import urllib.parse
@@ -26,14 +26,35 @@ if method == "DELETE":
 	DELETE_TARGET = params.get("file", [""])[0]
 else:
 	# Use CGI form for GET or POST
-	form = cgi.FieldStorage()
-	DELETE_TARGET = form.getfirst("DELETE_TARGET", "").strip()
+	if method == "POST":
+		content_length = int(os.environ.get("CONTENT_LENGTH", 0))
+		if content_length > 0:
+			post_data = sys.stdin.read(content_length)
+			form_data = urllib.parse.parse_qs(post_data)
+			DELETE_TARGET = form_data.get("DELETE_TARGET", [""])[0]
+		else:
+			DELETE_TARGET = ""
 
 decoded_target = urllib.parse.unquote(DELETE_TARGET)
 
 def delete_file(filename):
 	try:
 		target_path = os.path.join(UPLOAD_DIR, filename)
+
+		debug_info = f"""
+        <!-- DEBUG INFO:
+        UPLOAD_DIR: {UPLOAD_DIR}
+        filename: {filename}
+        target_path: {target_path}
+        target_path exists: {os.path.isfile(target_path)}
+        target_path realpath: {os.path.realpath(target_path) if os.path.exists(target_path) else 'N/A'}
+        UPLOAD_DIR realpath: {os.path.realpath(UPLOAD_DIR)}
+        Current working directory: {os.getcwd()}
+        Script location: {os.path.abspath(__file__)}
+        -->
+        """
+
+		print(debug_info)
 
 		if not os.path.isfile(target_path):
 			return False, f"File '{filename}' does not exist"
@@ -166,150 +187,3 @@ print(f"""
 """)
 
 
-
-
-# #!/usr/bin/env python3
-
-# import os
-# import html
-# import cgi
-
-# print("Content-Type: text/html\n")
-
-# UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "upload")
-# if not os.path.isabs(UPLOAD_DIR):
-#	 script_dir = os.path.dirname(os.path.abspath(__file__))
-#	 www_dir = os.path.dirname(script_dir)
-#	 if UPLOAD_DIR.startswith('www/'):
-#		 UPLOAD_DIR = UPLOAD_DIR[4:]
-#	 UPLOAD_DIR = os.path.join(www_dir, UPLOAD_DIR)
-
-# # Use FieldStorage to get POST data
-# form = cgi.FieldStorage()
-# DELETE_TARGET = form.getfirst("DELETE_TARGET", "").strip()
-
-# try:
-#	 if not DELETE_TARGET:
-#		 raise Exception("No target specified for deletion")
-
-#	 # Security: prevent path traversal
-#	 if "/" in DELETE_TARGET or "\\" in DELETE_TARGET:
-#		 raise Exception("Invalid filename.")
-
-#	 filepath = os.path.join(UPLOAD_DIR, DELETE_TARGET)
-
-#	 if not os.path.isfile(filepath):
-#		 raise Exception(f"File '{DELETE_TARGET}' does not exist.")
-
-#	 os.remove(filepath)
-
-#	 print(f"""
-#	 <!DOCTYPE html>
-#	 <html lang="en">
-#	 <head>
-#		 <meta charset="UTF-8">
-#		 <title>File Deleted</title>
-#	 </head>
-#	 <body>
-#		 <h1>File Deleted Successfully ✅</h1>
-#		 <p>Deleted file: {html.escape(DELETE_TARGET)}</p>
-#		 <p>Location: {html.escape(UPLOAD_DIR)}</p>
-#		 <a href="/index.html">Back to Homepage</a>
-#	 </body>
-#	 </html>
-#	 """)
-
-# except Exception as e:
-#	 print(f"""
-#	 <!DOCTYPE html>
-#	 <html lang="en">
-#	 <head>
-#		 <meta charset="UTF-8">
-#		 <title>Delete Failed</title>
-#	 </head>
-#	 <body>
-#		 <h1>Delete Failed ⚠️</h1>
-#		 <p>Error: {html.escape(str(e))}</p>
-#		 <p>Target: {html.escape(DELETE_TARGET)}</p>
-#		 <a href="/index.html">Back to Homepage</a>
-#	 </body>
-#	 </html>
-#	 """)
-
-
-
-# #!/usr/bin/env python3
-
-# import os
-# import html
-# import urllib.parse
-
-# print("Content-Type: text/html\n")
-
-# # DELETE_TARGET = os.environ.get("DELETE_TARGET", "")
-# UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "upload")
-
-# if not os.path.isabs(UPLOAD_DIR):
-# 	script_dir = os.path.dirname(os.path.abspath(__file__))
-# 	www_dir = os.path.dirname(script_dir)
-# 	if UPLOAD_DIR.startswith('www/'):
-# 		UPLOAD_DIR = UPLOAD_DIR[4:]
-# 	UPLOAD_DIR = os.path.join(www_dir, UPLOAD_DIR)
-
-# form = cgi.FieldStorage()
-# DELETE_TARGET = form.getfirst("DELETE_TARGET", "").strip()
-
-# try:
-# 	if not DELETE_TARGET:
-# 		raise Exception("No target specified for deletion")
-# 	#get the file name from url encoding
-# 	decoded_target = urllib.parse.unquote(DELETE_TARGET)
-
-# 	#get full path to the file
-# 	target_path = os.path.join(UPLOAD_DIR, decoded_target)
-
-# 	#check if the file exists
-# 	if not os.path.isfile(target_path):
-# 		raise Exception(f"'{decoded_target} does not exist")
-	
-# 	real_target_path = os.path.realpath(target_path)
-# 	real_upload_dir = os.path.realpath(UPLOAD_DIR)
-# 	if not real_target_path.startswith(real_upload_dir):
-# 		raise Exception("Invalid target path (outside of upload directory)")
-	
-# 	os.remove(target_path)
-
-
-# 	print(f"""
-#	 <!DOCTYPE html>
-#	 <html lang="en">
-#	 <head>
-#		 <meta charset="UTF-8">
-#		 <title>File Deleted</title>
-#	 </head>
-#	 <body>
-#		 <h1>File Deleted Successfully ✅</h1>
-#		 <p>Deleted file: {html.escape(decoded_target)}</p>
-#		 <p>Location: {html.escape(UPLOAD_DIR)}</p>
-#		 <a href="/index.html">Back to Homepage</a>
-#	 </body>
-#	 </html>
-#	 """)
-
-# except Exception as e:
-#	 # Error HTML
-#	 print(f"""
-#	 <!DOCTYPE html>
-#	 <html lang="en">
-#	 <head>
-#		 <meta charset="UTF-8">
-#		 <title>Delete Failed</title>
-#	 </head>
-#	 <body>
-#		 <h1>Delete Failed ⚠️</h1>
-#		 <p>Error: {html.escape(str(e))}</p>
-#		 <p>Target: {html.escape(DELETE_TARGET)}</p>
-#		 <a href="/index.html">Back to Homepage</a>
-#	 </body>
-#	 </html>
-#	 """)

@@ -250,7 +250,6 @@ ActionParameters Router::determineAction(const Request& request, const SingleSer
 				}
 			}
 		} else if(isFileExists(fileSystemPath)){
-			std::cout << "in file exists" << std::endl;
 			params.isStaticFile = true;
 			params.filePath = fileSystemPath;
 		} else{
