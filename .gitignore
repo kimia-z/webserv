@@ -3,7 +3,7 @@ obj
 .vscode
 .DS_Store
 form_table.txt
-bad_header.sh
+bad_header.py
 huge_payload.py
 error.py
 infinite.py
