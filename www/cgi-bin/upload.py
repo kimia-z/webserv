@@ -5,7 +5,6 @@ import html
 
 print("Content-Type: text/html\n")
 
-# Setup upload directory
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "upload")
 if not os.path.isabs(UPLOAD_DIR):
 	script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,7 +19,6 @@ except OSError as e:
 	print("<h2>Error: Cannot create folder " + html.escape(UPLOAD_DIR) + ": " + html.escape(str(e)) + "</h2>")
 	exit()
 
-# Process upload using cgi.FieldStorage
 try:
 	form = cgi.FieldStorage()
 		
@@ -32,20 +30,16 @@ try:
 	if not fileitem.filename:
 		raise Exception("No file selected")
 		
-	# Get filename
 	filename = os.path.basename(fileitem.filename)
 		
-	# Save file
 	saved_file_path = os.path.join(UPLOAD_DIR, filename)
 		
-	# Handle duplicate filenames
 	base, extension = os.path.splitext(filename)
 	counter = 1
 	while os.path.exists(saved_file_path):
 		saved_file_path = os.path.join(UPLOAD_DIR, base + "_" + str(counter) + extension)
 		counter += 1
 		
-	# Write file
 	with open(saved_file_path, "wb") as f:
 		f.write(fileitem.file.read())
 		

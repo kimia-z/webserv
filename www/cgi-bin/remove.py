@@ -22,14 +22,13 @@ def remove_entry(contact):
 	with open(FILE_PATH, "w", encoding="utf-8") as file:
 		for line in lines:
 			components = line.strip().split(' | ')
-			if len(components) == 3:  # Ensure we have all three fields
+			if len(components) == 3:
 				name, phone, email = components
 				if contact == phone or contact == email:
 					removed = True
-					continue # skipping this line
+					continue
 			file.write(line)
 
-	# if the file is empty after removal, it will be deleted
 	if os.stat(FILE_PATH).st_size == 0:
 		os.remove(FILE_PATH)
 
@@ -43,7 +42,6 @@ else:
 	message = "no contact submitted"
 	success = False
 
-# Determine the appropriate response based on success
 if success:
 	icon = "✅"
 	title = "Contact Removed Successfully"

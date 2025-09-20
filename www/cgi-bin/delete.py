@@ -8,7 +8,6 @@ print("Content-Type: text/html\n")
 
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "upload")
 
-# Resolve absolute path for UPLOAD_DIR
 if not os.path.isabs(UPLOAD_DIR):
 	script_dir = os.path.dirname(os.path.abspath(__file__))
 	www_dir = os.path.dirname(script_dir)
@@ -20,12 +19,10 @@ if not os.path.isabs(UPLOAD_DIR):
 method = os.environ.get("REQUEST_METHOD", "GET").upper()
 
 if method == "DELETE":
-	# parse query string for DELETE requests
 	query_string = os.environ.get("QUERY_STRING", "")
 	params = urllib.parse.parse_qs(query_string)
 	DELETE_TARGET = params.get("file", [""])[0]
 else:
-	# Use CGI form for GET or POST
 	if method == "POST":
 		content_length = int(os.environ.get("CONTENT_LENGTH", 0))
 		if content_length > 0:
@@ -40,21 +37,6 @@ decoded_target = urllib.parse.unquote(DELETE_TARGET)
 def delete_file(filename):
 	try:
 		target_path = os.path.join(UPLOAD_DIR, filename)
-
-		debug_info = f"""
-        <!-- DEBUG INFO:
-        UPLOAD_DIR: {UPLOAD_DIR}
-        filename: {filename}
-        target_path: {target_path}
-        target_path exists: {os.path.isfile(target_path)}
-        target_path realpath: {os.path.realpath(target_path) if os.path.exists(target_path) else 'N/A'}
-        UPLOAD_DIR realpath: {os.path.realpath(UPLOAD_DIR)}
-        Current working directory: {os.getcwd()}
-        Script location: {os.path.abspath(__file__)}
-        -->
-        """
-
-		print(debug_info)
 
 		if not os.path.isfile(target_path):
 			return False, f"File '{filename}' does not exist"
@@ -71,7 +53,6 @@ def delete_file(filename):
 
 success, message = delete_file(decoded_target)
 
-# Choose styling based on success/failure
 if success:
 	icon = "✅"
 	title = "File Deleted Successfully"
@@ -84,7 +65,6 @@ else:
 escaped_message = html.escape(message)
 escaped_file = html.escape(decoded_target)
 
-# HTML output in the same style as your other scripts
 print(f"""
 <!DOCTYPE html>
 <html lang="en">
