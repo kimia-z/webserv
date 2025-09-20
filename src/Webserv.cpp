@@ -107,7 +107,7 @@ void Webserv::runEventLoop()
 void Webserv::addFdToEpoll(int fd, uint32_t events)
 {
 	epoll_event event;
-	event.events = events | EPOLLRDHUP | EPOLLET;
+	event.events = events | EPOLLRDHUP;
 	event.data.fd = fd;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &event) == -1) {
 		throw std::runtime_error("Failed to add FD to epoll");
@@ -387,7 +387,7 @@ void Webserv::handleClientWrite(int clientFd)
 	ssize_t bytesSent = send(clientFd, response_it->second.c_str(), response_it->second.length(), 0);
 	if (bytesSent == -1) {
 		std::cerr << RED << "Send failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-		return ; // return to main loop and try again
+		closeClientConnection(clientFd);
 	} else {
 		// Data sent.
 		updateClientTimeout(clientFd); // Update timeout on activity
