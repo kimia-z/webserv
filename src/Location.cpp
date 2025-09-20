@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Location.cpp                                       :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: kziari <kziari@student.42.fr>              +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/27 13:59:39 by mstencel          #+#    #+#             */
-/*   Updated: 2025/08/20 13:43:02 by kziari           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   Location.cpp                                       :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: kziari <kziari@student.42.fr>                +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2025/06/27 13:59:39 by mstencel      #+#    #+#                 */
+/*   Updated: 2025/09/20 12:36:26 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,10 +19,9 @@ Location::Location() :
 	allowedMethods_(),
 	autoindex_(false),
 	uploadPath_(""),
-	// errorPages_(),
 	redirectionCode_(-1),
 	redirectionsPath_("") {
-	// std::cout << "Location's constructor was called" << std::endl;
+		
 }
 
 Location::Location(const Location& copy) : 
@@ -32,10 +31,9 @@ Location::Location(const Location& copy) :
 	allowedMethods_(copy.allowedMethods_),
 	autoindex_(copy.autoindex_),
 	uploadPath_(copy.uploadPath_),
-	// errorPages_(copy.errorPages_),
 	redirectionCode_(copy.redirectionCode_),
 	redirectionsPath_(copy.redirectionsPath_) {
-	// std::cout << "Location's copy constructor was called" << std::endl;
+		
 }
 
 Location& Location::operator=(const Location& copy) {
@@ -46,16 +44,13 @@ Location& Location::operator=(const Location& copy) {
 		allowedMethods_ = copy.allowedMethods_;
 		autoindex_ = copy.autoindex_;
 		uploadPath_ = copy.uploadPath_;
-		// errorPages_ = copy.errorPages_;
 		redirectionCode_ = copy.redirectionCode_;
 		redirectionsPath_ = copy.redirectionsPath_;
 	}
-	// std::cout << "Location's copy operator was called" << std::endl;
 	return (*this);
 }
 
 Location::~Location() {
-	// std::cout << "Location's  destructor was called" << std::endl;
 }
 
 std::string Location::getPath() const {
@@ -89,7 +84,6 @@ int	Location::getRedirectionCode() const {
 std::string	Location::getRedirectionsPath() const {
 	return (redirectionsPath_);
 }
-
 
 void	Location::setPath(const std::string& newPath) {
 	path_ = newPath;

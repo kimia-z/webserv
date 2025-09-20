@@ -2,4 +2,8 @@ webserv
 obj
 .vscode
 .DS_Store
-*.txt
+form_table.txt
+bad_header.sh
+huge_payload.py
+error.py
+infinite.py

@@ -6,19 +6,11 @@
 /*   By: kziari <kziari@student.42.fr>                +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/05/05 10:43:12 by mstencel      #+#    #+#                 */
-/*   Updated: 2025/08/11 13:23:30 by mstencel      ########   odam.nl         */
+/*   Updated: 2025/09/20 12:35:50 by mstencel      ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../incl/Webserv42.hpp"
-
-/// @brief opens the conFile and saves it in conFile, 
-	// checks if the conf file can be opened, if it's empty
-/// @param path 
-/// @return 
-
-// volatile = This prevents the compiler from making assumptions about the variable's value
-// sig_atomic_t = a integer type that can be read or written in a single
 
 volatile sig_atomic_t	g_running = 0;
 

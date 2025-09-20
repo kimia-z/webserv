@@ -53,7 +53,7 @@ private:
 	void					handleClientWrite(int clientFd);
 	void					handleCgiEvent(int pipeFd, uint32_t events);
 	void					runCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi);
-	void					handleCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi);
+	// void					handleCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi);
 	int						findClientFdForPipe(int pipeFd);
 	std::shared_ptr<Cgi> 	findCgiForClient(int clientFd);
 
@@ -62,7 +62,7 @@ private:
 	std::string	generateDirectoryListing(const std::string& directoryPath) const;
 	bool		fileExists(const std::string& path) const;
 
-	void		cleanupOldRequests();
+	// void		cleanupOldRequests();
 
 	// Timeout Management
 	void		checkClientTimeouts();
@@ -70,7 +70,7 @@ private:
 	void		updateClientTimeout(int clientFd);
 
 	void		sendTimeoutResponse(int clientFd, int errorCode);
-	void		handleTimeout(int clientFd, int timeoutSeconds);
+	void		handleTimeout(int clientFd, int timeoutSeconds, int flag);
 	bool		isTimedOut(const std::chrono::steady_clock::time_point& startTime, const std::chrono::steady_clock::time_point& now, int timeoutSeconds);
 	// CGI Helper
 	void		checkCgiTimeouts();

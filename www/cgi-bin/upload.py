@@ -31,18 +31,14 @@ try:
 		raise Exception("No file selected")
 		
 	filename = os.path.basename(fileitem.filename)
-		
 	saved_file_path = os.path.join(UPLOAD_DIR, filename)
-		
 	base, extension = os.path.splitext(filename)
 	counter = 1
 	while os.path.exists(saved_file_path):
 		saved_file_path = os.path.join(UPLOAD_DIR, base + "_" + str(counter) + extension)
 		counter += 1
-		
 	with open(saved_file_path, "wb") as f:
 		f.write(fileitem.file.read())
-		
 	final_filename = os.path.basename(saved_file_path)
 		
 	print("""
