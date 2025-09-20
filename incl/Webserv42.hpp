@@ -30,6 +30,7 @@
 #include <sstream>	//for stringstream
 #include <vector>	//for vector
 #include <csignal>  //for signal
+#include <fcntl.h>
 
 #endif
 

@@ -168,6 +168,16 @@ void	Cgi::createPipes() {
 	if (pipe(pipeIn_) == -1 || pipe(pipeOut_) == -1) {
 		throw CgiException("Cgi: Pipe creation failed");
 	}
+
+	int	flags = fcntl(pipeIn_[1], F_GETFL);
+	if (flags == -1 || fcntl(pipeIn_[1], F_SETFL, flags | O_NONBLOCK) == -1) {
+		throw CgiException("Cgi: Failed to set pipeIn_ non-blocking");
+	}
+
+	flags = fcntl(pipeOut_[0], F_GETFL);
+	if (flags == -1 || fcntl(pipeOut_[0], F_SETFL, flags | O_NONBLOCK) == -1) {
+		throw CgiException("Cgi: Failed to set pipeOut_ non-blocking");
+	}
 }
 
 void	Cgi::forkCgiProcess() {
@@ -207,28 +217,27 @@ void	Cgi::forkCgiProcess() {
 }
 
 void	Cgi::setupCgiPipes(std::function<void(int, uint32_t)> addtoEpoll) {
-	std::cout << "DEBUG: setupCgiPipes called" << std::endl;
-	std::cout << "DEBUG: Method: " << request_.getMethod() << std::endl;
-	std::cout << "DEBUG: Body empty: " << (request_.getBody().empty() ? "YES" : "NO") << std::endl;
-	std::cout << "DEBUG: Body length: " << request_.getBody().length() << std::endl;
+	// std::cout << "DEBUG: setupCgiPipes called" << std::endl;
+	// std::cout << "DEBUG: Method: " << request_.getMethod() << std::endl;
+	// std::cout << "DEBUG: Body empty: " << (request_.getBody().empty() ? "YES" : "NO") << std::endl;
+	// std::cout << "DEBUG: Body length: " << request_.getBody().length() << std::endl;
 
 	close(pipeIn_[0]);
 	close(pipeOut_[1]);
 
 	// Add output pipe to epoll for reading CGI output
-	addtoEpoll(pipeOut_[0], EPOLLIN | EPOLLRDHUP | EPOLLET);
-	std::cout << "DEBUG: Added output pipe: " << pipeOut_[0] << " to epoll" << std::endl;
+	addtoEpoll(pipeOut_[0], EPOLLIN | EPOLLRDHUP);
+	// std::cout << "DEBUG: Added output pipe: " << pipeOut_[0] << " to epoll" << std::endl;
 
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
-		// For POST with body, add input pipe to epoll for writing
-		addtoEpoll(pipeIn_[1], EPOLLOUT | EPOLLRDHUP | EPOLLET);
-		std::cout << "DEBUG: Added input pipe: " << pipeIn_[1] << " to epoll for POST with body" << std::endl;
+		addtoEpoll(pipeIn_[1], EPOLLOUT | EPOLLRDHUP);
+		// std::cout << "DEBUG: Added input pipe: " << pipeIn_[1] << " to epoll for POST with body" << std::endl;
 	} else {
 		// For GET requests or empty POST, close input pipe immediately
 		close(pipeIn_[1]);
 		pipeIn_[1] = -1;
 		inputWritten_ = true;
-		std::cout << "DEBUG: Closed input pipe for GET/empty POST" << std::endl;
+		// std::cout << "DEBUG: Closed input pipe for GET/empty POST" << std::endl;
 	}
 }
 
@@ -242,9 +251,9 @@ void	Cgi::startCgi(std::function<void(int, uint32_t)> addtoEpoll) {
 std::string	Cgi::runCgi() {
 	if (request_.getMethod() == "POST" && !request_.getBody().empty()) {
 		std::string	body = request_.getBody();
-		std::cout << "DEBUG: Writing full POST body of length: " << body.length() << std::endl;
+		// std::cout << "DEBUG: Writing full POST body of length: " << body.length() << std::endl;
 		ssize_t written = write(pipeIn_[1], body.c_str(), body.length());
-		std::cout << "DEBUG: Written " << written << " bytes to CGI input" << std::endl;
+		// std::cout << "DEBUG: Written " << written << " bytes to CGI input" << std::endl;
 		if (written == -1) {
 			close(pipeIn_[1]);
 			throw CgiException("Cgi: Failed to write POST data to CGI input");
@@ -259,9 +268,9 @@ std::string	Cgi::runCgi() {
 	while ((n = read(pipeOut_[0], buffer, sizeof(buffer))) > 0) {
 		output.append(buffer, n);
 	}
-	std::cout << "DEBUG: Read " << n << " bytes from CGI output" << std::endl;
-	std::cout << "DEBUG: Total CGI output length: " << output.length() << std::endl;
-	std::cout << "DEBUG: closing pipeOut_[0]" << pipeOut_[0] << std::endl;
+	// std::cout << "DEBUG: Read " << n << " bytes from CGI output" << std::endl;
+	// std::cout << "DEBUG: Total CGI output length: " << output.length() << std::endl;
+	// std::cout << "DEBUG: closing pipeOut_[0]" << pipeOut_[0] << std::endl;
 	close(pipeOut_[0]);
 
 	int status;
@@ -281,10 +290,10 @@ std::string	Cgi::runCgi() {
 }
 
 bool	Cgi::writeToCgiInput() {
-	std::cout << "DEBUG: writeToCgiInput() called" << std::endl;
-	std::cout << "DEBUG: Method: " << request_.getMethod() << std::endl;
-	std::cout << "DEBUG: Body length: " << request_.getBody().length() << std::endl;
-	std::cout << "DEBUG: BodyOffset: " << bodyOffset_ << std::endl;
+	// std::cout << "DEBUG: writeToCgiInput() called" << std::endl;
+	// std::cout << "DEBUG: Method: " << request_.getMethod() << std::endl;
+	// std::cout << "DEBUG: Body length: " << request_.getBody().length() << std::endl;
+	// std::cout << "DEBUG: BodyOffset: " << bodyOffset_ << std::endl;
 
 	// Already written or pipe closed
 	if (isInputAlreadyWritten()) {
@@ -301,7 +310,7 @@ bool	Cgi::writeToCgiInput() {
 //check if input already written or pipe closed
 bool	Cgi::isInputAlreadyWritten() {
 	if (inputWritten_ || pipeIn_[1] == -1) {
-		std::cout << "DEBUG: Input already written or pipe closed" << std::endl;
+		// std::cout << "DEBUG: Input already written or pipe closed" << std::endl;
 		return (true);
 	}
 	return (false);
@@ -310,7 +319,7 @@ bool	Cgi::isInputAlreadyWritten() {
 // Handle POST request body writing
 bool	Cgi::handlePostRequest() {
 	const std::string& body = request_.getBody();
-	std::cout << "DEBUG: in Cgi::handlePostRequest() POST body length: " << body.length() << std::endl;
+	// std::cout << "DEBUG: in Cgi::handlePostRequest() POST body length: " << body.length() << std::endl;
 
 	if (isAllDataWritten(body)) {
 		return (closeInputPipe());
@@ -321,9 +330,9 @@ bool	Cgi::handlePostRequest() {
 // Check if all data has been written
 bool	Cgi::isAllDataWritten(const std::string& body) {
 	size_t remainingBytes = body.length() - bodyOffset_;
-	std::cout << "DEBUG: Remaining bytes: " << remainingBytes << std::endl;
+	// std::cout << "DEBUG: Remaining bytes: " << remainingBytes << std::endl;
 	if (remainingBytes == 0) {
-		std::cout << "DEBUG: All data written, closing pipe" << std::endl;
+		// std::cout << "DEBUG: All data written, closing pipe" << std::endl;
 		return (true);
 	}
 	return (false);
@@ -332,53 +341,43 @@ bool	Cgi::isAllDataWritten(const std::string& body) {
 // Write POST data to CGI input pipe
 bool	Cgi::writePostData(const std::string& body) {
 	size_t writeSize = std::min(body.length() - bodyOffset_, static_cast<size_t>(BUFSIZ));
-	std::cout << "DEBUG: Attempting to write " << writeSize << " bytes to pipe" << pipeIn_[1] << " (offset: " << bodyOffset_ << ")" <<  std::endl;
+	// std::cout << "DEBUG: Attempting to write " << writeSize << " bytes to pipe" << pipeIn_[1] << " (offset: " << bodyOffset_ << ")" <<  std::endl;
 
-	size_t	remaining = body.length() - bodyOffset_;
+	// size_t	remaining = body.length() - bodyOffset_;
 	ssize_t written = write(pipeIn_[1], body.c_str() + bodyOffset_, writeSize);
-	std::cout << "DEBUG: Written " << written << " bytes" << std::endl;
+	// std::cout << "DEBUG: Written " << written << " bytes" << std::endl;
 
 
-	if (written == -1) {
-		std::cout << "DEBUG: Write errno error: " << strerror(errno) << std::endl;
-		return (closeInputPipe());
-	} else if (written > 0) {
-		if (written == static_cast<ssize_t>(remaining)) {
-			std::cout << "DEBUG: All data written, closing pipe" << std::endl;
+	if (written > 0) {
+		bodyOffset_ += written;
+		if (bodyOffset_ >= body.length()) {
+			// std::cout << "DEBUG: All data written, closing pipe" << std::endl;
 			return (closeInputPipe());
 		} else {
-			std::cout << "DEBUG: Partial write: " << written << " bytes, " << (body.length() - bodyOffset_ - written)  << " remaining" << std::endl;
-			// bodyOffset_ += written;
-			// return (false); // More data to write
-			return (updateBodyOffsetAndCheckDone(body, written));
+			// std::cout << "DEBUG: Partial write: " << written << " bytes, " << (body.length() - bodyOffset_)  << " remaining" << std::endl;
+			return (false); // More data to write
 		}
-
-		// std::cout << "DEBUG: Successfully wrote " << written << " bytes to CGI input" << std::endl;
-		// return (updateBodyOffsetAndCheckDone(body, written));
 	}
-	std::cout << "DEBUG: 0 bytes written, closing pipe" << std::endl;
-	// return (false); // No bytes written, try again later
-	return (closeInputPipe());
+	return (false);
 }
 
 // Update body offset and check if done
 bool	Cgi::updateBodyOffsetAndCheckDone(const std::string& body, ssize_t written) {
 	bodyOffset_ += written;
-	std::cout << "DEBUG: New bodyOffset: " << bodyOffset_ << std::endl;
+	// std::cout << "DEBUG: New bodyOffset: " << bodyOffset_ << std::endl;
 
 	if (bodyOffset_ >= body.length()) {
-		std::cout << "DEBUG: All data written, closing pipe" << std::endl;
+		// std::cout << "DEBUG: All data written, closing pipe" << std::endl;
 		return (closeInputPipe());
 	} else {
-		// Partial write, adjust body and try again later
-		std::cout << "DEBUG: Partial write: " << written << " bytes, " << (body.length() - bodyOffset_)  << " remaining" << std::endl;
+		// std::cout << "DEBUG: Partial write: " << written << " bytes, " << (body.length() - bodyOffset_)  << " remaining" << std::endl;
 		return (false); // More data to write
 	}
 }
 
 // Close the input pipe
 bool	Cgi::closeInputPipe() {
-	std::cout << "DEBUG: Closing input pipe, fd: " << pipeIn_[1] << std::endl;
+	// std::cout << "DEBUG: Closing input pipe, fd: " << pipeIn_[1] << std::endl;
 	close(pipeIn_[1]);
 	pipeIn_[1] = -1;
 	inputWritten_ = true;
@@ -388,7 +387,7 @@ bool	Cgi::closeInputPipe() {
 // Handle GET requests or empty POST
 bool	Cgi::handleNonPostRequest() {
 	// For GET requests or empty POST, close input pipe immediately
-	std::cout << "DEBUG: GET or empty POST, closing pipe" << std::endl;
+	// std::cout << "DEBUG: GET or empty POST, closing pipe" << std::endl;
 	return (closeInputPipe());
 }
 
@@ -403,10 +402,10 @@ bool Cgi::readFromCgiOutput() {
 
 	if (n > 0) {
 		cgiOutput_.append(buffer, n);
-		std::cout << "DEBUG: Read " << n << " bytes from CGI output" << std::endl;
+		// std::cout << "DEBUG: Read " << n << " bytes from CGI output" << std::endl;
 		return (false); // More data might be available, keep pipe in epoll
 	} else if (n == 0) {
-		std::cout << "DEBUG: CGI output finished (EOF)" << std::endl;
+		// std::cout << "DEBUG: CGI output finished (EOF)" << std::endl;
 		close(pipeOut_[0]);
 		pipeOut_[0] = -1;
 		outputRead_ = true;
@@ -416,7 +415,7 @@ bool Cgi::readFromCgiOutput() {
 		}
 		return (true);
 	} else {
-		std::cout << "DEBUG: Read error from CGI output: " << strerror(errno) << std::endl;
+		// std::cout << "DEBUG: Read error from CGI output: " << strerror(errno) << std::endl;
 		close(pipeOut_[0]);
 		pipeOut_[0] = -1;
 		outputRead_ = true;
@@ -455,30 +454,25 @@ bool Cgi::checkCgiProcess() {
 }
 
 bool	Cgi::cgiPipeReady(int pipeFd) {
-	std::cout << "DEBUG: cgiPipeReady called for pipe FD " << pipeFd << std::endl;
+	// std::cout << "DEBUG: cgiPipeReady called for pipe FD " << pipeFd << std::endl;
 	if (pipeFd == pipeIn_[1]) {
 		if (inputWritten_ || pipeIn_[1] == -1) {
-			std::cout << "DEBUG: Input pipe already written or closed" << std::endl;
+			// std::cout << "DEBUG: Input pipe already written or closed" << std::endl;
 			return (true);
 		} else {
-			if (bodyOffset_ >= request_.getBody().length()) {
-				std::cout << "DEBUG: All input data written, closing input pipe" << std::endl;
-				close(pipeIn_[1]);
-				return (true);
-			}
-			std::cout << "DEBUG: Input pipe ready for writing" << std::endl;
+			// std::cout << "DEBUG: Input pipe ready for writing" << std::endl;
 			return (false);
 		}
 	}
 	if (pipeFd == pipeOut_[0]) {
 		if (outputRead_ || pipeOut_[0] == -1) {
-			std::cout << "DEBUG: Output pipe already read or closed" << std::endl;
+			// std::cout << "DEBUG: Output pipe already read or closed" << std::endl;
 			return (true);
 		} else {
-			std::cout << "DEBUG: Output pipe ready for reading" << std::endl;
+			// std::cout << "DEBUG: Output pipe ready for reading" << std::endl;
 			return (false);
 		}
 	}
-	std::cout << "DEBUG: Unknown pipe FD " << pipeFd << std::endl;
+	// std::cout << "DEBUG: Unknown pipe FD " << pipeFd << std::endl;
 	return (false);
 }

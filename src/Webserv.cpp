@@ -90,17 +90,17 @@ void	Webserv::processEpollEvents(int numEvents) {
 		int	currentFd = events_[i].data.fd;
 		uint32_t currentEvents = events_[i].events;
 
-		std::cout << "DEBUG: Handling event for FD " << currentFd << std::endl;
-		std::cout << "DEBUG: Event on FD " << currentFd << " with events " << currentEvents << std::endl;
+		// std::cout << "DEBUG: Handling event for FD " << currentFd << std::endl;
+		// std::cout << "DEBUG: Event on FD " << currentFd << " with events " << currentEvents << std::endl;
 
 		if (listenerMap_.count(currentFd)) {
-			std::cout << "DEBUG: New connection on listener FD " << currentFd << std::endl;
+			// std::cout << "DEBUG: New connection on listener FD " << currentFd << std::endl;
 			handleNewConnection(currentFd);
 		} else {
 			bool isCgiPipe = false;
 			for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
 				if (it->second && (it->second->getInputPipe() == currentFd || it->second->getOutputPipe() == currentFd)) {
-					std::cout << "DEBUG: CGI pipe event on FD " << currentFd << std::endl;
+					// std::cout << "DEBUG: CGI pipe event on FD " << currentFd << std::endl;
 					handleCgiEvent(currentFd, currentEvents);
 					isCgiPipe = true;
 					break;
@@ -115,7 +115,7 @@ void	Webserv::processEpollEvents(int numEvents) {
 
 //handles events on client sockets, checks connection errors, read and write events, closes connections on errors or when done
 void	Webserv::handleClientSocketEvent(int currentFd, uint32_t currentEvents) {
-	std::cout << "DEBUG: Client socket event on FD " << currentFd << std::endl;
+	// std::cout << "DEBUG: Client socket event on FD " << currentFd << std::endl;
 	if (currentEvents & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
 		if (clientCgiMap_.find(currentFd) != clientCgiMap_.end()) {
 			return; //ignore if cgi pipe
@@ -134,7 +134,8 @@ void	Webserv::handleClientSocketEvent(int currentFd, uint32_t currentEvents) {
 void Webserv::addFdToEpoll(int fd, uint32_t events)
 {
 	epoll_event event;
-	event.events = events | EPOLLRDHUP | EPOLLET;
+	// event.events = events | EPOLLRDHUP | EPOLLET;
+	event.events = events | EPOLLRDHUP;
 	event.data.fd = fd;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &event) == -1) {
 		throw std::runtime_error("Failed to add FD to epoll");
@@ -147,32 +148,20 @@ void Webserv::removeFdFromEpoll(int fd)
 		return;
 	}
 
-	std::cout << "DEBUG: removeFdFromEpoll called for FD " << fd << std::endl;
-	std::cout << "DEBUG: clientRequests_.find(fd) == clientRequests_.end(): " << (clientRequests_.find(fd) == clientRequests_.end()) << std::endl;
-	std::cout << "DEBUG: listenerMap_.find(fd) == listenerMap_.end(): " << (listenerMap_.find(fd) == listenerMap_.end()) << std::endl;
-
-
-
+	// std::cout << "DEBUG: removeFdFromEpoll called for FD " << fd << std::endl;
+	// std::cout << "DEBUG: clientRequests_.find(fd) == clientRequests_.end(): " << (clientRequests_.find(fd) == clientRequests_.end()) << std::endl;
+	// std::cout << "DEBUG: listenerMap_.find(fd) == listenerMap_.end(): " << (listenerMap_.find(fd) == listenerMap_.end()) << std::endl;
 	if (clientRequests_.find(fd) == clientRequests_.end() && listenerMap_.find(fd) == listenerMap_.end() && clientCgiMap_.find(fd) == clientCgiMap_.end()) {
-		std::cout << "DEBUG: FD " << fd << " not found in maps, returning" << std::endl;
+		// std::cout << "DEBUG: FD " << fd << " not found in maps, returning" << std::endl;
 		return;
 	}
 
-	// if (clientCgiMap_.find(fd) != clientCgiMap_.end()) {
-	// 	std::cout << "DEBUG: FD " << fd << " not found in maps, returning" << std::endl;
-	// 	return;
-	// }
-
-	std::cout << "DEBUG: Attempting to remove FD " << fd << " from epoll" << std::endl;
+	// std::cout << "DEBUG: Attempting to remove FD " << fd << " from epoll" << std::endl;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, NULL) == -1) {
-		std::cout << "DEBUG: epoll_ctl failed with errno: " << errno << " (" << strerror(errno) << ")" << std::endl;
+		// std::cout << "DEBUG: epoll_ctl failed with errno: " << errno << " (" << strerror(errno) << ")" << std::endl;
 		if (errno != EBADF) {
 			std::cerr << RED << "epoll_ctl(DEL, FD " << fd << ") failed: " << strerror(errno) << RESET << std::endl;
-		} else {
-			std::cout << "DEBUG: Ignoring EBADF error for FD " << fd << std::endl;
 		}
-	} else {
-		std::cout << "DEBUG: Successfully removed FD " << fd << " from epoll" << std::endl;
 	}
 }
 
@@ -215,7 +204,18 @@ void Webserv::handleNewConnection(int listenerFd)
 		}
 		return;
 	}
-
+	int flags = fcntl(clientFd, F_GETFL, 0);
+	if (flags == -1) {
+		std::cerr << RED << "fcntl(F_GETFL) failed for client FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		close(clientFd);
+		return;
+	}
+	if (fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) == -1) {
+		std::cerr << RED << "fcntl(F_SETFL) failed for client FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		close(clientFd);
+		return;
+	}
+	
 	clientToServerMap_[clientFd] = listenerMap_[listenerFd];
 	clientRequests_.insert(std::make_pair(clientFd, Request()));
 	clientRequests_[clientFd].setMaxBodySize(listenerMap_[listenerFd]->getMaxBodySize());
@@ -292,7 +292,8 @@ void	Webserv::handleCompleteRequest(int clientFd) {
 //switches EPOLLIN to EPOLLOUT, prepares to send the response, closes the connection on switch error
 void	Webserv::switchToWriteMode(int clientFd) {
 	epoll_event event_mod;
-	event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+	// event_mod.events = EPOLLOUT | EPOLLRDHUP | EPOLLET;
+	event_mod.events = EPOLLOUT | EPOLLRDHUP;
 	event_mod.data.fd = clientFd;
 	if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, clientFd, &event_mod) == -1) {
 		closeClientConnection(clientFd);
@@ -306,10 +307,8 @@ ssize_t	Webserv::receiveClientData(int clientFd) {
 
 	ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer), 0);
 	if (bytesReceived == -1) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) { // Real error (not just no data)
-			std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
-			closeClientConnection(clientFd);
-		}
+		std::cerr << RED << "Recv failed on FD " << clientFd << ": " << strerror(errno) << RESET << std::endl;
+		closeClientConnection(clientFd);
 		return (-1);
 	} else if (bytesReceived == 0) { // Client disconnected
 		std::cout << "Client (FD: " << clientFd << ") disconnected." << std::endl;
@@ -382,8 +381,8 @@ void	Webserv::handleCgiAction(int clientFd, const ActionParameters& action, cons
 		addFdToEpoll(fd, events);
 	});
 	std::cout << GREEN << "Started CGI for client FD " << clientFd << " with script: " << action.cgiScriptPath << RESET << std::endl;
-	std::cout << "DEBUG: CGI Pipes - Input FD: " << cgi->getInputPipe() << ", Output FD: " << cgi->getOutputPipe() << std::endl;
-	std::cout << "DEBUG: removing client FD " << clientFd << " from epoll monitoring" << std::endl;
+	// std::cout << "DEBUG: CGI Pipes - Input FD: " << cgi->getInputPipe() << ", Output FD: " << cgi->getOutputPipe() << std::endl;
+	// std::cout << "DEBUG: removing client FD " << clientFd << " from epoll monitoring" << std::endl;
 
 	request_it->second.markComplete();
 }
@@ -681,27 +680,6 @@ std::string Webserv::generateDirectoryListing(const std::string& directoryPath) 
 	return html_listing.str();
 }
 
-// //TODO - really necessary?
-// void Webserv::cleanupOldRequests(){
-// 	auto currentTime = std::chrono::steady_clock::now();
-// 	const int CLEANUP_TRESHOLD = 60; // 1 minute
-// 	for (auto it = clientTimeouts_.begin(); it != clientTimeouts_.end();) {
-// 		if (currentTime - it->second > std::chrono::seconds(CLEANUP_TRESHOLD)) {
-// 			int clientFd = it->first;
-
-// 			try {
-// 				closeClientConnection(clientFd);
-// 			} catch (const std::exception& e) {
-// 				std::cerr << "Error cleaning up FD " << clientFd << ": " << e.what() << std::endl;
-// 			}
-// 			it = clientTimeouts_.erase(it);
-// 			std::cout << YELLOW << "Cleaning up old request for FD " << clientFd << " after " << CLEANUP_TRESHOLD << " seconds" << RESET << std::endl;
-// 		} else {
-// 			++it;
-// 		}
-// 	}
-// }
-
 void	Webserv::checkClientTimeouts() {
 	auto now = std::chrono::steady_clock::now();
 	const int TIMEOUT_SECONDS = 300; // 5 minutes
@@ -807,17 +785,17 @@ void Webserv::checkCompletedCgis()
 }
 
 void	Webserv::handleCgiEvent(int pipeFd, uint32_t events) {
-	std::cout << "DEBUG: handleCgiEvent called for FD " << pipeFd << " with events " << events << std::endl;
+	// std::cout << "DEBUG: handleCgiEvent called for FD " << pipeFd << " with events " << events << std::endl;
 
 	int clientFd = findClientFdForPipe(pipeFd);
 	if (clientFd == -1) {
-		std::cout << "DEBUG: No client found for pipe FD " << pipeFd << std::endl;
+		// std::cout << "DEBUG: No client found for pipe FD " << pipeFd << std::endl;
 		return;
 	}
 
 	std::shared_ptr<Cgi> cgi = findCgiForClient(clientFd);
 	if (!cgi) {
-		std::cout << "DEBUG: No CGI object found for client FD " << clientFd << std::endl;
+		// std::cout << "DEBUG: No CGI object found for client FD " << clientFd << std::endl;
 		return;
 	}
 
@@ -827,26 +805,26 @@ void	Webserv::handleCgiEvent(int pipeFd, uint32_t events) {
 void	Webserv::runCgiAction(int pipeFd, uint32_t events, int clientFd, std::shared_ptr<Cgi> cgi) {
 	// Write to input pipe
 	if (events & EPOLLOUT && pipeFd == cgi->getInputPipe()) {
-		std::cout << "DEBUG: EPOLLOUT on input pipe: " << pipeFd << ", calling writeToCgiInput()" << std::endl;
+		// std::cout << "DEBUG: EPOLLOUT on input pipe: " << pipeFd << ", calling writeToCgiInput()" << std::endl;
 		if (cgi->writeToCgiInput()) { //false first time
-			std::cout << "DEBUG: Input writing complete, removing pipe: " << pipeFd << " from epoll" << std::endl;
+			// std::cout << "DEBUG: Input writing complete, removing pipe: " << pipeFd << " from epoll" << std::endl;
 			removeFdFromEpoll(pipeFd);
 		} else {
 			if (cgi->cgiPipeReady(pipeFd)) {
 				removeFdFromEpoll(pipeFd);
 			}
-			std::cout << "DEBUG: More data to write, keeping pipe " << pipeFd << " in epoll" << std::endl;
+			// std::cout << "DEBUG: More data to write, keeping pipe " << pipeFd << " in epoll" << std::endl;
 		}
 		return;
 	}
 	// Read from output pipe
 	if (events & EPOLLIN && pipeFd == cgi->getOutputPipe()) {
-		std::cout << "DEBUG: EPOLLIN on output pipe, calling readFromCgiOutput()" << std::endl;
+		// std::cout << "DEBUG: EPOLLIN on output pipe, calling readFromCgiOutput()" << std::endl;
 		cgi->readFromCgiOutput();
 	}
 	// Handle hang-up on output pipe
 	if (events & EPOLLHUP && pipeFd == cgi->getOutputPipe()) {
-		std::cout << "DEBUG: EPOLLHUP on output pipe " << pipeFd << std::endl;
+		// std::cout << "DEBUG: EPOLLHUP on output pipe " << pipeFd << std::endl;
 		cgi->readFromCgiOutput();
 		cgi->markOutputComplete();
 		if (!cgi->getIsCgiComplete()) {
@@ -858,13 +836,13 @@ void	Webserv::runCgiAction(int pipeFd, uint32_t events, int clientFd, std::share
 	}
 	//check if cgi is complete
 	if (cgi->getIsCgiComplete() && cgi->getIsOutputComplete() && cgi->getIsInputComplete()) {
-		std::cout << "DEBUG: CGI complete, creating response" << std::endl;
+		// std::cout << "DEBUG: CGI complete, creating response" << std::endl;
 		createCgiResponse(clientFd, cgi);
 		return;
 	}
 	//error handling
 	if (events & (EPOLLERR | EPOLLRDHUP)) {
-		std::cout << "DEBUG: EPOLLERR or EPOLLRDHUP on pipe " << pipeFd << std::endl;
+		// std::cout << "DEBUG: EPOLLERR or EPOLLRDHUP on pipe " << pipeFd << std::endl;
 		removeFdFromEpoll(pipeFd);
 	}
 }
@@ -873,11 +851,11 @@ void	Webserv::runCgiAction(int pipeFd, uint32_t events, int clientFd, std::share
 int	Webserv::findClientFdForPipe(int pipeFd) {
 	for (auto it = clientCgiMap_.begin(); it != clientCgiMap_.end(); ++it) {
 		if (it->second && (it->second->getInputPipe() == pipeFd || it->second->getOutputPipe() == pipeFd)) {
-			std::cout << "DEBUG: Found client FD " << it->first << " for pipe FD " << pipeFd << std::endl;
+			// std::cout << "DEBUG: Found client FD " << it->first << " for pipe FD " << pipeFd << std::endl;
 			return (it->first);
 		}
 	}
-	std::cout << "DEBUG: No client found for pipe FD " << pipeFd << std::endl;
+	// std::cout << "DEBUG: No client found for pipe FD " << pipeFd << std::endl;
 	removeFdFromEpoll(pipeFd);
 	return (-1);
 }
@@ -885,7 +863,7 @@ int	Webserv::findClientFdForPipe(int pipeFd) {
 std::shared_ptr<Cgi> Webserv::findCgiForClient(int clientFd) {
 	std::shared_ptr<Cgi> cgi = clientCgiMap_[clientFd];
 	if (!cgi) {
-		std::cout << "DEBUG: No CGI object found for client FD " << clientFd << std::endl;
+		// std::cout << "DEBUG: No CGI object found for client FD " << clientFd << std::endl;
 		removeFdFromEpoll(clientFd);
 		return (nullptr);
 	}
